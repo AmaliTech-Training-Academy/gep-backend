@@ -56,188 +56,148 @@ security:
 
 paths:
   # ============================================
-  # AUTHENTICATION ENDPOINTS
+  # AUTHENTICATION ENDPOINTS ✅
   # ============================================
-  /auth/register:
-    post:
-      tags:
-        - Authentication
-      summary: Register a new user
-      description: Creates a new user account with email verification
-      operationId: registerUser
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRegistrationRequest'
-      responses:
-        '201':
-          description: User successfully registered
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserRegistrationResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '409':
-          description: Email already exists
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /auth/login:
-    post:
-      tags:
-        - Authentication
-      summary: User login
-      description: Authenticates user and returns JWT token
-      operationId: loginUser
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
-      responses:
-        '200':
-          description: Login successful
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
-        '401':
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '423':
-          description: Account deactivated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /auth/logout:
-    post:
-      tags:
-        - Authentication
-      summary: User logout
-      description: Invalidates current JWT token
-      operationId: logoutUser
-      responses:
-        '204':
-          description: Logout successful
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /auth/refresh:
-    post:
-      tags:
-        - Authentication
-      summary: Refresh access token
-      description: Generates new access token using refresh token
-      operationId: refreshToken
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
+  ```yaml
+    endpoints:
+      - name: Login
+        description: Authenticates a user and returns a JWT token.
+        path: /auth/login
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - email
+              - password
+            properties:
+              email:
+                type: string
+                format: email
+                example: user@example.com
+              password:
+                type: string
+                format: password
+                example: P@ssword123
+        responses:
+          200:
+            description: Successful login.
+            body:
               type: object
-              required:
-                - refreshToken
               properties:
-                refreshToken:
+                message:
                   type: string
-      responses:
-        '200':
-          description: Token refreshed successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TokenResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /auth/forgot-password:
-    post:
-      tags:
-        - Authentication
-      summary: Request password reset
-      description: Sends password reset email
-      operationId: forgotPassword
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
+                  example: "correct credentials, proceed to enter otp"
+          401:
+            description: Invalid credentials.
+            body:
               type: object
-              required:
-                - email
               properties:
-                email:
-                  type: string
-                  format: email
-      responses:
-        '200':
-          description: Password reset email sent
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Password reset instructions sent to email"
-        '404':
-          description: Email not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /auth/reset-password:
-    post:
-      tags:
-        - Authentication
-      summary: Reset password with token
-      description: Resets user password using reset token
-      operationId: resetPassword
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
+                error: string
+                message: string
+    
+      - name: Register
+        description: Registers a new user account.
+        path: /auth/register
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - fullName
+              - email
+              - password
+              - confirmPassword
+            properties:
+              fullName:
+                type: string
+                example: John Doe
+              email:
+                type: string
+                format: email
+                example: john@example.com
+              password:
+                type: string
+                format: password
+                minLength: 8
+              confirmPassword:
+                type: string
+                format: password
+        responses:
+          201:
+            description: User successfully registered.
+            body:
               type: object
-              required:
-                - token
-                - newPassword
               properties:
-                token:
+                message:
                   type: string
-                newPassword:
+                  example: "Account created successfully. OTP sent to email."
+          400:
+            description: Invalid registration details.
+    
+      - name: Verify OTP
+        description: Verifies the OTP sent to the user’s email after registration.
+        path: /auth/verify-otp
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - otp
+            properties:
+              otp:
+                type: string
+                example: "123456"
+        responses:
+          200:
+            description: OTP verification successful.
+            body:
+              type: object
+              properties:
+                access_token:
                   type: string
-                  format: password
-                  minLength: 8
-      responses:
-        '200':
-          description: Password reset successful
-        '400':
-          description: Invalid or expired token
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                  description: JWT access token.
+                refresh_token:
+                  type: string
+                  description: JWT refresh token.
+          400:
+            description: Invalid or expired OTP.
+    
+      - name: Forgot Password
+        description: Sends a password reset link or code to the user's email.
+        path: /auth/forgot-password
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - email
+            properties:
+              email:
+                type: string
+                format: email
+                example: user@example.com
+        responses:
+          200:
+            description: Password reset link sent successfully.
+            body:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Password reset link sent to your email."
+          404:
+            description: Email not found.
+
+  ```
 
   # ============================================
   # USER MANAGEMENT ENDPOINTS
