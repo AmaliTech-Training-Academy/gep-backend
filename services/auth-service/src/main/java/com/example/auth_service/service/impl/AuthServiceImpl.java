@@ -1,13 +1,21 @@
 package com.example.auth_service.service.impl;
 
+import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
+import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.exception.DuplicateEmailException;
 import com.example.auth_service.exception.PasswordMismatchException;
 import com.example.auth_service.model.User;
 import com.example.auth_service.repository.UserRepository;
+import com.example.auth_service.security.AuthUser;
+import com.example.auth_service.security.JwtUtil;
 import com.example.auth_service.service.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,9 +26,11 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtil jwtUtil;
 
     @Transactional
-    public User registerNewUser(UserRegistrationRequest registrationRequest) {
+    public void registerNewUser(UserRegistrationRequest registrationRequest) {
             if(!registrationRequest.passwordConfirmation().equals(registrationRequest.password())){
                 throw new PasswordMismatchException("Passwords do not match");
             }
@@ -37,6 +47,27 @@ public class AuthServiceImpl implements AuthService {
                     .isActive(true)
                     .build();
 
-            return userRepository.save(newUser);
+            userRepository.save(newUser);
+    }
+
+    public AuthResponse loginUser(UserLoginRequest loginRequest){
+        try{
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.password())
+            );
+
+            AuthUser user = (AuthUser) authentication.getPrincipal();
+
+            String accessToken = jwtUtil.generateAccessToken(user.getUsername());
+            String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
+
+            return new AuthResponse(
+                    accessToken,
+                    refreshToken
+            );
+
+        }catch(BadCredentialsException e){
+            throw new BadCredentialsException("Invalid credentials");
+        }
     }
 }
