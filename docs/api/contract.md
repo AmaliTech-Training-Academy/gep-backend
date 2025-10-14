@@ -196,6 +196,32 @@ paths:
                   example: "Password reset link sent to your email."
           404:
             description: Email not found.
+            
+      - name: Refresh Token
+        description: Refreshes the access token.
+        path: /auth/refresh-token
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - refresh_token
+            properties:
+              refresh_token:
+                type: string
+          responses:
+            200:
+              description: Access token refreshed successfully.
+              body:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT access token.
+            400:
+              description: Invalid refresh token.
 
   ```
 
