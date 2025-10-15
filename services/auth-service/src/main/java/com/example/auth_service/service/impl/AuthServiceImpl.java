@@ -71,8 +71,6 @@ public class AuthServiceImpl implements AuthService {
 
         }catch(BadCredentialsException e){
             throw new BadCredentialsException("Invalid credentials");
-        }catch(InactiveAccountException e){
-            throw new InactiveAccountException("User account is inactive");
         }
     }
 }
