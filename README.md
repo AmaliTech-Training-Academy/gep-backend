@@ -28,6 +28,7 @@ Java microservices backend for the Event Planner platform.
 
 ## Architecture Diagram
 ```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'fontSize': '16px', 'fontFamily': 'Arial, sans-serif'}}}%%
     graph TB
     Client[Client Applications<br/>Web/Mobile]
 
@@ -94,18 +95,18 @@ Kafka -->|Subscribe:<br/>event.created| Notification
 Kafka -->|Subscribe:<br/>payment.completed| Booking
 Kafka -->|Subscribe:<br/>booking.created| Event
 
-style Client fill:#e1f5ff
-style Gateway fill:#ff9999
-style Kafka fill:#9999ff
-style Redis fill:#ff6b6b
-style Auth fill:#99ff99
-style Discovery fill:#ffff99
-style Event fill:#99ff99
-style Booking fill:#99ff99
-style Payment fill:#99ff99
-style Notification fill:#99ff99
-style AuthDB fill:#ffcc99
-style EventDB fill:#ffcc99
-style BookingDB fill:#ffcc99
-style PaymentDB fill:#ffcc99
+style Client fill:#2196F3,stroke:#1976D2,stroke-width:3px,color:#ffffff
+style Gateway fill:#F44336,stroke:#D32F2F,stroke-width:3px,color:#ffffff
+style Kafka fill:#3F51B5,stroke:#303F9F,stroke-width:3px,color:#ffffff
+style Redis fill:#E91E63,stroke:#C2185B,stroke-width:3px,color:#ffffff
+style Auth fill:#4CAF50,stroke:#388E3C,stroke-width:3px,color:#ffffff
+style Discovery fill:#FF9800,stroke:#F57C00,stroke-width:3px,color:#000000
+style Event fill:#4CAF50,stroke:#388E3C,stroke-width:3px,color:#ffffff
+style Booking fill:#4CAF50,stroke:#388E3C,stroke-width:3px,color:#ffffff
+style Payment fill:#4CAF50,stroke:#388E3C,stroke-width:3px,color:#ffffff
+style Notification fill:#4CAF50,stroke:#388E3C,stroke-width:3px,color:#ffffff
+style AuthDB fill:#795548,stroke:#5D4037,stroke-width:3px,color:#ffffff
+style EventDB fill:#795548,stroke:#5D4037,stroke-width:3px,color:#ffffff
+style BookingDB fill:#795548,stroke:#5D4037,stroke-width:3px,color:#ffffff
+style PaymentDB fill:#795548,stroke:#5D4037,stroke-width:3px,color:#ffffff
 ```
