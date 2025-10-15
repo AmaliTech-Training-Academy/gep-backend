@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
@@ -48,6 +49,7 @@ public class AuthServiceImpl implements AuthService {
                     .build();
 
             userRepository.save(newUser);
+            emailService.sendWelcomeEmail(registrationRequest.email(), registrationRequest.fullName());
     }
 
     public AuthResponse loginUser(UserLoginRequest loginRequest){
