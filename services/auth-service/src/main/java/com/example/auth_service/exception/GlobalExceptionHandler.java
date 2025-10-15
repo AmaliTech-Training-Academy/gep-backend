@@ -30,6 +30,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(InactiveAccountException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleInactiveAccountException(InactiveAccountException ex){
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<CustomApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

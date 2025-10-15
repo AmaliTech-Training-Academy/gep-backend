@@ -5,6 +5,7 @@ import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.exception.DuplicateEmailException;
+import com.example.auth_service.exception.InactiveAccountException;
 import com.example.auth_service.exception.PasswordMismatchException;
 import com.example.auth_service.model.User;
 import com.example.auth_service.repository.UserRepository;
@@ -57,7 +58,9 @@ public class AuthServiceImpl implements AuthService {
             );
 
             AuthUser user = (AuthUser) authentication.getPrincipal();
-
+            if(!user.isActive()){
+                throw new InactiveAccountException("User account is inactive");
+            }
             String accessToken = jwtUtil.generateAccessToken(user.getUsername());
             String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
 
@@ -68,6 +71,8 @@ public class AuthServiceImpl implements AuthService {
 
         }catch(BadCredentialsException e){
             throw new BadCredentialsException("Invalid credentials");
+        }catch(InactiveAccountException e){
+            throw new InactiveAccountException("User account is inactive");
         }
     }
 }

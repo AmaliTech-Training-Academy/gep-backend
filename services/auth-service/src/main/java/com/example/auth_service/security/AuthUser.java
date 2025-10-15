@@ -14,9 +14,9 @@ public class AuthUser implements UserDetails {
 
     User user;
 
-    public Long getId(){
-        return user.getId();
-    }
+     public boolean isActive() {
+         return user.isActive();
+     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
