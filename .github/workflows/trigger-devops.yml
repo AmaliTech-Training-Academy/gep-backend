@@ -14,7 +14,7 @@ jobs:
       uses: peter-evans/repository-dispatch@v2
       with:
         token: ${{ secrets.DEVOPS_REPO_TOKEN }}
-        repository: AmaliTech-Training-Academy/gep_devops
+        repository: AmaliTech-Training-Academy/gep-devops
         event-type: backend-deployment
         client-payload: |
           {
