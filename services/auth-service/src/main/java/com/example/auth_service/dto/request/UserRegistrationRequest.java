@@ -19,7 +19,7 @@ public record UserRegistrationRequest(
                 message = "Password must contain at least one uppercase letter, one number, and one special character.")
         String password,
 
-        @NotBlank(message = "Password confirmation is required")
-        String passwordConfirmation
+        @NotBlank(message = "Confirm Password is required")
+        String confirmPassword
 ) {
 }

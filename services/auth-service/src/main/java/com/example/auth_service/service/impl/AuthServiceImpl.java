@@ -32,7 +32,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Transactional
     public void registerNewUser(UserRegistrationRequest registrationRequest) {
-            if(!registrationRequest.passwordConfirmation().equals(registrationRequest.password())){
+            if(!registrationRequest.confirmPassword().equals(registrationRequest.password())){
                 throw new PasswordMismatchException("Passwords do not match");
             }
 
