@@ -22,7 +22,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User implements UserDetails {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -62,13 +62,5 @@ public class User implements UserDetails {
         updatedAt = Instant.now();
     }
 
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role));
-    }
 
-    @Override
-    public String getUsername() {
-        return email;
-    }
 }

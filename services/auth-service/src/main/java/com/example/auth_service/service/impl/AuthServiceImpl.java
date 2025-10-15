@@ -9,6 +9,7 @@ import com.example.auth_service.exception.InactiveAccountException;
 import com.example.auth_service.exception.PasswordMismatchException;
 import com.example.auth_service.model.User;
 import com.example.auth_service.repository.UserRepository;
+import com.example.auth_service.security.AuthUser;
 import com.example.auth_service.security.JwtUtil;
 import com.example.auth_service.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -56,12 +57,12 @@ public class AuthServiceImpl implements AuthService {
                     new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.password())
             );
 
-            User user = (User) authentication.getPrincipal();
-            if(!user.isActive()){
+            AuthUser authUser = (AuthUser) authentication.getPrincipal();
+            if(!authUser.getUser().isActive()){
                 throw new InactiveAccountException("User account is inactive");
             }
-            String accessToken = jwtUtil.generateAccessToken(user.getUsername());
-            String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
+            String accessToken = jwtUtil.generateAccessToken(authUser.getUsername());
+            String refreshToken = jwtUtil.generateRefreshToken(authUser.getUsername());
 
             return new AuthResponse(
                     accessToken,
