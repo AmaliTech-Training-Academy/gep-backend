@@ -12,7 +12,7 @@ import java.util.List;
 @Builder
 public class AuthUser implements UserDetails {
 
-    User user;
+    private final User user;
 
      public boolean isActive() {
          return user.isActive();
@@ -20,7 +20,7 @@ public class AuthUser implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(user.getRole().name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
     }
 
     @Override
