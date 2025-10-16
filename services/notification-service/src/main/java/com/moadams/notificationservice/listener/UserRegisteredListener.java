@@ -1,14 +1,18 @@
 package com.moadams.notificationservice.listener;
 
 import com.moadams.notificationservice.event.UserRegisteredEvent;
+import com.moadams.notificationservice.service.impl.EmailService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+@RequiredArgsConstructor
 @Component
 public class UserRegisteredListener {
 
+    private final EmailService emailService;
     private static final Logger log = LoggerFactory.getLogger(UserRegisteredListener.class);
 
     @KafkaListener(topics = "user-registration-topic", groupId ="${spring.kafka.consumer.group-id}")
@@ -19,6 +23,7 @@ public class UserRegisteredListener {
 
     private void sendWelcomeEmail(UserRegisteredEvent event){
         log.info("Sending welcome email to: {}", event.email());
+        emailService.sendWelcomeEmail(event.email(), event.fullName());
     }
 
 }

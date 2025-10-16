@@ -2,27 +2,87 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Welcome to EventHub</title>
 </head>
-<body style="font-family: Arial, sans-serif; color: #333;">
-<h2>Hi <span th:text="${recipientName}">User</span></h2>
-<p>Welcome to <strong>EventHub</strong> – we’re thrilled to have you on board!</p>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+<table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+        <td align="center" style="padding: 20px 0;">
+            <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 
-<p>This is your space to plan, host,engage & grow your audience. Discover events and bring your community together with powerful tools for hosting productive online and in-person event</p>
+                <!-- Header -->
+                <tr>
+                    <td align="center" style="padding: 30px 20px 20px 20px;">
+                        <h1 style="margin: 0; font-size: 28px; color: #333;">
+                            <span style="color: #d84315;">Event</span> Hub
+                        </h1>
+                    </td>
+                </tr>
 
-<div style="display: flex; justify-content: center; align-items: center; margin-top: 20px;">
-    <div style="padding: 10px; background-color: #007bff; color: white; border-radius: 5px; border: 3px solid gray">
-        Find Events Easily
-    </div>
-    <div style="padding: 10px; background-color: #007bff; color: white; border-radius: 5px; border: 3px solid gray">
-        Manage & collaborate on events
-    </div>
-    <div style="padding: 10px; background-color: #007bff; color: white; border-radius: 5px; border: 3px solid gray">
-        Connect to zoom
-    </div>
-</div>
-<button style="margin-top: 20px; padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
-    <a href="" style="color: white; text-decoration: none;">Get Started</a>
-</button>
+                <!-- Hero Image -->
+                <tr>
+                    <td style="padding: 0;">
+                        <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&h=250&fit=crop" alt="Welcome to EventHub" style="width: 100%; height: auto; display: block;" />
+                    </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                    <td style="padding: 30px 40px;">
+                        <h2 style="margin: 0 0 10px 0; font-size: 20px; color: #333; font-weight: normal;">
+                            Hi <span th:text="${recipientName}" style="color: #333;">User</span>,
+                        </h2>
+                        <p style="margin: 10px 0 20px 0; font-size: 16px; line-height: 1.6; color: #333;">
+                            Welcome to <strong>EventHub</strong> – We're thrilled to have you on board!
+                        </p>
+                        <p style="margin: 0 0 30px 0; font-size: 14px; line-height: 1.6; color: #666;">
+                            This is your space to Plan, Host, Engage & Grow your audience. Discover events and bring your community together with powerful tools for hosting productive online and in-person events.
+                        </p>
+
+                        <!-- Feature Boxes -->
+                        <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                            <tr>
+                                <td style="padding: 15px; background-color: #f9f9f9; border: 2px solid #e0e0e0; border-radius: 8px; text-align: center; width: 33%;">
+                                    <span style="font-size: 14px; color: #666; font-weight: 500;">Find Events Easily</span>
+                                </td>
+                                <td style="width: 10px;"></td>
+                                <td style="padding: 15px; background-color: #f9f9f9; border: 2px solid #e0e0e0; border-radius: 8px; text-align: center; width: 33%;">
+                                    <span style="font-size: 14px; color: #666; font-weight: 500;">Manage & Collaborate on Events</span>
+                                </td>
+                                <td style="width: 10px;"></td>
+                                <td style="padding: 15px; background-color: #f9f9f9; border: 2px solid #e0e0e0; border-radius: 8px; text-align: center; width: 33%;">
+                                    <span style="font-size: 14px; color: #666; font-weight: 500;">Connect to Zoom</span>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- CTA Button -->
+                        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td align="center">
+                                    <a  style="display: inline-block; padding: 14px 40px; background-color: #d84315; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 6px; margin: 10px 0;">
+                                        Create Your First Event
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td style="padding: 20px 40px; background-color: #f9f9f9; text-align: center; border-top: 1px solid #e0e0e0;">
+                        <p style="margin: 0; font-size: 12px; color: #999; line-height: 1.5;">
+                            © 2025 EventHub. All rights reserved.<br/>
+                            You're receiving this email because you signed up for EventHub.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
 </body>
 </html>
