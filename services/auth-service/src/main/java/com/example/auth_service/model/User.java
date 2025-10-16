@@ -5,13 +5,9 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import lombok.*;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
+
 
 @Entity
 @Table(name = "users",indexes = {
@@ -51,7 +47,15 @@ public class User {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private UserEventStats userEventStats;
+
+    @OneToOne(mappedBy = "user")
+    private Profile profile;
+
     @PrePersist
+    @Transactional
     protected void onCreate() {
         createdAt = Instant.now();
         updatedAt = Instant.now();
