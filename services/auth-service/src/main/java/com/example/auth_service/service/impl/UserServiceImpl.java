@@ -87,7 +87,7 @@ public class UserServiceImpl implements UserService {
     public Iterable<UserManagementResponse> userSearch(String keyword, int page) {
         page = Math.max(page, 0);
         Pageable pageable = PageRequest.of(page, 10);
-        Page<User> searchResults = userRepository.findAllByFullNameContainingIgnoreCase(keyword, pageable);
+        Page<User> searchResults = userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword, pageable);
 
         return searchResults.map(UserMapper::toUserManagementResponse);
     }

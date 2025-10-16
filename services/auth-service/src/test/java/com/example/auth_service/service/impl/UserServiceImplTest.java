@@ -211,7 +211,7 @@ class UserServiceImplTest {
         List<User> users = List.of(testUser);
         Page<User> searchPage = new PageImpl<>(users, PageRequest.of(0, 10), 1);
 
-        when(userRepository.findAllByFullNameContainingIgnoreCase("John", PageRequest.of(0, 10)))
+        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(0, 10)))
                 .thenReturn(searchPage);
 
         // Act
@@ -222,7 +222,7 @@ class UserServiceImplTest {
         List<UserManagementResponse> resultList = new ArrayList<>();
         result.forEach(resultList::add);
         assertEquals(1, resultList.size());
-        verify(userRepository).findAllByFullNameContainingIgnoreCase("John", PageRequest.of(0, 10));
+        verify(userRepository).findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(0, 10));
     }
 
     @Test
@@ -230,7 +230,7 @@ class UserServiceImplTest {
         // Arrange
         Page<User> emptyPage = new PageImpl<>(new ArrayList<>(), PageRequest.of(0, 10), 0);
 
-        when(userRepository.findAllByFullNameContainingIgnoreCase("NonExistent", PageRequest.of(0, 10)))
+        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("NonExistent","NonExistent", PageRequest.of(0, 10)))
                 .thenReturn(emptyPage);
 
         // Act
@@ -249,7 +249,7 @@ class UserServiceImplTest {
         List<User> users = List.of(testUser);
         Page<User> searchPage = new PageImpl<>(users, PageRequest.of(0, 10), 1);
 
-        when(userRepository.findAllByFullNameContainingIgnoreCase("", PageRequest.of(0, 10)))
+        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("","", PageRequest.of(0, 10)))
                 .thenReturn(searchPage);
 
         // Act
@@ -257,7 +257,7 @@ class UserServiceImplTest {
 
         // Assert
         assertNotNull(result);
-        verify(userRepository).findAllByFullNameContainingIgnoreCase("", PageRequest.of(0, 10));
+        verify(userRepository).findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("","", PageRequest.of(0, 10));
     }
 
     @Test
@@ -265,14 +265,14 @@ class UserServiceImplTest {
         // Arrange
         Page<User> searchPage = new PageImpl<>(List.of(testUser), PageRequest.of(0, 10), 1);
 
-        when(userRepository.findAllByFullNameContainingIgnoreCase("John", PageRequest.of(0, 10)))
+        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(0, 10)))
                 .thenReturn(searchPage);
 
         // Act
         userService.userSearch("John", -5);
 
         // Assert
-        verify(userRepository).findAllByFullNameContainingIgnoreCase("John", PageRequest.of(0, 10));
+        verify(userRepository).findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(0, 10));
     }
 
     @Test
@@ -280,14 +280,14 @@ class UserServiceImplTest {
         // Arrange
         Page<User> searchPage = new PageImpl<>(List.of(testUser), PageRequest.of(2, 10), 1);
 
-        when(userRepository.findAllByFullNameContainingIgnoreCase("John", PageRequest.of(2, 10)))
+        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(2, 10)))
                 .thenReturn(searchPage);
 
         // Act
         userService.userSearch("John", 2);
 
         // Assert
-        verify(userRepository).findAllByFullNameContainingIgnoreCase("John", PageRequest.of(2, 10));
+        verify(userRepository).findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(2, 10));
     }
 
     // ==================== getUserById Tests ====================

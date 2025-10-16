@@ -19,5 +19,5 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     long countAllByIsActive(boolean isActive);
 
-    Page<User> findAllByFullNameContainingIgnoreCase(String keyword, Pageable pageable);
+    Page<User> findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String nameKeyword,String emailKeyword, Pageable pageable);
 }
