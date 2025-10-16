@@ -7,12 +7,14 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-@ControllerAdvice
+
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateEmailException.class)
@@ -29,6 +31,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CustomApiResponse<?>> handleBadCredentialsException(BadCredentialsException ex){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
     }
+
+    @ExceptionHandler(InactiveAccountException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleInactiveAccountException(InactiveAccountException ex){
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<CustomApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {

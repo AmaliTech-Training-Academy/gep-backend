@@ -2,12 +2,21 @@ package com.example.auth_service.model;
 
 import com.example.auth_service.enums.UserRole;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users",indexes = {
+        @Index(name = "idx_user_email", columnList = "email")
+})
 @Getter
 @Setter
 @Builder
@@ -23,23 +32,18 @@ public class User {
     private String fullName;
 
     @Column(nullable = false, unique = true)
+    @Email(message = "Invalid email format")
     private String email;
 
     @Column(nullable = false)
+    @Size(min = 8, message = "Password must be at least 8 characters long")
     private String password;
 
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
     @Column(name = "is_active")
-    boolean isActive;
-
-    private String profileImageUrl;
-
-    @Column(name = "phone_number")
-    private String phoneNumber;
-
-    private String address;
+    private boolean isActive;
 
     @Column(name = "created_at", nullable =false, updatable = false)
     private Instant createdAt;
@@ -57,4 +61,6 @@ public class User {
     protected void onUpdate() {
         updatedAt = Instant.now();
     }
+
+
 }

@@ -29,9 +29,9 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateAccessToken(String email){
+    private String generateToken(String email, long expiration){
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + jwtAccessExpirationMs);
+        Date expiry = new Date(now.getTime() + expiration);
         return Jwts.builder()
                 .subject(email)
                 .issuedAt(now)
@@ -40,15 +40,12 @@ public class JwtUtil {
                 .compact();
     }
 
+    public String generateAccessToken(String email){
+        return generateToken(email, jwtAccessExpirationMs);
+    }
+
     public String generateRefreshToken(String email){
-        Date now = new Date();
-        Date expiry = new Date(now.getTime() + jwtRefreshExpirationMs);
-        return Jwts.builder()
-                .subject(email)
-                .expiration(expiry)
-                .issuedAt(now)
-                .signWith(getKey())
-                .compact();
+        return generateToken(email, jwtRefreshExpirationMs);
     }
 
     public Claims extractAllClaims(String token) {
@@ -63,7 +60,7 @@ public class JwtUtil {
         return extractAllClaims(token).getSubject();
     }
 
-    protected boolean validateToken(String token, UserDetails userDetails){
+    public boolean validateToken(String token, UserDetails userDetails){
         String username = extractUsername(token);
         return username.equals(userDetails.getUsername()) && !extractAllClaims(token).getExpiration().before(new Date());
     }
