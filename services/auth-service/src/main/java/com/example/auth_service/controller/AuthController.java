@@ -4,6 +4,7 @@ import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.CustomApiResponse;
+import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +26,9 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<CustomApiResponse<?>> register(@Valid @RequestBody UserRegistrationRequest registrationRequest){
-        authService.registerNewUser(registrationRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                CustomApiResponse.success("User registered successfully")
-        );
+    public ResponseEntity<UserCreationResponse> register(@Valid @RequestBody UserRegistrationRequest registrationRequest){
+        UserCreationResponse creationResponse = authService.registerNewUser(registrationRequest);
+        return ResponseEntity.ok(creationResponse);
     }
 
     @PostMapping("/login")
