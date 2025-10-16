@@ -5,8 +5,13 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(name = "users",indexes = {
@@ -40,13 +45,6 @@ public class User {
     @Column(name = "is_active")
     private boolean isActive;
 
-    private String profileImageUrl;
-
-    @Column(name = "phone_number")
-    private String phoneNumber;
-
-    private String address;
-
     @Column(name = "created_at", nullable =false, updatable = false)
     private Instant createdAt;
 
@@ -63,4 +61,6 @@ public class User {
     protected void onUpdate() {
         updatedAt = Instant.now();
     }
+
+
 }

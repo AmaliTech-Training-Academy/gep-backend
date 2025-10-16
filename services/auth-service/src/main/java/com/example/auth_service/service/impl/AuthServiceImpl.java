@@ -3,6 +3,7 @@ package com.example.auth_service.service.impl;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
+import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.exception.DuplicateEmailException;
 import com.example.auth_service.exception.InactiveAccountException;
@@ -31,8 +32,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
 
     @Transactional
-    public void registerNewUser(UserRegistrationRequest registrationRequest) {
-            if(!registrationRequest.passwordConfirmation().equals(registrationRequest.password())){
+    public UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest) {
+            if(!registrationRequest.confirmPassword().equals(registrationRequest.password())){
                 throw new PasswordMismatchException("Passwords do not match");
             }
 
@@ -48,7 +49,8 @@ public class AuthServiceImpl implements AuthService {
                     .isActive(true)
                     .build();
 
-            userRepository.save(newUser);
+            User savedUser = userRepository.save(newUser);
+            return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
     }
 
     public AuthResponse loginUser(UserLoginRequest loginRequest){
@@ -57,12 +59,12 @@ public class AuthServiceImpl implements AuthService {
                     new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.password())
             );
 
-            AuthUser user = (AuthUser) authentication.getPrincipal();
-            if(!user.isActive()){
+            AuthUser authUser = (AuthUser) authentication.getPrincipal();
+            if(!authUser.getUser().isActive()){
                 throw new InactiveAccountException("User account is inactive");
             }
-            String accessToken = jwtUtil.generateAccessToken(user.getUsername());
-            String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
+            String accessToken = jwtUtil.generateAccessToken(authUser.getUsername());
+            String refreshToken = jwtUtil.generateRefreshToken(authUser.getUsername());
 
             return new AuthResponse(
                     accessToken,
