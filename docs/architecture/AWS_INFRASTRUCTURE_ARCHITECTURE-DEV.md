@@ -45,7 +45,8 @@ This document outlines the AWS infrastructure architecture for deploying the Eve
 - RDS PostgreSQL Single-AZ with smallest instances (no read replicas)
 - DocumentDB single instance for audit logs
 - ElastiCache Redis single node
-- Application Load Balancer (minimal configuration)
+- Application Load Balancer with path-based routing and health checks
+- ECS Service Discovery via AWS Cloud Map (no separate Discovery service)
 - CloudWatch for basic monitoring (X-Ray disabled)
 
 ---
@@ -54,16 +55,14 @@ This document outlines the AWS infrastructure architecture for deploying the Eve
 
 ### 2.1 High-Level Architecture
 
-The Event Planner backend consists of 7 microservices deployed in a single Availability Zone:
+The Event Planner backend consists of 5 microservices deployed in a single Availability Zone:
 
 **Microservices:**
-1. API Gateway Service (Port 8080) - Entry point - 1 task
-2. Auth Service (Port 8081) - Authentication & Authorization - 1 task
-3. Discovery Service (Port 8761) - Service Registry - 1 task
-4. Event Service (Port 8082) - Event CRUD - 1 task
-5. Booking Service (Port 8083) - Booking Management - 1 task
-6. Payment Service (Port 8084) - Payment Processing - 1 task
-7. Notification Service (Port 8085) - Email/SMS/Push - 1 task
+1. Auth Service (Port 8081) - Authentication & Authorization - 1 task
+2. Event Service (Port 8082) - Event CRUD - 1 task
+3. Booking Service (Port 8083) - Booking Management - 1 task
+4. Payment Service (Port 8084) - Payment Processing - 1 task
+5. Notification Service (Port 8085) - Email/SMS/Push - 1 task
 
 **Data Stores:**
 - 4 PostgreSQL RDS instances (Auth, Event, Booking, Payment) - Single-AZ, no replicas
@@ -200,25 +199,31 @@ Publisher Service → SNS Topic → SQS Queues (Fan-out) → Subscriber Services
 **Configuration:**
 - Internet-facing ALB in public subnet (Single-AZ)
 - Target Groups per microservice
+- Path-based routing to backend services
 - Health check endpoints: `/actuator/health`
+- Initiates auto-scaling events based on target health
 - Sticky sessions disabled
 - Connection draining: 30 seconds
 
 ### 3.7 Service Discovery: AWS Cloud Map
 
-**Service:** AWS Cloud Map
+**Service:** AWS Cloud Map (ECS Service Discovery)
 
 **Justification:**
-- **Native ECS Integration**: Automatic service registration
-- **DNS-Based Discovery**: Services discover each other via DNS
+- **Native ECS Integration**: Automatic service registration and deregistration
+- **DNS-Based Discovery**: Services discover each other via DNS without a separate Discovery microservice
 - **Health Checks**: Integrated with ECS task health
-- **Cost-Effective**: Replaces self-hosted Eureka/Consul
-- **Managed**: Zero operational overhead
+- **Cost-Effective**: Replaces both self-hosted Eureka/Consul and eliminates need for Discovery microservice
+- **Managed**: Zero operational overhead, fully managed by AWS
+- **Seamless**: Works transparently with ECS services
 
 **Configuration:**
 - Private DNS namespace: `eventplanner.local`
 - Service naming: `<service-name>.eventplanner.local`
+- Automatic registration: Services auto-register on startup
+- Automatic deregistration: Services auto-deregister on shutdown
 - Health check: ECS task health status
+- TTL: 60 seconds for DNS records
 
 ---
 
@@ -310,9 +315,7 @@ Publisher Service → SNS Topic → SQS Queues (Fan-out) → Subscriber Services
 
 | Service | vCPU | Memory | Min Tasks | Max Tasks | Target CPU % |
 |---------|------|--------|-----------|-----------|--------------|
-| API Gateway | 0.25 | 512 MB | 1 | 2 | 80% |
 | Auth Service | 0.25 | 512 MB | 1 | 2 | 80% |
-| Discovery Service | 0.25 | 512 MB | 1 | 1 | 80% |
 | Event Service | 0.25 | 512 MB | 1 | 2 | 80% |
 | Booking Service | 0.25 | 512 MB | 1 | 2 | 80% |
 | Payment Service | 0.25 | 512 MB | 1 | 2 | 80% |
@@ -549,15 +552,21 @@ public void updateEvent(String eventId, Event event) { }
 
 | Target Group | Path Pattern | Health Check | Deregistration Delay |
 |--------------|--------------|--------------|---------------------|
-| api-gateway-tg | `/*` | `/actuator/health` | 30s |
-| auth-service-tg | `/auth/*` | `/actuator/health` | 30s |
-| event-service-tg | `/events/*` | `/actuator/health` | 30s |
-| booking-service-tg | `/bookings/*` | `/actuator/health` | 30s |
-| payment-service-tg | `/payments/*` | `/actuator/health` | 30s |
+| auth-service-tg | `/api/auth/*` | `/actuator/health` | 30s |
+| event-service-tg | `/api/events/*` | `/actuator/health` | 30s |
+| booking-service-tg | `/api/bookings/*` | `/actuator/health` | 30s |
+| payment-service-tg | `/api/payments/*` | `/actuator/health` | 30s |
+| notification-service-tg | `/api/notifications/*` | `/actuator/health` | 30s |
 
 **Routing Strategy:**
-- All traffic → API Gateway Target Group
-- API Gateway routes internally to services via Cloud Map DNS
+- Path-based routing: ALB routes directly to backend services based on URL path
+- `/api/auth/*` → Auth Service Target Group
+- `/api/events/*` → Event Service Target Group
+- `/api/bookings/*` → Booking Service Target Group
+- `/api/payments/*` → Payment Service Target Group
+- `/api/notifications/*` → Notification Service Target Group
+- Health checks trigger auto-scaling events when targets become unhealthy
+- Services communicate internally via Cloud Map DNS for service-to-service calls
 
 **SSL/TLS:**
 - Certificate: AWS Certificate Manager (ACM)
@@ -644,7 +653,7 @@ public void updateEvent(String eventId, Event event) { }
 
 **Authentication:**
 - JWT tokens issued by Auth Service
-- Token validation at API Gateway
+- Token validation at ALB or individual services
 - Short-lived access tokens (15 minutes)
 - Refresh tokens (7 days)
 
@@ -653,7 +662,7 @@ public void updateEvent(String eventId, Event event) { }
 - Service-to-service authentication via IAM roles
 
 **API Rate Limiting:**
-- Implemented at API Gateway level
+- Implemented at ALB level or individual services
 - Per-user rate limits
 - DDoS protection via AWS Shield Standard (free)
 
@@ -706,15 +715,14 @@ public void updateEvent(String eventId, Event event) { }
 ### 11.2 CloudWatch Logs
 
 **Log Groups:**
-- `/ecs/eventplanner/api-gateway`
 - `/ecs/eventplanner/auth-service`
 - `/ecs/eventplanner/event-service`
 - `/ecs/eventplanner/booking-service`
 - `/ecs/eventplanner/payment-service`
 - `/ecs/eventplanner/notification-service`
-- `/ecs/eventplanner/discovery-service`
 - `/aws/rds/instance/<db-name>/postgresql`
 - `/aws/docdb/<cluster-name>`
+- `/aws/elasticloadbalancing/app/eventplanner-alb`
 
 **Log Retention:**
 - Application logs: 7 days
@@ -963,7 +971,7 @@ public void updateEvent(String eventId, Event event) { }
 
 **Minimal Resources:**
 - 0.25 vCPU and 512 MB per task
-- 1 task per service (7 services total)
+- 1 task per service (5 services total)
 - No Fargate Spot (simplicity)
 
 **Right-Sizing:**
@@ -1040,8 +1048,8 @@ public void updateEvent(String eventId, Event event) { }
 ### 14.6 Estimated Monthly Costs (Development)
 
 **Compute (ECS Fargate):**
-- 7 services × 1 task × 0.25 vCPU × 512 MB × 730 hours
-- ~$25/month
+- 5 services × 1 task × 0.25 vCPU × 512 MB × 730 hours
+- ~$18/month
 
 **Database (RDS):**
 - 2 × db.t4g.micro (Auth, Payment): ~$24/month
@@ -1073,12 +1081,12 @@ public void updateEvent(String eventId, Event event) { }
 - CloudWatch (basic)
 - ~$10/month
 
-**Total Estimated Cost: ~$255/month**
+**Total Estimated Cost: ~$248/month**
 
 **Additional Savings:**
 - Stop services when not in use: Save ~50%
 - Use on weekdays only (160 hrs/month): Save ~78%
-- **Weekday-only Total: ~$80-100/month**
+- **Weekday-only Total: ~$75-95/month**
 
 ---
 
@@ -1101,7 +1109,7 @@ graph TB
             end
 
             subgraph "Private Subnet - Application Tier"
-                ECS[ECS Fargate Tasks<br/>7 services x 1 task<br/>0.25 vCPU, 512 MB]
+                ECS[ECS Fargate Tasks<br/>5 services x 1 task<br/>0.25 vCPU, 512 MB]
             end
 
             subgraph "Private Subnet - Data Tier"
@@ -1161,13 +1169,12 @@ graph TB
         end
         
         subgraph "Private App Subnet"
-            Gateway[API Gateway<br/>1 task]
             Auth[Auth Service<br/>1 task]
-            Discovery[Discovery<br/>1 task]
             Event[Event Service<br/>1 task]
             Booking[Booking Service<br/>1 task]
             Payment[Payment Service<br/>1 task]
             Notif[Notification<br/>1 task]
+            CloudMapSvc[AWS Cloud Map<br/>Service Discovery]
         end
         
         subgraph "Private Data Subnet"
@@ -1181,13 +1188,18 @@ graph TB
     end
 
     Internet[Internet] --> ALB
-    ALB --> Gateway
     
-    Gateway --> Auth
-    Gateway --> Event
-    Gateway --> Booking
-    Gateway --> Payment
-    Gateway --> Notif
+    ALB -->|/api/auth/*| Auth
+    ALB -->|/api/events/*| Event
+    ALB -->|/api/bookings/*| Booking
+    ALB -->|/api/payments/*| Payment
+    ALB -->|/api/notifications/*| Notif
+    
+    Auth -.->|Service Discovery| CloudMapSvc
+    Event -.->|Service Discovery| CloudMapSvc
+    Booking -.->|Service Discovery| CloudMapSvc
+    Payment -.->|Service Discovery| CloudMapSvc
+    Notif -.->|Service Discovery| CloudMapSvc
     
     Auth --> AuthDB
     Event --> EventDB
@@ -1641,10 +1653,10 @@ This infrastructure architecture provides a cost-optimized foundation for the Ev
 - Least privilege IAM policies
 - Private subnets for all resources
 
-**Estimated Monthly Cost: ~$255** (24/7 operation)
-**Weekday-only Cost: ~$80-100** (160 hours/month)
+**Estimated Monthly Cost: ~$248** (24/7 operation)
+**Weekday-only Cost: ~$75-95** (160 hours/month)
 
-This architecture is optimized for development and testing, providing significant cost savings (~90% reduction) compared to production setup while maintaining essential functionality.
+This architecture is optimized for development and testing, providing significant cost savings (~92% reduction) compared to production setup while maintaining essential functionality. The removal of API Gateway and Discovery microservices further reduces complexity and cost while leveraging AWS-managed services (ALB for routing, Cloud Map for service discovery).
 
 ---
 
@@ -1652,9 +1664,7 @@ This architecture is optimized for development and testing, providing significan
 
 | Service | Internal Endpoint | Port |
 |---------|------------------|------|
-| API Gateway | api-gateway.eventplanner.local | 8080 |
 | Auth Service | auth-service.eventplanner.local | 8081 |
-| Discovery Service | discovery-service.eventplanner.local | 8761 |
 | Event Service | event-service.eventplanner.local | 8082 |
 | Booking Service | booking-service.eventplanner.local | 8083 |
 | Payment Service | payment-service.eventplanner.local | 8084 |
