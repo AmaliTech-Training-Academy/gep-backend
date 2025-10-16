@@ -45,7 +45,8 @@ This document outlines the AWS infrastructure architecture for deploying the Eve
 - RDS PostgreSQL with read replicas for read-intensive workloads
 - DocumentDB for audit logs
 - ElastiCache Redis for caching layer
-- Application Load Balancer for traffic distribution
+- Application Load Balancer with path-based routing and health checks
+- ECS Service Discovery via AWS Cloud Map (no separate Discovery service)
 - CloudWatch + X-Ray for observability
 
 ---
@@ -54,16 +55,14 @@ This document outlines the AWS infrastructure architecture for deploying the Eve
 
 ### 2.1 High-Level Architecture
 
-The Event Planner backend consists of 7 microservices deployed across 2 Availability Zones:
+The Event Planner backend consists of 5 microservices deployed across 2 Availability Zones:
 
 **Microservices:**
-1. API Gateway Service (Port 8080) - Entry point
-2. Auth Service (Port 8081) - Authentication & Authorization
-3. Discovery Service (Port 8761) - Service Registry
-4. Event Service (Port 8082) - Event CRUD
-5. Booking Service (Port 8083) - Booking Management
-6. Payment Service (Port 8084) - Payment Processing
-7. Notification Service (Port 8085) - Email/SMS/Push
+1. Auth Service (Port 8081) - Authentication & Authorization
+2. Event Service (Port 8082) - Event CRUD
+3. Booking Service (Port 8083) - Booking Management
+4. Payment Service (Port 8084) - Payment Processing
+5. Notification Service (Port 8085) - Email/SMS/Push
 
 **Data Stores:**
 - 4 PostgreSQL RDS instances (Auth, Event, Booking, Payment)
@@ -203,25 +202,31 @@ Publisher Service → SNS Topic → SQS Queues (Fan-out) → Subscriber Services
 **Configuration:**
 - Internet-facing ALB in public subnets
 - Target Groups per microservice
+- Path-based routing to backend services
 - Health check endpoints: `/actuator/health`
+- Initiates auto-scaling events based on target health
 - Sticky sessions for stateful services (if needed)
 - Connection draining: 300 seconds
 
 ### 3.7 Service Discovery: AWS Cloud Map
 
-**Service:** AWS Cloud Map
+**Service:** AWS Cloud Map (ECS Service Discovery)
 
 **Justification:**
-- **Native ECS Integration**: Automatic service registration
-- **DNS-Based Discovery**: Services discover each other via DNS
+- **Native ECS Integration**: Automatic service registration and deregistration
+- **DNS-Based Discovery**: Services discover each other via DNS without a separate Discovery microservice
 - **Health Checks**: Integrated with ECS task health
-- **Cost-Effective**: Replaces self-hosted Eureka/Consul
-- **Managed**: Zero operational overhead
+- **Cost-Effective**: Replaces both self-hosted Eureka/Consul and eliminates need for Discovery microservice
+- **Managed**: Zero operational overhead, fully managed by AWS
+- **Seamless**: Works transparently with ECS services
 
 **Configuration:**
 - Private DNS namespace: `eventplanner.local`
 - Service naming: `<service-name>.eventplanner.local`
+- Automatic registration: Services auto-register on startup
+- Automatic deregistration: Services auto-deregister on shutdown
 - Health check: ECS task health status
+- TTL: 60 seconds for DNS records
 
 ---
 
@@ -309,18 +314,15 @@ Publisher Service → SNS Topic → SQS Queues (Fan-out) → Subscriber Services
 - FARGATE_SPOT (for non-critical services)
 
 **Capacity Provider Strategy:**
-- Discovery Service: 100% FARGATE_SPOT (can tolerate interruptions)
-- Other Services: 70% FARGATE, 30% FARGATE_SPOT (cost optimization)
+- All Services: 70% FARGATE, 30% FARGATE_SPOT (cost optimization)
 
 ### 5.2 ECS Service Configuration
 
 **Per Microservice:**
 
 | Service | vCPU | Memory | Min Tasks | Max Tasks | Target CPU % |
-|---------|------|--------|-----------|-----------|--------------|
-| API Gateway | 1 | 2 GB | 4 | 20 | 70% |
+|---------|------|-----------|-----------|-----------|--------------|
 | Auth Service | 0.5 | 1 GB | 4 | 16 | 70% |
-| Discovery Service | 0.5 | 1 GB | 2 | 4 | 70% |
 | Event Service | 1 | 2 GB | 4 | 20 | 70% |
 | Booking Service | 1 | 2 GB | 4 | 20 | 70% |
 | Payment Service | 1 | 2 GB | 4 | 16 | 70% |
@@ -575,15 +577,21 @@ public void updateEvent(String eventId, Event event) { }
 
 | Target Group | Path Pattern | Health Check | Deregistration Delay |
 |--------------|--------------|--------------|---------------------|
-| api-gateway-tg | `/*` | `/actuator/health` | 30s |
-| auth-service-tg | `/auth/*` | `/actuator/health` | 30s |
-| event-service-tg | `/events/*` | `/actuator/health` | 30s |
-| booking-service-tg | `/bookings/*` | `/actuator/health` | 30s |
-| payment-service-tg | `/payments/*` | `/actuator/health` | 30s |
+| auth-service-tg | `/api/auth/*` | `/actuator/health` | 30s |
+| event-service-tg | `/api/events/*` | `/actuator/health` | 30s |
+| booking-service-tg | `/api/bookings/*` | `/actuator/health` | 30s |
+| payment-service-tg | `/api/payments/*` | `/actuator/health` | 30s |
+| notification-service-tg | `/api/notifications/*` | `/actuator/health` | 30s |
 
 **Routing Strategy:**
-- All traffic → API Gateway Target Group
-- API Gateway routes internally to services via Cloud Map DNS
+- Path-based routing: ALB routes directly to backend services based on URL path
+- `/api/auth/*` → Auth Service Target Group
+- `/api/events/*` → Event Service Target Group
+- `/api/bookings/*` → Booking Service Target Group
+- `/api/payments/*` → Payment Service Target Group
+- `/api/notifications/*` → Notification Service Target Group
+- Health checks trigger auto-scaling events when targets become unhealthy
+- Services communicate internally via Cloud Map DNS for service-to-service calls
 
 **SSL/TLS:**
 - Certificate: AWS Certificate Manager (ACM)
@@ -671,7 +679,7 @@ public void updateEvent(String eventId, Event event) { }
 
 **Authentication:**
 - JWT tokens issued by Auth Service
-- Token validation at API Gateway
+- Token validation at ALB or individual services
 - Short-lived access tokens (15 minutes)
 - Refresh tokens (7 days)
 
@@ -680,7 +688,7 @@ public void updateEvent(String eventId, Event event) { }
 - Service-to-service authentication via IAM roles
 
 **API Rate Limiting:**
-- Implemented at API Gateway level
+- Implemented at ALB level or individual services
 - Per-user rate limits
 - DDoS protection via AWS Shield Standard (free)
 
@@ -733,15 +741,14 @@ public void updateEvent(String eventId, Event event) { }
 ### 11.2 CloudWatch Logs
 
 **Log Groups:**
-- `/ecs/eventplanner/api-gateway`
 - `/ecs/eventplanner/auth-service`
 - `/ecs/eventplanner/event-service`
 - `/ecs/eventplanner/booking-service`
 - `/ecs/eventplanner/payment-service`
 - `/ecs/eventplanner/notification-service`
-- `/ecs/eventplanner/discovery-service`
 - `/aws/rds/instance/<db-name>/postgresql`
 - `/aws/docdb/<cluster-name>`
+- `/aws/elasticloadbalancing/app/eventplanner-alb`
 
 **Log Retention:**
 - Application logs: 30 days
@@ -966,7 +973,7 @@ public void updateEvent(String eventId, Event event) { }
 - Scale-in cooldown: 300 seconds
 - Metric: ECS Service Average Memory
 
-**Custom Metric Scaling (API Gateway):**
+**Custom Metric Scaling (Request-Based):**
 - Target: 1000 requests per task per minute
 - Scale-out cooldown: 60 seconds
 - Scale-in cooldown: 300 seconds
@@ -1016,8 +1023,7 @@ public void updateEvent(String eventId, Event event) { }
 ### 14.1 Compute Cost Optimization
 
 **Fargate Spot:**
-- Use for Discovery Service (100% Spot)
-- Use for other services (30% Spot, 70% regular)
+- Use for all services (30% Spot, 70% regular)
 - Savings: Up to 70% on Spot instances
 - Graceful handling of interruptions
 
@@ -1104,8 +1110,8 @@ public void updateEvent(String eventId, Event event) { }
 ### 14.6 Estimated Monthly Costs
 
 **Compute (ECS Fargate):**
-- 7 services × average 6 tasks × 1 vCPU × 2 GB × 730 hours
-- With 30% Spot: ~$800/month
+- 5 services × average 6 tasks × 1 vCPU × 2 GB × 730 hours
+- With 30% Spot: ~$685/month
 
 **Database (RDS):**
 - 4 databases (t4g.medium/large) + 8 read replicas
@@ -1135,13 +1141,13 @@ public void updateEvent(String eventId, Event event) { }
 - CloudWatch + X-Ray
 - ~$100/month
 
-**Total Estimated Cost: ~$3,000-3,500/month**
+**Total Estimated Cost: ~$2,885-3,385/month**
 
 **Cost Optimization Opportunities:**
-- Fargate Spot: Save $200/month
+- Fargate Spot: Save $170/month
 - Reserved Instances: Save $400/month
 - VPC Endpoints: Save $50/month
-- **Optimized Total: ~$2,500-3,000/month**
+- **Optimized Total: ~$2,385-2,885/month**
 
 ---
 
@@ -1166,11 +1172,11 @@ graph TB
 
             subgraph "Private Subnets - Application Tier"
                 subgraph "AZ-A (10.0.10.0/24)"
-                    ECS1[ECS Fargate Tasks<br/>API Gateway, Auth, Event<br/>Booking, Payment, Notification]
+                    ECS1[ECS Fargate Tasks<br/>Auth, Event, Booking<br/>Payment, Notification]
                 end
                 
                 subgraph "AZ-B (10.0.11.0/24)"
-                    ECS2[ECS Fargate Tasks<br/>API Gateway, Auth, Event<br/>Booking, Payment, Notification]
+                    ECS2[ECS Fargate Tasks<br/>Auth, Event, Booking<br/>Payment, Notification]
                 end
             end
 
@@ -1253,12 +1259,12 @@ graph TB
         end
         
         subgraph "Private App Subnet A"
-            Gateway1[API Gateway<br/>2 tasks]
             Auth1[Auth Service<br/>2 tasks]
             Event1[Event Service<br/>2 tasks]
             Booking1[Booking Service<br/>2 tasks]
             Payment1[Payment Service<br/>2 tasks]
             Notif1[Notification<br/>1 task]
+            CloudMapSvc1[AWS Cloud Map<br/>Service Discovery]
         end
         
         subgraph "Private Data Subnet A"
@@ -1276,12 +1282,12 @@ graph TB
         end
         
         subgraph "Private App Subnet B"
-            Gateway2[API Gateway<br/>2 tasks]
             Auth2[Auth Service<br/>2 tasks]
             Event2[Event Service<br/>2 tasks]
             Booking2[Booking Service<br/>2 tasks]
             Payment2[Payment Service<br/>2 tasks]
             Notif2[Notification<br/>1 task]
+            CloudMapSvc2[AWS Cloud Map<br/>Service Discovery]
         end
         
         subgraph "Private Data Subnet B"
@@ -1295,20 +1301,35 @@ graph TB
     Internet[Internet] --> ALBA
     Internet --> ALBB
     
-    ALBA --> Gateway1
-    ALBA --> Gateway2
-    ALBB --> Gateway1
-    ALBB --> Gateway2
+    ALBA -->|/api/auth/*| Auth1
+    ALBA -->|/api/auth/*| Auth2
+    ALBA -->|/api/events/*| Event1
+    ALBA -->|/api/events/*| Event2
+    ALBA -->|/api/bookings/*| Booking1
+    ALBA -->|/api/bookings/*| Booking2
+    ALBA -->|/api/payments/*| Payment1
+    ALBA -->|/api/payments/*| Payment2
     
-    Gateway1 --> Auth1
-    Gateway1 --> Event1
-    Gateway1 --> Booking1
-    Gateway1 --> Payment1
+    ALBB -->|/api/auth/*| Auth1
+    ALBB -->|/api/auth/*| Auth2
+    ALBB -->|/api/events/*| Event1
+    ALBB -->|/api/events/*| Event2
+    ALBB -->|/api/bookings/*| Booking1
+    ALBB -->|/api/bookings/*| Booking2
+    ALBB -->|/api/payments/*| Payment1
+    ALBB -->|/api/payments/*| Payment2
     
-    Gateway2 --> Auth2
-    Gateway2 --> Event2
-    Gateway2 --> Booking2
-    Gateway2 --> Payment2
+    Auth1 -.->|Service Discovery| CloudMapSvc1
+    Event1 -.->|Service Discovery| CloudMapSvc1
+    Booking1 -.->|Service Discovery| CloudMapSvc1
+    Payment1 -.->|Service Discovery| CloudMapSvc1
+    Notif1 -.->|Service Discovery| CloudMapSvc1
+    
+    Auth2 -.->|Service Discovery| CloudMapSvc2
+    Event2 -.->|Service Discovery| CloudMapSvc2
+    Booking2 -.->|Service Discovery| CloudMapSvc2
+    Payment2 -.->|Service Discovery| CloudMapSvc2
+    Notif2 -.->|Service Discovery| CloudMapSvc2
     
     Auth1 --> RDSPrimary
     Event1 --> RDSRead1
