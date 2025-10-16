@@ -154,6 +154,9 @@ paths:
               otp:
                 type: string
                 example: "123456"
+              email:
+                type: string
+                example: 123@example.com
         responses:
           200:
             description: OTP verification successful.
