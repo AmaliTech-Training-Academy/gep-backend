@@ -4,7 +4,6 @@ import com.example.auth_service.dto.request.UserUpdateRequest;
 import com.example.auth_service.dto.response.UserManagementResponse;
 import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserSummaryReport;
-import com.example.auth_service.enums.SortEnum;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.mapper.UserMapper;
