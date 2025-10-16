@@ -10,6 +10,6 @@ public record UserManagementResponse(
     String role,
     boolean status,
     String profileImageUrl,
-    int eventsOrganized,
-    int eventsAttended
+    long eventsOrganized,
+    long eventsAttended
 ){}

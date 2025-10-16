@@ -229,224 +229,251 @@ paths:
   ```
 
   # ============================================
-  # USER MANAGEMENT ENDPOINTS
+  # USER MANAGEMENT ENDPOINTS ✅
   # ============================================
-  /users:
-    get:
-      tags:
-        - User Management
-      summary: Get all users (Admin only)
-      description: Retrieves paginated list of all users with filtering
-      operationId: getAllUsers
-      parameters:
-        - $ref: '#/components/parameters/PageNumber'
-        - $ref: '#/components/parameters/PageSize'
-        - $ref: '#/components/parameters/SortBy'
-        - $ref: '#/components/parameters/SortOrder'
-        - name: role
-          in: query
-          schema:
+  ```yaml
+    user-management-endpoints:
+    - name: Get User
+      description: Retrieves the user details of a specified user.
+      path: /users/{userId}
+      method: GET
+      request:
+        headers:
+          Content-Type: application/json
+          authorization: Bearer {access_token}
+      responses:
+        200:
+          data:
+            type: object
+            properties:
+              userId:
+                type: string
+              fullName:
+                type: string
+              email:
+                type: string
+              phone:
+                type: string
+              address:
+                type: string
+              profileImageUrl:
+                type: string
+              status:
+                type: boolean
+        404:
+          message: User not found.
+
+    - name: update User
+      description: Updates the user details of a specified user.
+      path: /users/{userId}
+      method: PUT
+      request:
+        headers:
+          Content-Type: application/json
+          authorization: Bearer {access_token}
+        body:
+          type: object
+          properties:
+            fullName:
+              type: string
+            email:
+              type: string
+            phone:
+              type: string
+            address:
+              type: string
+            status:
+              type: boolean
+      responses:
+        200:
+          data:
+            type: object
+            properties:
+              userId:
+                type: Long
+              fullName:
+                type: string
+              email:
+                type: string
+              phone:
+                type: string
+              address:
+                type: string
+              profileImageUrl:
+                type: string
+              status:
+        400:
+          message: Invalid request.
+        404:
+          message: User not found.
+
+    - name: deactivate User/ reactivate User
+      description: Deactivates/reactivates the user account of a specified user.
+      path: /users/{userId}/deactivate
+      method: POST
+      request:
+        headers:
+          Content-Type: application/json
+          authorization: Bearer {access_token}
+      responses:
+        200:
+
+    - name: search User - Admin Dashboard
+      description: Searches for a user by name.
+      path: /users/search
+      method: GET
+      request:
+        headers:
+          Content-Type: application/json
+          authorization: Bearer {access_token}
+        parameters:
+          - name: keyword
+            in: query
+            description: Name of the user to search for.
+            required: false
             type: string
-            enum: [ADMIN, ORGANIZER, ATTENDEE]
-        - name: status
-          in: query
-          schema:
+          - name: page
+            in: query
+            description: Page number.
+            required: false
+            type: integer
+      responses:
+        200:
+          data:
+            type: object
+            properties:
+              users:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    userId:
+                      type: Long
+                    fullName:
+                      type: string
+                    email:
+                      type: string
+                    role:
+                      type: string
+                    status:
+                      type: boolean
+                    profileImageUrl:
+                      type: string
+                    eventsOrganized:
+                      type: Long
+                    eventsAttended:
+                      type: Long
+
+    - name: user management - Admin Dashboard
+      description: Overview and list of all users.
+      path: /users/management
+      method: GET
+      request:
+        headers:
+          Content-Type: application/json
+          authorization: Bearer {access_token}
+      responses:
+        200:
+          data:
+            type: object
+            properties:
+              totalUsers:
+                type: Long
+              totalOrganizers:
+                type: Long
+              totalAttendees:
+                type: Long
+              totalDeactivatedUsers:
+                type: Long
+              users:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    totalElements:
+                      type: Long
+                    totalPages:
+                      type: Long
+                    size:
+                      type: Long
+                    number:
+                      type: Long
+                    content:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          userId:
+                            type: Long
+                          fullName:
+                            type: string
+                          email:
+                            type: string
+                          role:
+                            type: string
+                          status:
+                            type: boolean
+                          profileImageUrl:
+                            type: string
+                          eventsOrganized:
+                            type: Long
+                          eventsAttended:
+                            type: Long
+
+    - name: filter users - Admin Dashboard
+      description: Filter users by role and status.
+      path: /users/filter
+      method: GET
+      request:
+        headers:
+          Content-Type: application/json
+          authorization: Bearer {access_token}
+        parameters:
+          - name: role
+            in: query
+            description: Role of the user to filter.
+            required: false
+            default: "ATTENDEE"
             type: string
-            enum: [ACTIVE, DEACTIVATED]
-        - name: search
-          in: query
-          description: Search by name or email
-          schema:
-            type: string
+          - name: status
+            in: query
+            description: Status of the user to filter.
+            required: false
+            default: "false"
+            type: boolean
+          - name: page
+            in: query
+            description: Page number.
+            required: false
+            default: "0"
+            type: integer
       responses:
-        '200':
-          description: Users retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/UserResponse'
-                  pagination:
-                    $ref: '#/components/schemas/PaginationMetadata'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-    post:
-      tags:
-        - User Management
-      summary: Create new user (Admin only)
-      description: Creates a new user account by admin
-      operationId: createUser
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateUserRequest'
-      responses:
-        '201':
-          description: User created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          description: Email already exists
-
-  /users/{userId}:
-    get:
-      tags:
-        - User Management
-      summary: Get user by ID
-      description: Retrieves detailed user information
-      operationId: getUserById
-      parameters:
-        - $ref: '#/components/parameters/UserId'
-      responses:
-        '200':
-          description: User retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserDetailResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    put:
-      tags:
-        - User Management
-      summary: Update user details
-      description: Updates user profile information
-      operationId: updateUser
-      parameters:
-        - $ref: '#/components/parameters/UserId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateUserRequest'
-      responses:
-        '200':
-          description: User updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    delete:
-      tags:
-        - User Management
-      summary: Delete user (Admin only)
-      description: Soft deletes a user account
-      operationId: deleteUser
-      parameters:
-        - $ref: '#/components/parameters/UserId'
-      responses:
-        '204':
-          description: User deleted successfully
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /users/{userId}/deactivate:
-    patch:
-      tags:
-        - User Management
-      summary: Deactivate user account
-      description: Deactivates user preventing login
-      operationId: deactivateUser
-      parameters:
-        - $ref: '#/components/parameters/UserId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                reason:
-                  type: string
-                  description: Reason for deactivation
-      responses:
-        '200':
-          description: User deactivated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /users/{userId}/activate:
-    patch:
-      tags:
-        - User Management
-      summary: Activate user account
-      description: Reactivates a deactivated user account
-      operationId: activateUser
-      parameters:
-        - $ref: '#/components/parameters/UserId'
-      responses:
-        '200':
-          description: User activated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /users/me:
-    get:
-      tags:
-        - User Management
-      summary: Get current user profile
-      description: Retrieves authenticated user's profile
-      operationId: getCurrentUser
-      responses:
-        '200':
-          description: Profile retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserDetailResponse'
-
-    put:
-      tags:
-        - User Management
-      summary: Update current user profile
-      description: Updates authenticated user's profile
-      operationId: updateCurrentUser
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateProfileRequest'
-      responses:
-        '200':
-          description: Profile updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserDetailResponse'
-
+        200:
+          data:
+            type: object
+            properties:
+              users:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    userId:
+                      type: Long
+                    fullName:
+                      type: string
+                    email:
+                      type: string
+                    role:
+                      type: string
+                    status:
+                      type: boolean
+                    profileImageUrl:
+                      type: string
+                    eventsOrganized:
+                      type: Long
+                    eventsAttended:
+                      type: Long
+  ```
   # ============================================
   # EVENT MANAGEMENT ENDPOINTS
   # ============================================
