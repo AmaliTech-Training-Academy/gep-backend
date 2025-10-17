@@ -1,5 +1,6 @@
 package com.example.auth_service.service;
 
+import com.example.auth_service.dto.request.OtpVerificationRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
@@ -11,7 +12,9 @@ public interface AuthService {
     @Transactional
     UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest);
 
-    AuthResponse loginUser(UserLoginRequest loginRequest);
+    void loginUser(UserLoginRequest loginRequest);
+
+    AuthResponse verifyOtp(OtpVerificationRequest request);
 
     AuthResponse refreshAccessToken(String refreshToken);
 }

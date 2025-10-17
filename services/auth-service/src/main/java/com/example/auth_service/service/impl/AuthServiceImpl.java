@@ -1,5 +1,6 @@
 package com.example.auth_service.service.impl;
 
+import com.example.auth_service.dto.request.OtpVerificationRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
@@ -14,6 +15,7 @@ import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.AuthUser;
 import com.example.auth_service.security.JwtUtil;
 import com.example.auth_service.service.AuthService;
+import com.example.auth_service.service.OtpService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -33,6 +35,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final OtpService otpService;
     private final AuthenticationManager authenticationManager;
     private final KafkaTemplate<Long, UserRegisteredEvent> kafkaTemplate;
     private final JwtUtil jwtUtil;
@@ -65,7 +68,8 @@ public class AuthServiceImpl implements AuthService {
             return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
     }
 
-    public AuthResponse loginUser(UserLoginRequest loginRequest){
+    @Override
+    public void loginUser(UserLoginRequest loginRequest){
         try{
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.password())
@@ -75,17 +79,32 @@ public class AuthServiceImpl implements AuthService {
             if(!authUser.getUser().isActive()){
                 throw new InactiveAccountException("User account is inactive");
             }
-            String accessToken = jwtUtil.generateAccessToken(authUser.getUsername());
-            String refreshToken = jwtUtil.generateRefreshToken(authUser.getUsername());
-
-            return new AuthResponse(
-                    accessToken,
-                    refreshToken
-            );
-
+            otpService.generateOtp(loginRequest.email());
         }catch(BadCredentialsException e){
             throw new BadCredentialsException("Invalid credentials");
         }
+    }
+
+    @Override
+    public AuthResponse verifyOtp(OtpVerificationRequest request){
+        boolean isValid = otpService.verifyOtp(request.email(), request.otp());
+        if(!isValid){
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new BadCredentialsException("User not found"));
+
+        if(!user.isActive()){
+            throw new InactiveAccountException("User account is inactive");
+        }
+
+        String accessToken = jwtUtil.generateAccessToken(user.getEmail());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+
+        return new AuthResponse(
+                accessToken,
+                refreshToken
+        );
     }
 
     @Override
@@ -110,4 +129,6 @@ public class AuthServiceImpl implements AuthService {
                 newRefreshToken
         );
     }
+
+
 }

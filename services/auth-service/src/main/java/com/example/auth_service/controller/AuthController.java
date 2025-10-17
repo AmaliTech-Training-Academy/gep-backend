@@ -1,5 +1,6 @@
 package com.example.auth_service.controller;
 
+import com.example.auth_service.dto.request.OtpVerificationRequest;
 import com.example.auth_service.dto.request.RefreshAccessTokenRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
@@ -30,9 +31,15 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody UserLoginRequest loginRequest){
-        AuthResponse authResponse = authService.loginUser(loginRequest);
-        return ResponseEntity.ok(authResponse);
+    public ResponseEntity<CustomApiResponse<?>> login(@Valid @RequestBody UserLoginRequest loginRequest){
+        authService.loginUser(loginRequest);
+        return ResponseEntity.ok(CustomApiResponse.success("OTP sent to user's email"));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody OtpVerificationRequest request){
+        AuthResponse response = authService.verifyOtp(request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")

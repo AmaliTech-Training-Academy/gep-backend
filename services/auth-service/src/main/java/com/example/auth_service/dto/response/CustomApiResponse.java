@@ -12,4 +12,12 @@ public record CustomApiResponse<T>(
     public static <T> CustomApiResponse<T> error(String message, T data) {
         return new CustomApiResponse<>( message, data);
     }
+
+    public static <T> CustomApiResponse<T> success(String message, T data) {
+        return new CustomApiResponse<>( message, data);
+    }
+
+    public static <T> CustomApiResponse<T> success(String message) {
+        return new CustomApiResponse<>( message, null);
+    }
 }
