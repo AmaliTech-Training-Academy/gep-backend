@@ -37,7 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
     private final AuthenticationManager authenticationManager;
-    private final KafkaTemplate<Long, UserRegisteredEvent> kafkaTemplate;
+    private final KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate;
     private final JwtUtil jwtUtil;
 
     private static final String USER_REGISTRATION_TOPIC = "user-registration-topic";
@@ -63,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
             User savedUser = userRepository.save(newUser);
             UserRegisteredEvent event = new UserRegisteredEvent(savedUser.getId(), savedUser.getFullName(), savedUser.getEmail());
             log.info("Sending event to kafka topic");
-            kafkaTemplate.send(USER_REGISTRATION_TOPIC, event.userId(), event );
+            kafkaTemplate.send(USER_REGISTRATION_TOPIC, event.email(), event );
             log.info("Event sent to kafka topic");
             return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
     }

@@ -45,4 +45,25 @@ public class EmailService implements NotificationService {
             log.error("Failed to send welcome email");
         }
     }
+
+    @Override
+    public void sendOtpEmail(String recipientEmail, String otpCode) {
+        try{
+            Context context = new Context();
+            context.setVariable("otpCode", otpCode);
+
+            String htmlContent = templateEngine.process("verify-otp", context);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+            helper.setTo(recipientEmail);
+            helper.setSubject("Verify OTP");
+            helper.setFrom(adminEmail, "EventHub");
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+
+        }catch (MessagingException | UnsupportedEncodingException e){
+            log.error("Failed to send otp email");
+        }
+    }
 }
