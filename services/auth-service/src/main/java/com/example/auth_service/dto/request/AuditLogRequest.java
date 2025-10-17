@@ -1,4 +1,11 @@
 package com.example.auth_service.dto.request;
 
-public record AuditLogRequest() {
+import java.time.Instant;
+
+public record AuditLogRequest(
+        String email,
+        String ipAddress,
+        Instant timestamp
+) {
 }
+
