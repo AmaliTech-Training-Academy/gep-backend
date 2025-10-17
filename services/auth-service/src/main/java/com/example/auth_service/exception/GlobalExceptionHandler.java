@@ -1,9 +1,12 @@
 package com.example.auth_service.exception;
 
 import com.example.auth_service.dto.response.CustomApiResponse;
+import io.jsonwebtoken.ExpiredJwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -54,6 +57,10 @@ public class GlobalExceptionHandler {
                 .body(CustomApiResponse.error("Validation failed", errors));
     }
 
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity handleUnauthorizedAccess(DisabledException ex){
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CustomApiResponse<?>> handleGenericException(Exception ex){
