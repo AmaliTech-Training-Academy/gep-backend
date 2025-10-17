@@ -62,6 +62,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity handleExpiredJwt(ExpiredJwtException ex){
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error("Token has expired."));
+    }
+
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CustomApiResponse<?>> handleGenericException(Exception ex){
         return ResponseEntity.internalServerError().body(CustomApiResponse.error("Unexpected error occured"));

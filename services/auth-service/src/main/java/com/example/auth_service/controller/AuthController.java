@@ -1,5 +1,6 @@
 package com.example.auth_service.controller;
 
+import com.example.auth_service.dto.request.RefreshAccessTokenRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
@@ -31,6 +32,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody UserLoginRequest loginRequest){
         AuthResponse authResponse = authService.loginUser(loginRequest);
+        return ResponseEntity.ok(authResponse);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshAccessTokenRequest request){
+        AuthResponse authResponse = authService.refreshAccessToken(request.refreshToken());
         return ResponseEntity.ok(authResponse);
     }
 

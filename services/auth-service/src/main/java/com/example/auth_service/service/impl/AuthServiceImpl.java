@@ -18,6 +18,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -74,5 +75,28 @@ public class AuthServiceImpl implements AuthService {
         }catch(BadCredentialsException e){
             throw new BadCredentialsException("Invalid credentials");
         }
+    }
+
+    @Override
+    public AuthResponse refreshAccessToken(String refreshToken){
+        String email = jwtUtil.extractUsername(refreshToken);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadCredentialsException("User not found"));
+
+        if(!user.isActive()){
+            throw new InactiveAccountException("User account is inactive");
+        }
+
+        if(!jwtUtil.validateToken(refreshToken)){
+            throw new BadCredentialsException("Invalid refresh token");
+        }
+
+        String newAccessToken = jwtUtil.generateAccessToken(email);
+        String newRefreshToken = jwtUtil.generateRefreshToken(email);
+
+        return new AuthResponse(
+                newAccessToken,
+                newRefreshToken
+        );
     }
 }
