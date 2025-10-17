@@ -3,6 +3,7 @@ package com.example.auth_service.service.impl;
 import com.example.auth_service.dto.request.UserUpdateRequest;
 import com.example.auth_service.dto.response.UserManagementResponse;
 import com.example.auth_service.dto.response.UserResponse;
+import com.example.auth_service.dto.response.UserStatistics;
 import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.exception.ResourceNotFoundException;
@@ -50,11 +51,8 @@ public class UserServiceImpl implements UserService {
         Page<UserManagementResponse> userResponse = users.map(UserMapper::toUserManagementResponse);
 
         // Overview Summary metrics
-        long totalUsers = userRepository.count();
-        long totalOrganizers = userRepository.countAllByRole(UserRole.ORGANISER);
-        long totalAttendees = userRepository.countAllByRole(UserRole.ATTENDEE);
-        long totalDeactivatedUsers = userRepository.countAllByIsActive(false);
-        return UserMapper.toUserSummary(userResponse,totalUsers,totalOrganizers,totalAttendees,totalDeactivatedUsers);
+        UserStatistics userStats = userRepository.getUserStatistics();
+        return UserMapper.toUserSummary(userResponse,userStats);
     }
 
     /**
@@ -75,19 +73,41 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
+
     /**
-     * Searches for users whose full names contain the specified keyword, ignoring case sensitivity.
-     * Results are returned in a paginated format.
+     * Searches for users based on the specified criteria such as keyword, role, and status,
+     * and returns a paginated list of matching users.
      *
-     * @param keyword the keyword to search for in user full names
-     * @param page the page number to retrieve; if the provided page is less than 0, it defaults to 0
-     * @return an Iterable containing UserManagementResponse objects representing the search results
+     * @param keyword a string to search for in user attributes like full name or email;
+     *                can be null or empty, in which case it is ignored
+     * @param role the role of the user (e.g., ATTENDEE, ORGANISER, ADMIN) to filter by;
+     *             can be null, in which case it is ignored
+     * @param status a boolean indicating whether to search for active or inactive users;
+     *               can be null, in which case it is ignored
+     * @param page the page number for pagination, where 0 indicates the first page;
+     *             values below 0 are treated as 0
+     * @return a {@code Page} of {@code UserManagementResponse}, containing user details
+     *         that match the search criteria
      */
     @Override
-    public Iterable<UserManagementResponse> userSearch(String keyword, int page) {
+    public Page<UserManagementResponse> userSearch(String keyword,UserRole role, Boolean status, int page) {
         page = Math.max(page, 0);
-        Pageable pageable = PageRequest.of(page, 10);
-        Page<User> searchResults = userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword, pageable);
+        Sort sort = Sort.by("fullName");
+        Pageable pageable = PageRequest.of(page, 10,sort);
+
+        // build specification based on user input
+        Specification<User> spec = (root, query, cb) -> cb.conjunction();
+
+        if(keyword != null && !keyword.trim().isEmpty()) {
+            spec = spec.and(UserSpecifications.hasKeyword(keyword.trim()));
+        }
+        if(role != null) {
+            spec = spec.and(UserSpecifications.hasRole(role));
+        }
+        if(status != null) {
+            spec = spec.and(UserSpecifications.isActive(status));
+        }
+        Page<User> searchResults = userRepository.findAll(spec, pageable);
 
         return searchResults.map(UserMapper::toUserManagementResponse);
     }
@@ -143,29 +163,5 @@ public class UserServiceImpl implements UserService {
         // save profile updates
         profileRepository.save(userToUpdate.getProfile());
         return UserMapper.toUserResponse(userToUpdate);
-    }
-
-    /**
-     * Filters users based on their role and status and returns the results
-     * in a paginated format.
-     *
-     * @param role the role of the users to filter (e.g., ORGANIZER, ATTENDEE)
-     * @param status the activation status of the users to filter (true for active, false for inactive)
-     * @param page the page number of the results to retrieve; if less than 0, it defaults to 0
-     * @return a Page containing filtered UserManagementResponse objects
-     */
-    @Override
-    public Page<UserManagementResponse> filterUsers(UserRole role, Boolean status, int page) {
-        int pageNumber = Math.max(page,0);
-        Pageable pageable = PageRequest.of(pageNumber,10);
-
-        // generate filter specification
-        Specification<User> spec = UserSpecifications
-                .hasRole(role)
-                .and(UserSpecifications.isActive(status));
-
-        Page<User> filterResults = userRepository.findAll(spec,pageable);
-
-        return filterResults.map(UserMapper::toUserManagementResponse);
     }
 }

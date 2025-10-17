@@ -2,8 +2,12 @@ package com.example.auth_service.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Setter
 @Getter
@@ -12,6 +16,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "profiles")
+@EntityListeners(AuditingEntityListener.class)
 public class Profile {
 
     @Id
@@ -29,20 +34,11 @@ public class Profile {
 
     private String address;
 
+    @CreatedDate
     @Column(name = "created_at", nullable =false, updatable = false)
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
+    @LastModifiedDate
     @Column(name = "updated_at")
-    private Instant updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = Instant.now();
-        updatedAt = Instant.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = Instant.now();
-    }
+    private LocalDateTime updatedAt;
 }

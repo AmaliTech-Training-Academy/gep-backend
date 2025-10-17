@@ -8,6 +8,7 @@ import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -48,21 +49,25 @@ public class UserManagementController {
         return ResponseEntity.ok().build();
     }
 
-
     /**
-     * Searches for users based on a given keyword, with optional pagination support.
+     * Searches for users based on the provided criteria, including keyword, role, status, and page number.
      * This method is accessible only to users with the `ADMIN` authority.
      *
-     * @param keyword the keyword to search for among user data
-     * @param page the page number for pagination, defaults to 0 if not specified
-     * @return a ResponseEntity containing a CustomApiResponse with an iterable collection of UserManagementResponse objects
+     * @param keyword the search keyword to filter users by their full name or email (optional)
+     * @param role the role of the users to filter (optional)
+     * @param status the active status of the users to filter (optional)
+     * @param page the page number for pagination (defaults to 0 if not provided)
+     * @return a ResponseEntity containing a CustomApiResponse with a paginated list of UserManagementResponse objects
      */
     @GetMapping("/search")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CustomApiResponse<Iterable<UserManagementResponse>>> userSearch(
-            @RequestParam(defaultValue = "") String keyword, @RequestParam(defaultValue = "0") int page
+    public ResponseEntity<CustomApiResponse<Page<UserManagementResponse>>> userSearch(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) UserRole role,
+            @RequestParam(required = false) Boolean status,
+            @RequestParam(defaultValue = "0") int page
     ){
-        CustomApiResponse<Iterable<UserManagementResponse>> response = CustomApiResponse.success(userService.userSearch(keyword, page));
+        CustomApiResponse<Page<UserManagementResponse>> response = CustomApiResponse.success(userService.userSearch(keyword,role,status, page));
         return ResponseEntity.ok(response);
     }
 
@@ -96,27 +101,6 @@ public class UserManagementController {
             @RequestBody UserUpdateRequest userUpdateRequest
     ){
         CustomApiResponse<UserResponse> response = CustomApiResponse.success(userService.updateUser(userId, userUpdateRequest));
-        return ResponseEntity.ok(response);
-    }
-
-
-    /**
-     * Filters users based on the specified role, status, and pagination details.
-     * This method requires the requesting user to have admin authority.
-     *
-     * @param role the role of the users to filter (e.g., ADMIN, USER, ORGANIZER)
-     * @param status the activation status of the users to filter (true for active, false for deactivated)
-     * @param page the page number for pagination, defaults to 0 if not specified
-     * @return a ResponseEntity containing a CustomApiResponse with an iterable collection of UserManagementResponse objects
-     */
-    @GetMapping("/filter")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CustomApiResponse<Iterable<UserManagementResponse>>> filterUsers(
-            @RequestParam(defaultValue = "ATTENDEE") UserRole role,
-            @RequestParam(defaultValue = "false") Boolean status,
-            @RequestParam(defaultValue = "0") int page
-    ){
-        CustomApiResponse<Iterable<UserManagementResponse>> response = CustomApiResponse.success(userService.filterUsers(role,status,page));
         return ResponseEntity.ok(response);
     }
 }

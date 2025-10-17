@@ -3,6 +3,7 @@ package com.example.auth_service.service.impl;
 import com.example.auth_service.dto.request.UserUpdateRequest;
 import com.example.auth_service.dto.response.UserManagementResponse;
 import com.example.auth_service.dto.response.UserResponse;
+import com.example.auth_service.dto.response.UserStatistics;
 import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.exception.ResourceNotFoundException;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -55,8 +57,8 @@ class UserServiceImplTest {
                 .phoneNumber("1234567890")
                 .address("123 Test Street")
                 .profileImageUrl("http://example.com/profile.jpg")
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
 
         testUserEventStats = UserEventStats
@@ -73,8 +75,8 @@ class UserServiceImplTest {
                 .isActive(true)
                 .profile(testProfile)
                 .userEventStats(testUserEventStats)
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
 
         testProfile.setUser(testUser);
@@ -97,11 +99,10 @@ class UserServiceImplTest {
         List<User> users = List.of(testUser);
         Page<User> userPage = new PageImpl<>(users, PageRequest.of(0, 10, Sort.by("fullName")), 1);
 
+        // Mock the combined statistics query
+        UserStatisticsImpl stats = new UserStatisticsImpl(10L, 3L, 7L, 2L);
         when(userRepository.findAll(any(Pageable.class))).thenReturn(userPage);
-        when(userRepository.count()).thenReturn(10L);
-        when(userRepository.countAllByRole(UserRole.ORGANISER)).thenReturn(3L);
-        when(userRepository.countAllByRole(UserRole.ATTENDEE)).thenReturn(7L);
-        when(userRepository.countAllByIsActive(false)).thenReturn(2L);
+        when(userRepository.getUserStatistics()).thenReturn(stats);
 
         // Act
         UserSummaryReport result = userService.getUserSummaryReport();
@@ -116,10 +117,7 @@ class UserServiceImplTest {
         assertEquals(1, result.users().getTotalElements());
 
         verify(userRepository).findAll(any(Pageable.class));
-        verify(userRepository).count();
-        verify(userRepository).countAllByRole(UserRole.ORGANISER);
-        verify(userRepository).countAllByRole(UserRole.ATTENDEE);
-        verify(userRepository).countAllByIsActive(false);
+        verify(userRepository).getUserStatistics();
     }
 
     @Test
@@ -127,11 +125,10 @@ class UserServiceImplTest {
         // Arrange
         Page<User> emptyPage = new PageImpl<>(new ArrayList<>(), PageRequest.of(0, 10, Sort.by("fullName")), 0);
 
+        // Mock the combined statistics query for empty dataset
+        UserStatisticsImpl stats = new UserStatisticsImpl(0L, 0L, 0L, 0L);
         when(userRepository.findAll(any(Pageable.class))).thenReturn(emptyPage);
-        when(userRepository.count()).thenReturn(0L);
-        when(userRepository.countAllByRole(UserRole.ORGANISER)).thenReturn(0L);
-        when(userRepository.countAllByRole(UserRole.ATTENDEE)).thenReturn(0L);
-        when(userRepository.countAllByIsActive(false)).thenReturn(0L);
+        when(userRepository.getUserStatistics()).thenReturn(stats);
 
         // Act
         UserSummaryReport result = userService.getUserSummaryReport();
@@ -143,7 +140,11 @@ class UserServiceImplTest {
         assertEquals(0L, result.totalAttendees());
         assertEquals(0L, result.totalDeactivatedUsers());
         assertEquals(0, result.users().getTotalElements());
+
+        verify(userRepository).findAll(any(Pageable.class));
+        verify(userRepository).getUserStatistics();
     }
+
 
     // ==================== updateUserStatus Tests ====================
 
@@ -209,86 +210,83 @@ class UserServiceImplTest {
     void shouldReturnSearchResultsWhenKeywordMatches() {
         // Arrange
         List<User> users = List.of(testUser);
-        Page<User> searchPage = new PageImpl<>(users, PageRequest.of(0, 10), 1);
+        Page<User> searchPage = new PageImpl<>(users, PageRequest.of(0, 10, Sort.by("fullName")), 1);
 
-        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(0, 10)))
+        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName")))))
                 .thenReturn(searchPage);
 
         // Act
-        Iterable<UserManagementResponse> result = userService.userSearch("John", 0);
+        Page<UserManagementResponse> result = userService.userSearch("John", null, null, 0);
 
         // Assert
         assertNotNull(result);
-        List<UserManagementResponse> resultList = new ArrayList<>();
-        result.forEach(resultList::add);
-        assertEquals(1, resultList.size());
-        verify(userRepository).findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(0, 10));
+        assertEquals(1, result.getTotalElements());
+        verify(userRepository).findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName"))));
     }
 
     @Test
     void shouldReturnEmptyResultsWhenKeywordDoesNotMatch() {
         // Arrange
-        Page<User> emptyPage = new PageImpl<>(new ArrayList<>(), PageRequest.of(0, 10), 0);
+        Page<User> emptyPage = new PageImpl<>(new ArrayList<>(), PageRequest.of(0, 10, Sort.by("fullName")), 0);
 
-        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("NonExistent","NonExistent", PageRequest.of(0, 10)))
+        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName")))))
                 .thenReturn(emptyPage);
 
         // Act
-        Iterable<UserManagementResponse> result = userService.userSearch("NonExistent", 0);
+        Page<UserManagementResponse> result = userService.userSearch("NonExistent", null, null, 0);
 
         // Assert
         assertNotNull(result);
-        List<UserManagementResponse> resultList = new ArrayList<>();
-        result.forEach(resultList::add);
-        assertEquals(0, resultList.size());
+        assertEquals(0, result.getTotalElements());
     }
 
     @Test
     void shouldHandleEmptyKeywordInSearch() {
         // Arrange
         List<User> users = List.of(testUser);
-        Page<User> searchPage = new PageImpl<>(users, PageRequest.of(0, 10), 1);
+        Page<User> searchPage = new PageImpl<>(users, PageRequest.of(0, 10, Sort.by("fullName")), 1);
 
-        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("","", PageRequest.of(0, 10)))
+        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName")))))
                 .thenReturn(searchPage);
 
         // Act
-        Iterable<UserManagementResponse> result = userService.userSearch("", 0);
+        Page<UserManagementResponse> result = userService.userSearch("", null, null, 0);
 
         // Assert
         assertNotNull(result);
-        verify(userRepository).findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("","", PageRequest.of(0, 10));
+        verify(userRepository).findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName"))));
     }
 
     @Test
     void shouldDefaultToPageZeroWhenNegativePageProvided() {
         // Arrange
-        Page<User> searchPage = new PageImpl<>(List.of(testUser), PageRequest.of(0, 10), 1);
+        Page<User> searchPage = new PageImpl<>(List.of(testUser), PageRequest.of(0, 10, Sort.by("fullName")), 1);
 
-        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(0, 10)))
+        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName")))))
                 .thenReturn(searchPage);
 
         // Act
-        userService.userSearch("John", -5);
+        userService.userSearch("John", null, null, -5);
 
         // Assert
-        verify(userRepository).findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(0, 10));
+        verify(userRepository).findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName"))));
     }
 
     @Test
     void shouldHandleValidPageNumberInSearch() {
         // Arrange
-        Page<User> searchPage = new PageImpl<>(List.of(testUser), PageRequest.of(2, 10), 1);
+        Page<User> searchPage = new PageImpl<>(List.of(testUser), PageRequest.of(2, 10, Sort.by("fullName")), 1);
 
-        when(userRepository.findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(2, 10)))
+        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(2, 10, Sort.by("fullName")))))
                 .thenReturn(searchPage);
 
         // Act
-        userService.userSearch("John", 2);
+        userService.userSearch("John", null, null, 2);
 
         // Assert
-        verify(userRepository).findByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase("John","John", PageRequest.of(2, 10));
+        verify(userRepository).findAll(any(Specification.class), eq(PageRequest.of(2, 10, Sort.by("fullName"))));
     }
+
 
     // ==================== getUserById Tests ====================
 
@@ -460,153 +458,37 @@ class UserServiceImplTest {
         verify(userRepository).save(userCaptor.capture());
         assertFalse(userCaptor.getValue().isActive());
     }
+}
+class UserStatisticsImpl implements UserStatistics {
+    private final Long totalUsers;
+    private final Long totalOrganizers;
+    private final Long totalAttendees;
+    private final Long totalDeactivatedUsers;
 
-    // ==================== filterUsers Tests ====================
-
-    @Test
-    void shouldFilterUsersByRoleAndStatus() {
-        // Arrange
-        List<User> users = List.of(testUser);
-        Page<User> filterPage = new PageImpl<>(users, PageRequest.of(0, 10), 1);
-
-        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(filterPage);
-
-        // Act
-        Page<UserManagementResponse> result = userService.filterUsers(UserRole.ATTENDEE, true, 0);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1, result.getTotalElements());
-        verify(userRepository).findAll(any(Specification.class), any(Pageable.class));
+    UserStatisticsImpl(Long totalUsers, Long totalOrganizers, Long totalAttendees, Long totalDeactivatedUsers) {
+        this.totalUsers = totalUsers;
+        this.totalOrganizers = totalOrganizers;
+        this.totalAttendees = totalAttendees;
+        this.totalDeactivatedUsers = totalDeactivatedUsers;
     }
 
-    @Test
-    void shouldFilterUsersByRoleOnly() {
-        // Arrange
-        List<User> users = List.of(testUser);
-        Page<User> filterPage = new PageImpl<>(users, PageRequest.of(0, 10), 1);
-
-        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(filterPage);
-
-        // Act
-        Page<UserManagementResponse> result = userService.filterUsers(UserRole.ORGANISER, null, 0);
-
-        // Assert
-        assertNotNull(result);
-        verify(userRepository).findAll(any(Specification.class), any(Pageable.class));
+    @Override
+    public long getTotalUsers() {
+        return this.totalUsers;
     }
 
-    @Test
-    void shouldFilterUsersByStatusOnly() {
-        // Arrange
-        List<User> users = List.of(testUser);
-        Page<User> filterPage = new PageImpl<>(users, PageRequest.of(0, 10), 1);
-
-        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(filterPage);
-
-        // Act
-        Page<UserManagementResponse> result = userService.filterUsers(null, false, 0);
-
-        // Assert
-        assertNotNull(result);
-        verify(userRepository).findAll(any(Specification.class), any(Pageable.class));
+    @Override
+    public long getTotalOrganizers() {
+        return this.totalOrganizers;
     }
 
-    @Test
-    void shouldReturnEmptyPageWhenNoUsersMatchFilter() {
-        // Arrange
-        Page<User> emptyPage = new PageImpl<>(new ArrayList<>(), PageRequest.of(0, 10), 0);
-
-        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(emptyPage);
-
-        // Act
-        Page<UserManagementResponse> result = userService.filterUsers(UserRole.ORGANISER, true, 0);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(0, result.getTotalElements());
+    @Override
+    public long getTotalAttendees() {
+        return this.totalAttendees;
     }
 
-    @Test
-    void shouldDefaultToPageZeroWhenNegativePageProvidedInFilter() {
-        // Arrange
-        Page<User> filterPage = new PageImpl<>(List.of(testUser), PageRequest.of(0, 10), 1);
-
-        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(filterPage);
-
-        // Act
-        userService.filterUsers(UserRole.ATTENDEE, true, -3);
-
-        // Assert
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(userRepository).findAll(any(Specification.class), pageableCaptor.capture());
-        assertEquals(0, pageableCaptor.getValue().getPageNumber());
-    }
-
-    @Test
-    void shouldHandleValidPageNumberInFilter() {
-        // Arrange
-        Page<User> filterPage = new PageImpl<>(List.of(testUser), PageRequest.of(3, 10), 1);
-
-        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(filterPage);
-
-        // Act
-        userService.filterUsers(UserRole.ATTENDEE, true, 3);
-
-        // Assert
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(userRepository).findAll(any(Specification.class), pageableCaptor.capture());
-        assertEquals(3, pageableCaptor.getValue().getPageNumber());
-        assertEquals(10, pageableCaptor.getValue().getPageSize());
-    }
-
-    @Test
-    void shouldFilterWithBothNullRoleAndStatus() {
-        // Arrange
-        Page<User> filterPage = new PageImpl<>(List.of(testUser), PageRequest.of(0, 10), 1);
-
-        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(filterPage);
-
-        // Act
-        Page<UserManagementResponse> result = userService.filterUsers(null, null, 0);
-
-        // Assert
-        assertNotNull(result);
-        verify(userRepository).findAll(any(Specification.class), any(Pageable.class));
-    }
-
-    @Test
-    void shouldFilterInactiveOrganizers() {
-        // Arrange
-        User inactiveOrganizer = User.builder()
-                .id(2L)
-                .fullName("Inactive Organizer")
-                .email("inactive@example.com")
-                .password("password")
-                .role(UserRole.ORGANISER)
-                .userEventStats(testUserEventStats)
-                .isActive(false)
-                .profile(testProfile)
-                .build();
-
-        Page<User> filterPage = new PageImpl<>(List.of(inactiveOrganizer), PageRequest.of(0, 10), 1);
-
-        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(filterPage);
-
-        // Act
-        Page<UserManagementResponse> result = userService.filterUsers(UserRole.ORGANISER, false, 0);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1, result.getTotalElements());
-        verify(userRepository).findAll(any(Specification.class), any(Pageable.class));
+    @Override
+    public long getTotalDeactivatedUsers() {
+        return this.totalDeactivatedUsers;
     }
 }

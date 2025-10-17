@@ -2,8 +2,11 @@ package com.example.auth_service.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_event_stats")
@@ -12,6 +15,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class UserEventStats {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,16 +33,7 @@ public class UserEventStats {
     @Builder.Default
     private Integer totalEventsAttended = 0;
 
+    @LastModifiedDate
     @Column(name = "last_updated_at")
-    private Instant lastUpdatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        lastUpdatedAt = Instant.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastUpdatedAt = Instant.now();
-    }
+    private LocalDateTime lastUpdatedAt;
 }

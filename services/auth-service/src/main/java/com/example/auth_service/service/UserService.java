@@ -11,8 +11,8 @@ import org.springframework.data.domain.Page;
 public interface UserService {
     UserSummaryReport getUserSummaryReport();
     void updateUserStatus(Long userId);
-    Iterable<UserManagementResponse> userSearch(String keyword, int page);
+    Page<UserManagementResponse> userSearch(String keyword,UserRole role, Boolean status, int page);
     UserResponse getUserById(Long userId);
     UserResponse updateUser(Long userId, UserUpdateRequest request);
-    Page<UserManagementResponse> filterUsers(UserRole role, Boolean status, int page);
+//    Page<UserManagementResponse> filterUsers(UserRole role, Boolean status, int page);
 }

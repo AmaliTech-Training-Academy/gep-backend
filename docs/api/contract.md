@@ -319,7 +319,7 @@ paths:
         200:
 
     - name: search User - Admin Dashboard
-      description: Searches for a user by name.
+      description: Searches for a user by name, email and filters by status and role.
       path: /users/search
       method: GET
       request:
@@ -332,6 +332,16 @@ paths:
             description: Name of the user to search for.
             required: false
             type: string
+          - name: role
+            in: query
+            description: Role of the user to filter.
+            required: false
+            type: string
+          - name: status
+            in: query
+            description: Status of the user to filter.
+            required: false
+            type: boolean
           - name: page
             in: query
             description: Page number.
@@ -419,60 +429,6 @@ paths:
                             type: Long
                           eventsAttended:
                             type: Long
-
-    - name: filter users - Admin Dashboard
-      description: Filter users by role and status.
-      path: /users/filter
-      method: GET
-      request:
-        headers:
-          Content-Type: application/json
-          authorization: Bearer {access_token}
-        parameters:
-          - name: role
-            in: query
-            description: Role of the user to filter.
-            required: false
-            default: "ATTENDEE"
-            type: string
-          - name: status
-            in: query
-            description: Status of the user to filter.
-            required: false
-            default: "false"
-            type: boolean
-          - name: page
-            in: query
-            description: Page number.
-            required: false
-            default: "0"
-            type: integer
-      responses:
-        200:
-          data:
-            type: object
-            properties:
-              users:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    userId:
-                      type: Long
-                    fullName:
-                      type: string
-                    email:
-                      type: string
-                    role:
-                      type: string
-                    status:
-                      type: boolean
-                    profileImageUrl:
-                      type: string
-                    eventsOrganized:
-                      type: Long
-                    eventsAttended:
-                      type: Long
   ```
   # ============================================
   # EVENT MANAGEMENT ENDPOINTS
