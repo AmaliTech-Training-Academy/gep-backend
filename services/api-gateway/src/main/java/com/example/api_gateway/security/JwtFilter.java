@@ -21,8 +21,9 @@ public class JwtFilter implements GlobalFilter {
     private final JwtUtil jwtUtil;
 
     public static final List<String> OPEN_API_ENDPOINTS = List.of(
-            "/auth/register",
-            "/auth/login"
+            "/api/v1/auth/register",
+            "/api/v1/auth/login",
+            "/auth-service/v3/api-docs"
     );
 
 
