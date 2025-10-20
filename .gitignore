@@ -38,3 +38,5 @@ build/
 
 ### Logs ###
 *.log
+
+localstack_data
