@@ -4,6 +4,7 @@ import com.example.auth_service.dto.response.CustomApiResponse;
 import io.jsonwebtoken.ExpiredJwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -72,6 +73,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error("Token has expired."));
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity handleEmptyBody(HttpMessageNotReadableException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(CustomApiResponse.error("Request body is missing or malformed."));
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CustomApiResponse<?>> handleGenericException(Exception ex){
