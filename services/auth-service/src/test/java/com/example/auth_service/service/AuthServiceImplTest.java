@@ -28,13 +28,9 @@ public class AuthServiceImplTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private PasswordEncoder passwordEncoder;
-    @Mock
     private OtpService otpService;
     @Mock
     private AuthenticationManager authenticationManager;
-    @Mock
-    private KafkaTemplate<String, Object> kafkaTemplate;
     @Mock
     private JwtUtil jwtUtil;
 
@@ -49,7 +45,6 @@ public class AuthServiceImplTest {
     // --- LOGIN TESTS ---
     @Test
     void testLoginUser_Successful() {
-        // Arrange
         String email = "user@example.com";
         String password = "password";
 
@@ -67,10 +62,8 @@ public class AuthServiceImplTest {
         when(auth.getPrincipal()).thenReturn(authUser);
         when(authenticationManager.authenticate(any())).thenReturn(auth);
 
-        // Act
         authService.loginUser(new UserLoginRequest(email, password));
 
-        // Assert
         verify(authenticationManager, times(1))
                 .authenticate(any(UsernamePasswordAuthenticationToken.class));
         verify(otpService, times(1)).generateOtp(email);
@@ -78,7 +71,6 @@ public class AuthServiceImplTest {
 
     @Test
     void testLoginUser_InactiveAccount_ThrowsException() {
-        // Arrange
         String email = "inactive@example.com";
         String password = "password";
 
@@ -93,7 +85,6 @@ public class AuthServiceImplTest {
         when(auth.getPrincipal()).thenReturn(authUser);
         when(authenticationManager.authenticate(any())).thenReturn(auth);
 
-        // Act + Assert
         InactiveAccountException ex = assertThrows(
                 InactiveAccountException.class,
                 () -> authService.loginUser(new UserLoginRequest(email, password))
@@ -105,14 +96,12 @@ public class AuthServiceImplTest {
 
     @Test
     void testLoginUser_InvalidCredentials_ThrowsException() {
-        // Arrange
         String email = "wrong@example.com";
         String password = "wrongpass";
 
         when(authenticationManager.authenticate(any()))
                 .thenThrow(new BadCredentialsException("Invalid credentials"));
 
-        // Act + Assert
         BadCredentialsException ex = assertThrows(
                 BadCredentialsException.class,
                 () -> authService.loginUser(new UserLoginRequest(email, password))
@@ -124,12 +113,10 @@ public class AuthServiceImplTest {
 
     @Test
     void testVerifyOtp_InvalidOtp_ThrowsException() {
-        // Arrange
         String email = "user@example.com";
         String otp = "000000";
         when(otpService.verifyOtp(email, otp)).thenReturn(false);
 
-        // Act + Assert
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> authService.verifyOtp(new OtpVerificationRequest(email, otp))
@@ -141,7 +128,6 @@ public class AuthServiceImplTest {
 
     @Test
     void testVerifyOtp_InactiveUser_ThrowsException() {
-        // Arrange
         String email = "inactive@example.com";
         String otp = "123456";
 
@@ -150,7 +136,6 @@ public class AuthServiceImplTest {
         when(otpService.verifyOtp(email, otp)).thenReturn(true);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
 
-        // Act + Assert
         InactiveAccountException ex = assertThrows(
                 InactiveAccountException.class,
                 () -> authService.verifyOtp(new OtpVerificationRequest(email, otp))
