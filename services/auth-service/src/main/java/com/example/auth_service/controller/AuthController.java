@@ -5,6 +5,7 @@ import com.example.auth_service.dto.request.RefreshAccessTokenRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
+import com.example.auth_service.dto.response.CustomApiResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.service.AuthService;
 import jakarta.validation.Valid;
