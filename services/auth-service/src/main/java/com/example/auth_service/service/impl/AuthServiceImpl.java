@@ -20,17 +20,18 @@ import com.example.auth_service.security.AuthUser;
 import com.example.auth_service.security.JwtUtil;
 import com.example.auth_service.service.AuthService;
 import com.example.auth_service.service.OtpService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import org.springframework.beans.factory.annotation.Value;
 
 @RequiredArgsConstructor
 @Service
@@ -43,10 +44,12 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
     private final AuthenticationManager authenticationManager;
-    private final KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate;
+    private final SqsClient sqsClient;
+    private final ObjectMapper objectMapper;
     private final JwtUtil jwtUtil;
 
-    private static final String USER_REGISTRATION_TOPIC = "user-registration-topic";
+    @Value("${sqs.user-registration-queue-url}")
+    private String userRegistrationQueueUrl;
 
     @Transactional
     public UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest) {
@@ -68,9 +71,7 @@ public class AuthServiceImpl implements AuthService {
 
             User savedUser = userRepository.save(newUser);
             UserRegisteredEvent event = new UserRegisteredEvent(savedUser.getId(), savedUser.getFullName(), savedUser.getEmail());
-            log.info("Sending event to kafka topic");
-            kafkaTemplate.send(USER_REGISTRATION_TOPIC, event.email(), event );
-            log.info("Event sent to kafka topic");
+            sendRegistrationMessageToQueue(event);
             Profile userProfile = Profile.builder().user(savedUser).build();
             profileRepository.save(userProfile);
             UserEventStats userEventStats = UserEventStats.builder().user(savedUser).build();
@@ -140,5 +141,15 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
+    public void sendRegistrationMessageToQueue(UserRegisteredEvent event){
+        try{
+        log.info("Sending event to SQS queue");
+        String messageBody = objectMapper.writeValueAsString(event);
+        sqsClient.sendMessage(builder -> builder.queueUrl(userRegistrationQueueUrl).messageBody(messageBody));
+        log.info("Message sent to SQS queue");
+        }catch (Exception e){
+            log.error("Error sending message to SQS: {}", e.getMessage());
+        }
+    }
 
 }
