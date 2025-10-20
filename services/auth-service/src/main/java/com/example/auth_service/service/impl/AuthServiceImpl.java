@@ -8,7 +8,11 @@ import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.exception.DuplicateEmailException;
 import com.example.auth_service.exception.InactiveAccountException;
 import com.example.auth_service.exception.PasswordMismatchException;
+import com.example.auth_service.model.Profile;
 import com.example.auth_service.model.User;
+import com.example.auth_service.model.UserEventStats;
+import com.example.auth_service.repository.ProfileRepository;
+import com.example.auth_service.repository.UserEventStatsRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.AuthUser;
 import com.example.auth_service.security.JwtUtil;
@@ -27,6 +31,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
+    private final UserEventStatsRepository userEventStatsRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
@@ -50,6 +56,10 @@ public class AuthServiceImpl implements AuthService {
                     .build();
 
             User savedUser = userRepository.save(newUser);
+            Profile userProfile = Profile.builder().user(savedUser).build();
+            profileRepository.save(userProfile);
+            UserEventStats userEventStats = UserEventStats.builder().user(savedUser).build();
+            userEventStatsRepository.save(userEventStats);
             return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
     }
 

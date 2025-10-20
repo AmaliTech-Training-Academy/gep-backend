@@ -2,43 +2,38 @@ package com.example.auth_service.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 
-@Setter
-@Getter
 @Entity
+@Table(name = "user_event_stats")
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "profiles")
 @EntityListeners(AuditingEntityListener.class)
-public class Profile {
-
+public class UserEventStats {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    private String profileImageUrl;
+    @Column(name = "total_events_created", nullable = false)
+    @Builder.Default
+    private Integer totalEventsCreated = 0;
 
-    @Column(name = "phone_number")
-    private String phoneNumber;
-
-    private String address;
-
-    @CreatedDate
-    @Column(name = "created_at", nullable =false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "total_events_attended", nullable = false)
+    @Builder.Default
+    private Integer totalEventsAttended = 0;
 
     @LastModifiedDate
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    @Column(name = "last_updated_at")
+    private LocalDateTime lastUpdatedAt;
 }
