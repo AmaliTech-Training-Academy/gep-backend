@@ -21,20 +21,21 @@ import com.example.auth_service.security.JwtUtil;
 import com.example.auth_service.service.AuthService;
 import com.example.auth_service.service.OtpService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseCookie;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import org.springframework.beans.factory.annotation.Value;
+
+import java.time.Duration;
 
 @RequiredArgsConstructor
 @Service
@@ -53,6 +54,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${sqs.user-registration-queue-url}")
     private String userRegistrationQueueUrl;
+
+    @Value("${application.security.jwt.expiration}")
+    private long accessTokenExpiration;
+
+    @Value("${application.security.jwt.refresh-token.expiration}")
+    private long refreshTokenExpiration;
 
     @Transactional
     public UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest) {
@@ -101,7 +108,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public AuthResponse verifyOtp(OtpVerificationRequest request){
+    public void verifyOtp(OtpVerificationRequest request, HttpServletResponse response){
         boolean isValid = otpService.verifyOtp(request.email(), request.otp());
         if(!isValid){
             throw new IllegalArgumentException("Invalid or expired OTP");
@@ -116,14 +123,11 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
-        return new AuthResponse(
-                accessToken,
-                refreshToken
-        );
+        setAuthCookies(response, accessToken, refreshToken);
     }
 
     @Override
-    public AuthResponse refreshAccessToken(String refreshToken){
+    public void refreshAccessToken(String refreshToken, HttpServletResponse response){
         String email = jwtUtil.extractUsername(refreshToken);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadCredentialsException("User not found"));
@@ -139,10 +143,12 @@ public class AuthServiceImpl implements AuthService {
         String newAccessToken = jwtUtil.generateAccessToken(email);
         String newRefreshToken = jwtUtil.generateRefreshToken(email);
 
-        return new AuthResponse(
-                newAccessToken,
-                newRefreshToken
-        );
+        setAuthCookies(response, newAccessToken, newRefreshToken);
+    }
+
+    @Override
+    public void logout(HttpServletResponse response){
+        clearAuthCookies(response);
     }
 
     public void sendRegistrationMessageToQueue(User savedUser){
@@ -154,6 +160,44 @@ public class AuthServiceImpl implements AuthService {
         }catch (Exception e){
             log.error("Error sending message to SQS: {}", e.getMessage());
         }
+    }
+
+    private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken){
+        ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", accessToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(Duration.ofMillis(accessTokenExpiration))
+                .build();
+
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(Duration.ofMillis(refreshTokenExpiration))
+                .build();
+
+        response.addHeader("Set-Cookie", accessTokenCookie.toString());
+        response.addHeader("Set-Cookie", refreshTokenCookie.toString());
+    }
+
+    private void clearAuthCookies(HttpServletResponse response){
+        ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        response.addHeader("Set-Cookie", accessTokenCookie.toString());
+        response.addHeader("Set-Cookie", refreshTokenCookie.toString());
     }
 
 }

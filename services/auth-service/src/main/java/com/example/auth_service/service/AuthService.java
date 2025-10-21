@@ -5,6 +5,7 @@ import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface AuthService {
@@ -13,7 +14,9 @@ public interface AuthService {
 
     void loginUser(UserLoginRequest loginRequest);
 
-    AuthResponse verifyOtp(OtpVerificationRequest request);
+    void verifyOtp(OtpVerificationRequest request, HttpServletResponse response);
 
-    AuthResponse refreshAccessToken(String refreshToken);
+    void refreshAccessToken(String refreshToken, HttpServletResponse response);
+
+    void logout(HttpServletResponse response);
 }

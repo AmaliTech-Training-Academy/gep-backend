@@ -68,6 +68,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity handleAuthorizationDeniedException(AuthorizationDeniedException ex){
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(ExpiredJwtException.class)
     public ResponseEntity handleExpiredJwt(ExpiredJwtException ex){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error("Token has expired."));
