@@ -7,7 +7,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 
 @Entity
@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Builder
-@RequiredArgsConstructor
 @AllArgsConstructor
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
@@ -35,22 +34,48 @@ public class Event {
     private String location;
 
     @Column(nullable = false)
-    private String flyer_url;
+    private String flyerUrl;
 
+    @Column
+    private String zoomMeetingLink;
 
+    @Column
+    private Instant startTime;
 
+    @Column
+    private String startTimeZoneId;
+
+    @Column
+    private Instant endTime;
+
+    @Column
+    private Instant endTimeZoneId;
+
+    @Column
+    private Instant eventTime;
+
+    @Column
+    private Instant eventTimeZoneId;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "event_type_id", referencedColumnName = "id")
+    private EventType eventType;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "event_meeting_type_id", referencedColumnName = "id")
+    private EventMeetingType eventMeetingType;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "event_option_id", referencedColumnName = "id")
+    private EventOptions eventOptions;
 
     @CreatedDate
     @Column(name = "created_at", nullable =false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-
-
-
+    private Instant updatedAt;
 
 
 }
