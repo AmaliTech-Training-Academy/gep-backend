@@ -1,4 +1,7 @@
 package com.event_service.event_service.dto;
 
-public record EventTypeResponse() {
+public record EventTypeResponse(
+        Long id,
+        String name
+) {
 }
