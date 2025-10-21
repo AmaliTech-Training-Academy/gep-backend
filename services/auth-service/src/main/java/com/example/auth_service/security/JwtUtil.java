@@ -62,7 +62,16 @@ public class JwtUtil {
 
     public boolean validateToken(String token, UserDetails userDetails){
         String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !extractAllClaims(token).getExpiration().before(new Date());
+        return username.equals(userDetails.getUsername()) && !extractAllClaims(token).getExpiration().before(new Date() ) && userDetails.isEnabled();
+    }
+
+    public boolean validateToken(String token){
+        try {
+            Claims claims = extractAllClaims(token);
+            return !claims.getExpiration().before(new Date());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
 }

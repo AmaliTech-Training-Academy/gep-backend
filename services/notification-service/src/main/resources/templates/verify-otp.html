@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify Your Email - EventHub</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+<table role="presentation" style="width: 100%; border-collapse: collapse;">
+  <tr>
+    <td align="center" style="padding: 20px 0;">
+      <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+        <!-- Header -->
+        <tr>
+          <td align="center" style="padding: 30px 20px 20px 20px;">
+            <h1 style="margin: 0; font-size: 28px; color: #333;">
+              <span style="color: #d84315;">Event</span> Hub
+            </h1>
+          </td>
+        </tr>
+
+        <!-- Content -->
+        <tr>
+          <td style="padding: 30px 40px;">
+            <h2 style="margin: 0 0 10px 0; font-size: 22px; color: #333; font-weight: 600;">
+              Verify Login
+            </h2>
+
+            <p style="margin: 0 0 30px 0; font-size: 14px; line-height: 1.6; color: #666;">
+              You are logging into your account. Please enter the otp code for verification.:
+            </p>
+
+            <!-- OTP Box -->
+            <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+              <tr>
+                <td align="center" style="padding: 30px 20px; background-color: #f9f9f9; border: 2px dashed #d84315; border-radius: 8px;">
+                  <p style="margin: 0 0 10px 0; font-size: 13px; color: #999; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">
+                    Your Verification Code
+                  </p>
+                  <p style="margin: 0; font-size: 36px; font-weight: bold; color: #d84315; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                    <span th:text="${otpCode}">123456</span>
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Information Box -->
+            <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <tr>
+                <td style="padding: 20px; background-color: #fff9e6; border-left: 4px solid #ffa726; border-radius: 4px;">
+                  <p style="margin: 0 0 10px 0; font-size: 14px; color: #666; line-height: 1.6;">
+                    <strong style="color: #333;">⏱️ This code will expire in <span style="color: #d84315;">5</span> minutes.</strong>
+                  </p>
+                  <p style="margin: 0; font-size: 13px; color: #666; line-height: 1.6;">
+                    If you didn't request this code, please ignore this email or contact our support team if you have concerns.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin: 20px 0 0 0; font-size: 13px; line-height: 1.6; color: #999;">
+              For security reasons, never share this code with anyone. EventHub staff will never ask for your verification code.
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding: 20px 40px; background-color: #f9f9f9; text-align: center; border-top: 1px solid #e0e0e0;">
+            <p style="margin: 0 0 10px 0; font-size: 12px; color: #999; line-height: 1.5;">
+              © 2025 EventHub. All rights reserved.
+            </p>
+            <p style="margin: 0; font-size: 12px; color: #999; line-height: 1.5;">
+              This is an automated message, please do not reply to this email.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

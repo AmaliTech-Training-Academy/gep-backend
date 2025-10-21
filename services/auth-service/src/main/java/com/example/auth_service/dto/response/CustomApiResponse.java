@@ -20,4 +20,9 @@ public record CustomApiResponse<T>(
     public static <T> CustomApiResponse<T> success(T data){
         return new CustomApiResponse<>(null,data);
     }
+
+    public static <T> CustomApiResponse<T> success(String message, T data) {
+        return new CustomApiResponse<>( message, data);
+    }
+
 }
