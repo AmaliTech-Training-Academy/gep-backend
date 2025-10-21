@@ -13,7 +13,7 @@ public class UserRegisteredListener {
 
     private final EmailService emailService;
 
-    @SqsListener("user-registration-queue")
+    @SqsListener("${sqs.user-registration-queue}")
     public void listenUserRegistered(UserRegisteredEvent  event){
         emailService.sendWelcomeEmail(event.email(), event.fullName());
     }

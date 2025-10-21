@@ -23,6 +23,7 @@ import com.example.auth_service.service.OtpService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseCookie;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -72,12 +73,13 @@ public class AuthServiceImpl implements AuthService {
                     .build();
 
             User savedUser = userRepository.save(newUser);
-            UserRegisteredEvent event = new UserRegisteredEvent(savedUser.getId(), savedUser.getFullName(), savedUser.getEmail());
-            sendRegistrationMessageToQueue(event);
+
             Profile userProfile = Profile.builder().user(savedUser).build();
             profileRepository.save(userProfile);
             UserEventStats userEventStats = UserEventStats.builder().user(savedUser).build();
             userEventStatsRepository.save(userEventStats);
+
+            sendRegistrationMessageToQueue(savedUser);
             return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
     }
 
@@ -143,9 +145,9 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
-    public void sendRegistrationMessageToQueue(UserRegisteredEvent event){
+    public void sendRegistrationMessageToQueue(User savedUser){
         try{
-        log.info("Sending event to SQS queue");
+        UserRegisteredEvent event = new UserRegisteredEvent(savedUser.getId(), savedUser.getFullName(), savedUser.getEmail());
         String messageBody = objectMapper.writeValueAsString(event);
         sqsClient.sendMessage(builder -> builder.queueUrl(userRegistrationQueueUrl).messageBody(messageBody));
         log.info("Message sent to SQS queue");

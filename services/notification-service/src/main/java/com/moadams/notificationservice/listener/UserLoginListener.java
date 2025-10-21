@@ -13,7 +13,7 @@ public class UserLoginListener {
 
     private final EmailService emailService;
 
-    @SqsListener("user-login")
+    @SqsListener("${sqs.user-login-queue}")
     public void listenUserLogin(UserLoginEvent event){
         emailService.sendOtpEmail(event.email(), event.otp());
     }
