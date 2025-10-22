@@ -8,6 +8,7 @@ import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.CustomApiResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.service.AuthService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,15 +34,21 @@ public class AuthController {
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<AuthResponse> verifyOtp(@Valid @RequestBody OtpVerificationRequest request){
-        AuthResponse response = authService.verifyOtp(request);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<CustomApiResponse<?>> verifyOtp(@Valid @RequestBody OtpVerificationRequest request, HttpServletResponse response){
+        authService.verifyOtp(request, response);
+        return ResponseEntity.ok(CustomApiResponse.success("Login successful"));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshAccessTokenRequest request){
-        AuthResponse authResponse = authService.refreshAccessToken(request.refreshToken());
-        return ResponseEntity.ok(authResponse);
+    public ResponseEntity<CustomApiResponse<?>> refreshToken(@CookieValue(name="refreshToken") String refreshToken, HttpServletResponse response){
+        authService.refreshAccessToken(refreshToken, response);
+        return ResponseEntity.ok(CustomApiResponse.success("Token refreshed successfully"));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<CustomApiResponse<?>> logout(HttpServletResponse response){
+        authService.logout(response);
+        return ResponseEntity.ok(CustomApiResponse.success("Logged out successfully"));
     }
 
 }
