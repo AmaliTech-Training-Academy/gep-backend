@@ -63,23 +63,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Transactional
     public UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest) {
-            if(!registrationRequest.confirmPassword().equals(registrationRequest.password())){
-                throw new PasswordMismatchException("Passwords do not match");
-            }
-
-            if(userRepository.existsByEmail(registrationRequest.email())){
-                throw new DuplicateEmailException("Email already registered");
-            }
-
-            User newUser = User.builder()
-                    .fullName(registrationRequest.fullName())
-                    .email(registrationRequest.email())
-                    .password(passwordEncoder.encode(registrationRequest.password()))
-                    .role(UserRole.ATTENDEE)
-                    .isActive(true)
-                    .build();
-
-            User savedUser = userRepository.save(newUser);
+            validateRequest(registrationRequest);
+            User savedUser = createAndSaveUser(registrationRequest);
 
             Profile userProfile = Profile.builder().user(savedUser).build();
             profileRepository.save(userProfile);
@@ -89,6 +74,39 @@ public class AuthServiceImpl implements AuthService {
             sendRegistrationMessageToQueue(savedUser);
             return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
     }
+
+    private void validateRequest(UserRegistrationRequest registrationRequest){
+        if(!registrationRequest.password().equals(registrationRequest.confirmPassword())){
+            throw new PasswordMismatchException("Passwords do not match");
+        }
+        String email = registrationRequest.email().toLowerCase().trim();
+        if(userRepository.existsByEmail(email)){
+            throw new DuplicateEmailException("Email already registered");
+        }
+    }
+
+    private User createAndSaveUser(UserRegistrationRequest registrationRequest){
+        User user = User.builder()
+                .fullName(registrationRequest.fullName())
+                .email(registrationRequest.email().toLowerCase().trim())
+                .password(passwordEncoder.encode(registrationRequest.password()))
+                .role(UserRole.ATTENDEE)
+                .isActive(true)
+                .build();
+        return userRepository.save(user);
+    }
+
+    public void sendRegistrationMessageToQueue(User savedUser){
+        try{
+            UserRegisteredEvent event = new UserRegisteredEvent(savedUser.getId(), savedUser.getFullName(), savedUser.getEmail());
+            String messageBody = objectMapper.writeValueAsString(event);
+            sqsClient.sendMessage(builder -> builder.queueUrl(userRegistrationQueueUrl).messageBody(messageBody));
+            log.info("Message sent to SQS queue");
+        }catch (Exception e){
+            log.error("Error sending message to SQS: {}", e.getMessage());
+        }
+    }
+
 
     @Override
     public void loginUser(UserLoginRequest loginRequest){
@@ -151,16 +169,6 @@ public class AuthServiceImpl implements AuthService {
         clearAuthCookies(response);
     }
 
-    public void sendRegistrationMessageToQueue(User savedUser){
-        try{
-        UserRegisteredEvent event = new UserRegisteredEvent(savedUser.getId(), savedUser.getFullName(), savedUser.getEmail());
-        String messageBody = objectMapper.writeValueAsString(event);
-        sqsClient.sendMessage(builder -> builder.queueUrl(userRegistrationQueueUrl).messageBody(messageBody));
-        log.info("Message sent to SQS queue");
-        }catch (Exception e){
-            log.error("Error sending message to SQS: {}", e.getMessage());
-        }
-    }
 
     private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken){
         ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", accessToken)
