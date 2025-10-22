@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<CustomApiResponse<?>> handleDuplicateEmailException(DuplicateEmailException ex){
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(CustomApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(CustomApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(PasswordMismatchException.class)
@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InactiveAccountException.class)
     public ResponseEntity<CustomApiResponse<?>> handleInactiveAccountException(InactiveAccountException ex){
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(CustomApiResponse.error(ex.getMessage()));
     }
 
 
@@ -66,6 +66,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DisabledException.class)
     public ResponseEntity handleUnauthorizedAccess(DisabledException ex){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity handleAuthorizationDeniedException(AuthorizationDeniedException ex){
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(CustomApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(ExpiredJwtException.class)
