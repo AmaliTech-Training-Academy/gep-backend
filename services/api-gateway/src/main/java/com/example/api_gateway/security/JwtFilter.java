@@ -4,10 +4,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -23,6 +25,9 @@ public class JwtFilter implements GlobalFilter {
     public static final List<String> OPEN_API_ENDPOINTS = List.of(
             "/api/v1/auth/register",
             "/api/v1/auth/login",
+            "/api/v1/auth/verify-otp",
+            "/api/v1/auth/refresh",
+            "/api/v1/auth/logout",
             "/auth-service/v3/api-docs"
     );
 
@@ -36,13 +41,7 @@ public class JwtFilter implements GlobalFilter {
             return chain.filter(exchange);
         }
 
-        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return onError(exchange, "Missing or invalid Authorization header", HttpStatus.UNAUTHORIZED);
-        }
-
-        String token = authHeader.substring(7);
+        String token = extractTokenFromCookie(request);
 
         if (!jwtUtil.validateToken(token)) {
             return onError(exchange, "Invalid or expired JWT token", HttpStatus.UNAUTHORIZED);
@@ -55,6 +54,11 @@ public class JwtFilter implements GlobalFilter {
                 .build();
 
         return chain.filter(exchange.mutate().request(mutatedRequest).build());
+    }
+
+    private String extractTokenFromCookie(ServerHttpRequest request){
+        HttpCookie cookie = request.getCookies().getFirst("accessToken");
+        return cookie != null ? cookie.getValue() : null;
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, String errorMessage, HttpStatus httpStatus) {
