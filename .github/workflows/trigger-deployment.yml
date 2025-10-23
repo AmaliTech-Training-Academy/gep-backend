@@ -1,0 +1,78 @@
+name: Trigger Deployment
+
+on:
+  push:
+    branches: [dev, staging, main]
+  pull_request:
+    branches: [dev, staging, main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.changes.outputs.services }}
+      environment: ${{ steps.env.outputs.environment }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Detect changed services
+      id: changes
+      run: |
+        if [ "${{ github.event_name }}" == "pull_request" ]; then
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+        else
+          BASE_SHA="${{ github.event.before }}"
+        fi
+        
+        CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }})
+        SERVICES=()
+        
+        for service in user-service event-service notification-service gateway-service; do
+          if echo "$CHANGED_FILES" | grep -q "^$service/"; then
+            SERVICES+=("\"$service\"")
+          fi
+        done
+        
+        # If shared libs changed, rebuild all services
+        if echo "$CHANGED_FILES" | grep -qE "^(common-lib|security-lib|messaging-lib)/"; then
+          SERVICES=("\"user-service\"" "\"event-service\"" "\"notification-service\"" "\"gateway-service\"")
+        fi
+        
+        SERVICES_JSON="[$(IFS=,; echo "${SERVICES[*]}")]"
+        echo "services=$SERVICES_JSON" >> $GITHUB_OUTPUT
+
+    - name: Determine environment
+      id: env
+      run: |
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "environment=prod" >> $GITHUB_OUTPUT
+        elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+          echo "environment=staging" >> $GITHUB_OUTPUT
+        else
+          echo "environment=dev" >> $GITHUB_OUTPUT
+        fi
+
+  trigger-deployment:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger DevOps Pipeline
+      run: |
+        curl -X POST \
+          -H "Authorization: token ${{ secrets.DEVOPS_REPO_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo/dispatches \
+          -d '{
+            "event_type": "backend-deployment",
+            "client_payload": {
+              "repository": "${{ github.repository }}",
+              "sha": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "environment": "${{ needs.detect-changes.outputs.environment }}",
+              "services": ${{ needs.detect-changes.outputs.services }},
+              "actor": "${{ github.actor }}"
+            }
+          }'
