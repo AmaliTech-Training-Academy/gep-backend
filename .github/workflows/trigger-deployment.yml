@@ -15,18 +15,27 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 2
+        fetch-depth: 0
 
     - name: Detect changed services
       id: changes
       run: |
         if [ "${{ github.event_name }}" == "pull_request" ]; then
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
-        else
+        elif [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
           BASE_SHA="${{ github.event.before }}"
+        else
+          # First push or force push - compare with HEAD~1 or use all files
+          BASE_SHA="HEAD~1"
         fi
         
-        CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }})
+        # Ensure we have the base commit
+        if ! git cat-file -e "$BASE_SHA" 2>/dev/null; then
+          echo "Base SHA not found, using HEAD~1"
+          BASE_SHA="HEAD~1"
+        fi
+        
+        CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }} 2>/dev/null || git ls-files)
         SERVICES=()
         
         for service in services/user-service services/event-service services/notification-service services/api-gateway; do
