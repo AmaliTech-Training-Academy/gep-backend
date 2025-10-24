@@ -90,8 +90,9 @@ jobs:
         
         # Debug what we're about to call
         DEVOPS_URL="https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo/dispatches"
+        TOKEN="${{ secrets.DEVOPS_REPO_TOKEN }}"
         echo "🔗 Target URL: $DEVOPS_URL"
-        echo "🔑 Token length: ${#{{ secrets.DEVOPS_REPO_TOKEN }}}"
+        echo "🔑 Token set: $([ -n "$TOKEN" ] && echo "Yes (${#TOKEN} chars)" || echo "No")"
         
         # Check if required secrets are set
         if [ -z "${{ secrets.DEVOPS_REPO_TOKEN }}" ] || [ -z "${{ secrets.DEVOPS_REPO_OWNER }}" ]; then
