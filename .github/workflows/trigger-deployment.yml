@@ -29,15 +29,16 @@ jobs:
         CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }})
         SERVICES=()
         
-        for service in user-service event-service notification-service gateway-service; do
+        for service in services/user-service services/event-service services/notification-service services/api-gateway; do
+          service_name=$(basename $service)
           if echo "$CHANGED_FILES" | grep -q "^$service/"; then
-            SERVICES+=("\"$service\"")
+            SERVICES+=("\"$service_name\"")
           fi
         done
         
         # If shared libs changed, rebuild all services
-        if echo "$CHANGED_FILES" | grep -qE "^(common-lib|security-lib|messaging-lib)/"; then
-          SERVICES=("\"user-service\"" "\"event-service\"" "\"notification-service\"" "\"gateway-service\"")
+        if echo "$CHANGED_FILES" | grep -qE "^shared/(common-lib|security-lib|messaging-lib)/"; then
+          SERVICES=("\"user-service\"" "\"event-service\"" "\"notification-service\"" "\"api-gateway\"")
         fi
         
         SERVICES_JSON="[$(IFS=,; echo "${SERVICES[*]}")]"
@@ -48,7 +49,9 @@ jobs:
       run: |
         if [ "${{ github.ref }}" == "refs/heads/main" ]; then
           echo "environment=prod" >> $GITHUB_OUTPUT
-        elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+        elif [ "${{ github.ref }}" == "refs/heads/dev" ]; then
+          echo "environment=dev" >> $GITHUB_OUTPUT
+        elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
           echo "environment=staging" >> $GITHUB_OUTPUT
         else
           echo "environment=dev" >> $GITHUB_OUTPUT
@@ -61,7 +64,10 @@ jobs:
     steps:
     - name: Trigger DevOps Pipeline
       run: |
-        curl -X POST \
+        echo "Triggering deployment for services: ${{ needs.detect-changes.outputs.services }}"
+        echo "Environment: ${{ needs.detect-changes.outputs.environment }}"
+        
+        response=$(curl -s -w "\n%{http_code}" -X POST \
           -H "Authorization: token ${{ secrets.DEVOPS_REPO_TOKEN }}" \
           -H "Accept: application/vnd.github.v3+json" \
           https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo/dispatches \
@@ -75,4 +81,15 @@ jobs:
               "services": ${{ needs.detect-changes.outputs.services }},
               "actor": "${{ github.actor }}"
             }
-          }'
+          }')
+        
+        http_code=$(echo "$response" | tail -n1)
+        body=$(echo "$response" | head -n -1)
+        
+        if [ "$http_code" -eq 204 ]; then
+          echo "✅ Successfully triggered DevOps pipeline"
+        else
+          echo "❌ Failed to trigger pipeline. HTTP code: $http_code"
+          echo "Response: $body"
+          exit 1
+        fi
