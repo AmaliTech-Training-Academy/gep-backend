@@ -13,8 +13,6 @@ public record ResetPasswordRequest(
         @NotBlank(message = "Password is required")
         @Pattern(regexp = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?]).*$",
                 message = "Password must contain at least one uppercase letter, one number, and one special character.")
-        String password,
-        @NotBlank(message = "Password is required")
-        String confirmPassword
+        String password
 ) {
 }
