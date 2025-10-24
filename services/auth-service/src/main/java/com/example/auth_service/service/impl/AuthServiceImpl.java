@@ -128,7 +128,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void verifyOtp(OtpVerificationRequest request, HttpServletResponse response){
+    public AuthResponse verifyOtp(OtpVerificationRequest request, HttpServletResponse response){
         boolean isValid = otpService.verifyOtp(request.email(), request.otp());
         if(!isValid){
             throw new IllegalArgumentException("Invalid or expired OTP");
@@ -139,6 +139,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
         setAuthCookies(response, accessToken, refreshToken);
+        return new AuthResponse(user.getEmail(), user.getRole());
     }
 
     @Override
