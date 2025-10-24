@@ -50,8 +50,15 @@ jobs:
           SERVICES=("\"user-service\"" "\"event-service\"" "\"notification-service\"" "\"api-gateway\"")
         fi
         
+        # If workflow files changed, trigger all services for testing
+        if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/"; then
+          SERVICES=("\"user-service\"" "\"event-service\"" "\"notification-service\"" "\"api-gateway\"")
+        fi
+        
         SERVICES_JSON="[$(IFS=,; echo "${SERVICES[*]}")]"
         echo "services=$SERVICES_JSON" >> $GITHUB_OUTPUT
+        echo "Debug: Changed files: $CHANGED_FILES"
+        echo "Debug: Services found: $SERVICES_JSON"
 
     - name: Determine environment
       id: env
@@ -68,9 +75,14 @@ jobs:
 
   trigger-deployment:
     needs: detect-changes
-    if: needs.detect-changes.outputs.services != '[]'
+    if: always() && (needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '')
     runs-on: ubuntu-latest
     steps:
+    - name: Debug outputs
+      run: |
+        echo "Services: ${{ needs.detect-changes.outputs.services }}"
+        echo "Environment: ${{ needs.detect-changes.outputs.environment }}"
+        
     - name: Trigger DevOps Pipeline
       run: |
         echo "Triggering deployment for services: ${{ needs.detect-changes.outputs.services }}"
