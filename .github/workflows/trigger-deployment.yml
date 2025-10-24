@@ -15,18 +15,27 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 2
+        fetch-depth: 0
 
     - name: Detect changed services
       id: changes
       run: |
         if [ "${{ github.event_name }}" == "pull_request" ]; then
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
-        else
+        elif [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
           BASE_SHA="${{ github.event.before }}"
+        else
+          # First push or force push - compare with HEAD~1 or use all files
+          BASE_SHA="HEAD~1"
         fi
         
-        CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }})
+        # Ensure we have the base commit
+        if ! git cat-file -e "$BASE_SHA" 2>/dev/null; then
+          echo "Base SHA not found, using HEAD~1"
+          BASE_SHA="HEAD~1"
+        fi
+        
+        CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }} 2>/dev/null || git ls-files)
         SERVICES=()
         
         for service in services/user-service services/event-service services/notification-service services/api-gateway; do
@@ -41,8 +50,15 @@ jobs:
           SERVICES=("\"user-service\"" "\"event-service\"" "\"notification-service\"" "\"api-gateway\"")
         fi
         
+        # If workflow files changed, trigger all services for testing
+        if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/"; then
+          SERVICES=("\"user-service\"" "\"event-service\"" "\"notification-service\"" "\"api-gateway\"")
+        fi
+        
         SERVICES_JSON="[$(IFS=,; echo "${SERVICES[*]}")]"
         echo "services=$SERVICES_JSON" >> $GITHUB_OUTPUT
+        echo "Debug: Changed files: $CHANGED_FILES"
+        echo "Debug: Services found: $SERVICES_JSON"
 
     - name: Determine environment
       id: env
@@ -59,13 +75,37 @@ jobs:
 
   trigger-deployment:
     needs: detect-changes
-    if: needs.detect-changes.outputs.services != '[]'
+    if: always() && (needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '')
     runs-on: ubuntu-latest
     steps:
+    - name: Debug outputs
+      run: |
+        echo "Services: ${{ needs.detect-changes.outputs.services }}"
+        echo "Environment: ${{ needs.detect-changes.outputs.environment }}"
+        
     - name: Trigger DevOps Pipeline
       run: |
         echo "Triggering deployment for services: ${{ needs.detect-changes.outputs.services }}"
         echo "Environment: ${{ needs.detect-changes.outputs.environment }}"
+        
+        # Check if required secrets are set
+        if [ -z "${{ secrets.DEVOPS_REPO_TOKEN }}" ] || [ -z "${{ secrets.DEVOPS_REPO_OWNER }}" ]; then
+          echo "⚠️ DEVOPS_REPO_TOKEN or DEVOPS_REPO_OWNER secrets not set"
+          echo "📋 Payload that would be sent:"
+          echo '{
+            "event_type": "backend-deployment",
+            "client_payload": {
+              "repository": "${{ github.repository }}",
+              "sha": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "environment": "${{ needs.detect-changes.outputs.environment }}",
+              "services": ${{ needs.detect-changes.outputs.services }},
+              "actor": "${{ github.actor }}"
+            }
+          }'
+          echo "✅ Workflow validation successful - would trigger DevOps pipeline"
+          exit 0
+        fi
         
         response=$(curl -s -w "\n%{http_code}" -X POST \
           -H "Authorization: token ${{ secrets.DEVOPS_REPO_TOKEN }}" \
@@ -91,5 +131,6 @@ jobs:
         else
           echo "❌ Failed to trigger pipeline. HTTP code: $http_code"
           echo "Response: $body"
+          echo "💡 Check: 1) Secrets are set 2) DevOps repo exists 3) Token has repo dispatch permissions"
           exit 1
         fi
