@@ -139,7 +139,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
         setAuthCookies(response, accessToken, refreshToken);
-        return new AuthResponse(user.getEmail(), user.getRole());
+        return new AuthResponse(user.getId(), user.getEmail(), user.getRole());
     }
 
     @Override
