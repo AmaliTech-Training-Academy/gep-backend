@@ -13,5 +13,5 @@ From the docker-compose file, you can run the localstack service
 ## 2. Create SQS Queue
 
 ```bash
-awslocal sqs create-queue --queue-name <name-of-queue>
+aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name my-queue
 ```

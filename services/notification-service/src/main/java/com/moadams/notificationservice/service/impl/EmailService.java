@@ -32,17 +32,24 @@ public class EmailService implements NotificationService {
             context.setVariable("recipientName", recipientName);
 
             String htmlContent = templateEngine.process("welcome-email", context);
-
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-            helper.setTo(recipientEmail);
-            helper.setSubject("Welcome to Our Eventhub");
-            helper.setFrom(adminEmail, "EventHub");
-            helper.setText(htmlContent, true);
-            mailSender.send(message);
-
+            sendEmail(htmlContent, recipientEmail, "Welcome to Our Eventhub");
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send welcome email");
+        }
+    }
+
+    @Override
+    public void sendForgotPasswordEmail(String recipientEmail, String recipientName, String otpCode) {
+        try{
+            Context context = new Context();
+            context.setVariable("recipientName", recipientName);
+            context.setVariable("otpCode", otpCode);
+
+            String htmlContent = templateEngine.process("forgot-password", context);
+            sendEmail(htmlContent, recipientEmail, "Password Reset Request");
+
+        }catch (MessagingException | UnsupportedEncodingException e){
+            log.error("Failed to send forgot password email");
         }
     }
 
@@ -54,16 +61,21 @@ public class EmailService implements NotificationService {
 
             String htmlContent = templateEngine.process("verify-otp", context);
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-            helper.setTo(recipientEmail);
-            helper.setSubject("Verify OTP");
-            helper.setFrom(adminEmail, "EventHub");
-            helper.setText(htmlContent, true);
-            mailSender.send(message);
+            sendEmail(htmlContent, recipientEmail, "Verify OTP");
 
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send otp email");
         }
+    }
+
+    private void sendEmail( String htmlContent, String recipientEmail, String subject) throws MessagingException, UnsupportedEncodingException {
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+        helper.setTo(recipientEmail);
+        helper.setSubject(subject);
+        helper.setFrom(adminEmail, "EventHub");
+        helper.setText(htmlContent, true);
+        mailSender.send(message);
     }
 }

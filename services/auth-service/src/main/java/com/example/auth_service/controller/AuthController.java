@@ -1,10 +1,6 @@
 package com.example.auth_service.controller;
 
-import com.example.auth_service.dto.request.OtpVerificationRequest;
-import com.example.auth_service.dto.request.RefreshAccessTokenRequest;
-import com.example.auth_service.dto.request.UserLoginRequest;
-import com.example.auth_service.dto.request.UserRegistrationRequest;
-import com.example.auth_service.dto.response.AuthResponse;
+import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.CustomApiResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.service.AuthService;
@@ -39,6 +35,12 @@ public class AuthController {
         return ResponseEntity.ok(CustomApiResponse.success("Login successful"));
     }
 
+    @PostMapping("/resend-otp")
+    public ResponseEntity<CustomApiResponse<?>> resendOtp(@RequestBody EmailRequest request){
+        authService.resendOtp(request.email());
+        return ResponseEntity.ok(CustomApiResponse.success("OTP resent successfully"));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<CustomApiResponse<?>> refreshToken(@CookieValue(name="refreshToken") String refreshToken, HttpServletResponse response){
         authService.refreshAccessToken(refreshToken, response);
@@ -49,6 +51,18 @@ public class AuthController {
     public ResponseEntity<CustomApiResponse<?>> logout(HttpServletResponse response){
         authService.logout(response);
         return ResponseEntity.ok(CustomApiResponse.success("Logged out successfully"));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<CustomApiResponse<?>> forgotPassword(@Valid @RequestBody EmailRequest request){
+        authService.requestPasswordReset(request.email());
+        return ResponseEntity.ok(CustomApiResponse.success("Password reset email sent"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<CustomApiResponse<?>> resetPassword(@Valid @RequestBody ResetPasswordRequest request){
+        authService.resetPassword(request);
+        return ResponseEntity.ok(CustomApiResponse.success("Password has been reset successfully"));
     }
 
 }
