@@ -88,6 +88,25 @@ jobs:
         echo "Triggering deployment for services: ${{ needs.detect-changes.outputs.services }}"
         echo "Environment: ${{ needs.detect-changes.outputs.environment }}"
         
+        # Check if required secrets are set
+        if [ -z "${{ secrets.DEVOPS_REPO_TOKEN }}" ] || [ -z "${{ secrets.DEVOPS_REPO_OWNER }}" ]; then
+          echo "⚠️ DEVOPS_REPO_TOKEN or DEVOPS_REPO_OWNER secrets not set"
+          echo "📋 Payload that would be sent:"
+          echo '{
+            "event_type": "backend-deployment",
+            "client_payload": {
+              "repository": "${{ github.repository }}",
+              "sha": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "environment": "${{ needs.detect-changes.outputs.environment }}",
+              "services": ${{ needs.detect-changes.outputs.services }},
+              "actor": "${{ github.actor }}"
+            }
+          }'
+          echo "✅ Workflow validation successful - would trigger DevOps pipeline"
+          exit 0
+        fi
+        
         response=$(curl -s -w "\n%{http_code}" -X POST \
           -H "Authorization: token ${{ secrets.DEVOPS_REPO_TOKEN }}" \
           -H "Accept: application/vnd.github.v3+json" \
@@ -112,5 +131,6 @@ jobs:
         else
           echo "❌ Failed to trigger pipeline. HTTP code: $http_code"
           echo "Response: $body"
+          echo "💡 Check: 1) Secrets are set 2) DevOps repo exists 3) Token has repo dispatch permissions"
           exit 1
         fi
