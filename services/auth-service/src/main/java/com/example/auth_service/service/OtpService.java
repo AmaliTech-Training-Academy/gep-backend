@@ -1,6 +1,7 @@
 package com.example.auth_service.service;
 
 public interface OtpService {
-    String generateOtp(String key);
+    void requestLoginOtp(String email);
     boolean verifyOtp(String key, String otp);
+    void requestResetPasswordOtp(String email, String fullName);
 }

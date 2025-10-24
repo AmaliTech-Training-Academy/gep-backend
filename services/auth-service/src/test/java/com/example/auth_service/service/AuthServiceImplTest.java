@@ -61,7 +61,7 @@ public class AuthServiceImplTest {
                 .email(email)
                 .password("encoded")
                 .fullName("Test User")
-                .role(UserRole.ATTENDEE)
+                .role(UserRole.ORGANISER)
                 .isActive(true)
                 .build();
 
@@ -75,7 +75,7 @@ public class AuthServiceImplTest {
 
         verify(authenticationManager, times(1))
                 .authenticate(any(UsernamePasswordAuthenticationToken.class));
-        verify(otpService, times(1)).generateOtp(email);
+        verify(otpService, times(1)).requestLoginOtp(email);
     }
 
     @Test
@@ -100,7 +100,7 @@ public class AuthServiceImplTest {
         );
 
         assertEquals("User account is inactive", ex.getMessage());
-        verify(otpService, never()).generateOtp(anyString());
+        verify(otpService, never()).requestLoginOtp(anyString());
     }
 
     @Test
@@ -117,7 +117,7 @@ public class AuthServiceImplTest {
         );
 
         assertEquals("Invalid credentials", ex.getMessage());
-        verify(otpService, never()).generateOtp(anyString());
+        verify(otpService, never()).requestLoginOtp(anyString());
     }
 
     // --- VERIFY OTP TESTS ---
@@ -318,7 +318,7 @@ public class AuthServiceImplTest {
                     .email(email)
                     .password("encoded_password")
                     .fullName("Deactivated User")
-                    .role(UserRole.ATTENDEE)
+                    .role(UserRole.ORGANISER)
                     .isActive(false)
                     .build();
 
@@ -338,7 +338,7 @@ public class AuthServiceImplTest {
 
             assertEquals("User account is inactive", exception.getMessage());
             verify(authenticationManager, times(1)).authenticate(any());
-            verify(otpService, never()).generateOtp(anyString());
+            verify(otpService, never()).requestLoginOtp(anyString());
         }
 
         @Test
@@ -360,7 +360,7 @@ public class AuthServiceImplTest {
             assertThrows(InactiveAccountException.class,
                     () -> authService.loginUser(new UserLoginRequest(email, "password")));
 
-            verify(otpService, never()).generateOtp(email);
+            verify(otpService, never()).requestLoginOtp(email);
         }
 
         @Test
@@ -384,7 +384,7 @@ public class AuthServiceImplTest {
             assertThrows(InactiveAccountException.class,
                     () -> authService.loginUser(new UserLoginRequest(email, "password")));
 
-            verify(otpService, never()).generateOtp(anyString());
+            verify(otpService, never()).requestLoginOtp(anyString());
         }
     }
 
@@ -402,7 +402,7 @@ public class AuthServiceImplTest {
             User deactivatedUser = User.builder()
                     .email(email)
                     .fullName("Deactivated User")
-                    .role(UserRole.ATTENDEE)
+                    .role(UserRole.ORGANISER)
                     .isActive(false)
                     .build();
 
@@ -484,7 +484,7 @@ public class AuthServiceImplTest {
             User deactivatedUser = User.builder()
                     .email(email)
                     .fullName("Deactivated User")
-                    .role(UserRole.ATTENDEE)
+                    .role(UserRole.ORGANISER)
                     .isActive(false)
                     .build();
 
@@ -711,7 +711,7 @@ public class AuthServiceImplTest {
                     .email(email)
                     .password("encoded_password")
                     .fullName("Deactivated User")
-                    .role(UserRole.ATTENDEE)
+                    .role(UserRole.ORGANISER)
                     .isActive(false)
                     .build();
 
@@ -735,7 +735,7 @@ public class AuthServiceImplTest {
                     () -> authService.refreshAccessToken("any-token", response));
 
             // Verify no authentication artifacts were created
-            verify(otpService, never()).generateOtp(email);
+            verify(otpService, never()).requestLoginOtp(email);
             verify(jwtUtil, never()).generateAccessToken(email);
             verify(jwtUtil, never()).generateRefreshToken(email);
             verify(response, never()).addHeader(eq("Set-Cookie"), anyString());

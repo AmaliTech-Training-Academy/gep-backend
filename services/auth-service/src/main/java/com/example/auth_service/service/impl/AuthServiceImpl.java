@@ -1,11 +1,13 @@
 package com.example.auth_service.service.impl;
 
 import com.example.auth_service.dto.request.OtpVerificationRequest;
+import com.example.auth_service.dto.request.ResetPasswordRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
+import com.example.auth_service.event.ResetPasswordEvent;
 import com.example.auth_service.event.UserRegisteredEvent;
 import com.example.auth_service.exception.DuplicateEmailException;
 import com.example.auth_service.exception.InactiveAccountException;
@@ -90,7 +92,7 @@ public class AuthServiceImpl implements AuthService {
                 .fullName(registrationRequest.fullName())
                 .email(registrationRequest.email().toLowerCase().trim())
                 .password(passwordEncoder.encode(registrationRequest.password()))
-                .role(UserRole.ATTENDEE)
+                .role(UserRole.ORGANISER)
                 .isActive(true)
                 .build();
         return userRepository.save(user);
@@ -119,29 +121,31 @@ public class AuthServiceImpl implements AuthService {
             if(!authUser.getUser().isActive()){
                 throw new InactiveAccountException("User account is inactive");
             }
-            otpService.generateOtp(loginRequest.email());
+            otpService.requestLoginOtp(loginRequest.email());
         }catch(BadCredentialsException e){
             throw new BadCredentialsException("Invalid credentials");
         }
     }
 
     @Override
-    public void verifyOtp(OtpVerificationRequest request, HttpServletResponse response){
+    public AuthResponse verifyOtp(OtpVerificationRequest request, HttpServletResponse response){
         boolean isValid = otpService.verifyOtp(request.email(), request.otp());
         if(!isValid){
             throw new IllegalArgumentException("Invalid or expired OTP");
         }
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new BadCredentialsException("User not found"));
-
-        if(!user.isActive()){
-            throw new InactiveAccountException("User account is inactive");
-        }
+        User user = getActiveUserByEmail(request.email());
 
         String accessToken = jwtUtil.generateAccessToken(user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
         setAuthCookies(response, accessToken, refreshToken);
+        return new AuthResponse(user.getEmail(), user.getRole());
+    }
+
+    @Override
+    public void resendOtp(String email) {
+        User user = getActiveUserByEmail(email);
+        otpService.requestLoginOtp(user.getEmail());
     }
 
     @Override
@@ -162,6 +166,32 @@ public class AuthServiceImpl implements AuthService {
         String newRefreshToken = jwtUtil.generateRefreshToken(email);
 
         setAuthCookies(response, newAccessToken, newRefreshToken);
+    }
+
+    @Override
+    public void requestPasswordReset(String email) {
+        User user = getActiveUserByEmail(email);
+        otpService.requestResetPasswordOtp(email, user.getFullName());
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordRequest resetPasswordRequest) {
+        boolean isValid = otpService.verifyOtp(resetPasswordRequest.email(), resetPasswordRequest.otp());
+        if(!isValid){
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
+        User user = getActiveUserByEmail(resetPasswordRequest.email());
+        user.setPassword(passwordEncoder.encode(resetPasswordRequest.password()));
+        userRepository.save(user);
+    }
+
+    private User getActiveUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadCredentialsException("User not found"));
+        if(!user.isActive()){
+            throw new InactiveAccountException("User account is inactive");
+        }
+        return user;
     }
 
     @Override

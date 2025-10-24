@@ -1,6 +1,7 @@
 package com.example.auth_service.service;
 
 import com.example.auth_service.dto.request.OtpVerificationRequest;
+import com.example.auth_service.dto.request.ResetPasswordRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.dto.request.UserRegistrationRequest;
 import com.example.auth_service.dto.response.AuthResponse;
@@ -14,9 +15,15 @@ public interface AuthService {
 
     void loginUser(UserLoginRequest loginRequest);
 
-    void verifyOtp(OtpVerificationRequest request, HttpServletResponse response);
+    AuthResponse verifyOtp(OtpVerificationRequest request, HttpServletResponse response);
+
+    void resendOtp(String email);
 
     void refreshAccessToken(String refreshToken, HttpServletResponse response);
+
+    void requestPasswordReset(String email);
+
+    void resetPassword(ResetPasswordRequest resetPasswordEvent);
 
     void logout(HttpServletResponse response);
 }
