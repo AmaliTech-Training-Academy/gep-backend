@@ -89,7 +89,7 @@ jobs:
         echo "Environment: ${{ needs.detect-changes.outputs.environment }}"
         
         # Debug what we're about to call
-        DEVOPS_URL="https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo/dispatches"
+        DEVOPS_URL="https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/gep-devops/dispatches"
         TOKEN="${{ secrets.DEVOPS_REPO_TOKEN }}"
         echo "🔗 Target URL: $DEVOPS_URL"
         echo "🔑 Token set: $([ -n "$TOKEN" ] && echo "Yes (${#TOKEN} chars)" || echo "No")"
@@ -118,12 +118,12 @@ jobs:
         repo_check=$(curl -s -w "\n%{http_code}" \
           -H "Authorization: token ${{ secrets.DEVOPS_REPO_TOKEN }}" \
           -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo)
+          https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/gep-devops)
         
         repo_http_code=$(echo "$repo_check" | tail -n1)
         if [ "$repo_http_code" -ne 200 ]; then
           echo "❌ Repository check failed. HTTP code: $repo_http_code"
-          echo "Repository: ${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo"
+          echo "Repository: ${{ secrets.DEVOPS_REPO_OWNER }}/gep-devops"
           echo "Response: $(echo "$repo_check" | head -n -1)"
           echo "💡 Possible issues: 1) Repository doesn't exist 2) Token lacks access 3) Wrong owner/repo name"
           exit 1
