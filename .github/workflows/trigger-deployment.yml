@@ -88,10 +88,15 @@ jobs:
         echo "Triggering deployment for services: ${{ needs.detect-changes.outputs.services }}"
         echo "Environment: ${{ needs.detect-changes.outputs.environment }}"
         
+        # Debug what we're about to call
+        DEVOPS_URL="https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo/dispatches"
+        echo "🔗 Target URL: $DEVOPS_URL"
+        echo "🔑 Token length: ${#{{ secrets.DEVOPS_REPO_TOKEN }}}"
+        
         # Check if required secrets are set
         if [ -z "${{ secrets.DEVOPS_REPO_TOKEN }}" ] || [ -z "${{ secrets.DEVOPS_REPO_OWNER }}" ]; then
           echo "⚠️ DEVOPS_REPO_TOKEN or DEVOPS_REPO_OWNER secrets not set"
-          echo "📋 Payload that would be sent:"
+          echo "📋 Payload that would be sent to: $DEVOPS_URL"
           echo '{
             "event_type": "backend-deployment",
             "client_payload": {
@@ -107,10 +112,28 @@ jobs:
           exit 0
         fi
         
+        # Test if the repository exists first
+        echo "🔍 Testing repository access..."
+        repo_check=$(curl -s -w "\n%{http_code}" \
+          -H "Authorization: token ${{ secrets.DEVOPS_REPO_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo)
+        
+        repo_http_code=$(echo "$repo_check" | tail -n1)
+        if [ "$repo_http_code" -ne 200 ]; then
+          echo "❌ Repository check failed. HTTP code: $repo_http_code"
+          echo "Repository: ${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo"
+          echo "Response: $(echo "$repo_check" | head -n -1)"
+          echo "💡 Possible issues: 1) Repository doesn't exist 2) Token lacks access 3) Wrong owner/repo name"
+          exit 1
+        fi
+        
+        echo "✅ Repository access confirmed"
+        
         response=$(curl -s -w "\n%{http_code}" -X POST \
           -H "Authorization: token ${{ secrets.DEVOPS_REPO_TOKEN }}" \
           -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/${{ secrets.DEVOPS_REPO_OWNER }}/devops-repo/dispatches \
+          "$DEVOPS_URL" \
           -d '{
             "event_type": "backend-deployment",
             "client_payload": {
@@ -131,6 +154,6 @@ jobs:
         else
           echo "❌ Failed to trigger pipeline. HTTP code: $http_code"
           echo "Response: $body"
-          echo "💡 Check: 1) Secrets are set 2) DevOps repo exists 3) Token has repo dispatch permissions"
+          echo "💡 For repository_dispatch, token needs 'repo' or 'public_repo' scope"
           exit 1
         fi
