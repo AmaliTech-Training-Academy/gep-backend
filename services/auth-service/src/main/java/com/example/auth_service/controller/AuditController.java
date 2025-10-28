@@ -19,7 +19,7 @@ public class AuditController {
 
     @GetMapping
     public ResponseEntity<PagedAuditResponse> getAuditLogs(
-            @RequestParam(value = "sortBy", defaultValue = "email",required = false) String[] sortBy,
+            @RequestParam(value = "sortBy", defaultValue = "createdAt",required = false) String[] sortBy,
             @RequestParam(value = "pageNumber",defaultValue = "0", required = false) int pageNumber,
             @RequestParam(value = "pageSize", defaultValue = "5", required = false) int pageSize
     ) {
