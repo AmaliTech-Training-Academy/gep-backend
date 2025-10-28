@@ -38,7 +38,7 @@ jobs:
         CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }} 2>/dev/null || git ls-files)
         SERVICES=()
         
-        for service in services/user-service services/event-service services/notification-service services/api-gateway; do
+        for service in services/auth-service services/event-service services/notification-service services/api-gateway services/config-server services/discovery-server; do
           service_name=$(basename $service)
           if echo "$CHANGED_FILES" | grep -q "^$service/"; then
             SERVICES+=("\"$service_name\"")
@@ -47,12 +47,12 @@ jobs:
         
         # If shared libs changed, rebuild all services
         if echo "$CHANGED_FILES" | grep -qE "^shared/(common-lib|security-lib|messaging-lib)/"; then
-          SERVICES=("\"user-service\"" "\"event-service\"" "\"notification-service\"" "\"api-gateway\"")
+          SERVICES=("\"auth-service\"" "\"event-service\"" "\"notification-service\"" "\"api-gateway\"" "\"config-server\"" "\"discovery-server\"")
         fi
         
         # If workflow files changed, trigger all services for testing
         if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/"; then
-          SERVICES=("\"user-service\"" "\"event-service\"" "\"notification-service\"" "\"api-gateway\"")
+          SERVICES=("\"auth-service\"" "\"event-service\"" "\"notification-service\"" "\"api-gateway\"" "\"config-server\"" "\"discovery-server\"")
         fi
         
         SERVICES_JSON="[$(IFS=,; echo "${SERVICES[*]}")]"
