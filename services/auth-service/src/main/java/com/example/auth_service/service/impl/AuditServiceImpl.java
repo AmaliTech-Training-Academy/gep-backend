@@ -1,11 +1,12 @@
 package com.example.auth_service.service.impl;
 
+import com.example.auth_service.dto.request.AuditLogData;
 import com.example.auth_service.dto.request.AuditLogRequest;
 import com.example.auth_service.dto.response.AuditResponse;
 import com.example.auth_service.dto.response.PagedAuditResponse;
 import com.example.auth_service.mappers.AuditMapper;
-import com.example.auth_service.model.AuditLog;
-import com.example.auth_service.repository.AuditLogRepository;
+import com.example.auth_service.model.AuditLogJSONB;
+import com.example.auth_service.repository.AuditLogJSONBRepository;
 import com.example.auth_service.service.AuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -21,29 +22,32 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AuditServiceImpl implements AuditService {
 
-    private final AuditLogRepository auditLogRepository;
+    private final AuditLogJSONBRepository auditLogJSONBRepository;
     private final AuditMapper auditMapper;
 
     @Override
     public void save(AuditLogRequest auditLogRequest) {
-        AuditLog auditLog = AuditLog
+        AuditLogData auditLogData = new AuditLogData(
+                auditLogRequest.email(),
+                auditLogRequest.ipAddress(),
+                auditLogRequest.timestamp()
+        );
+        AuditLogJSONB auditLogJSONB = AuditLogJSONB
                 .builder()
-                .email(auditLogRequest.email())
-                .ipAddress(auditLogRequest.ipAddress())
-                .timestamp(auditLogRequest.timestamp())
+                .auditLogDataJson(auditLogData)
                 .build();
-        auditLogRepository.save(auditLog);
+        auditLogJSONBRepository.save(auditLogJSONB);
     }
 
     @Override
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public PagedAuditResponse findAll(int pageNumber, int pageSize, String[] sortBy) {
         Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, sortBy));
-        List<AuditResponse> auditResponseList = auditLogRepository.findAll(pageable).stream()
+        List<AuditResponse> auditResponseList = auditLogJSONBRepository.findAll(pageable).stream()
                 .map(auditMapper::toAuditResponse)
                 .collect(Collectors.toList());
         return  new PagedAuditResponse(
-                pageable.getPageNumber() + 1,
+                pageable.getPageNumber(),
                 pageable.getPageSize(),
                 auditResponseList
         );
