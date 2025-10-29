@@ -176,9 +176,6 @@ CREATE SCHEMA booking_schema;
 CREATE SCHEMA payment_schema;
 -- Tables: payments, transactions, refunds
 
--- Audit Schema
-CREATE SCHEMA audit_schema;
--- Tables: audit_logs (with JSONB columns)
 ```
 
 **Application Configuration:**
@@ -235,24 +232,21 @@ spring:
 
 **Audit Log Implementation:**
 ```sql
--- Audit logs table in audit_schema
-CREATE TABLE audit_schema.audit_logs (
+-- Audit logs table in
+CREATE TABLE audit_log_jsonb (
     id BIGSERIAL PRIMARY KEY,
-    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    service VARCHAR(50) NOT NULL,
-    action VARCHAR(100) NOT NULL,
-    user_id VARCHAR(100),
-    resource_id VARCHAR(100),
-    changes JSONB,  -- Flexible JSON storage
-    metadata JSONB, -- IP, user agent, etc.
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    audit_log_data_json JSONB NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITHOUT TIME ZONE,
+    CONSTRAINT audit_log_jsonb_pkey PRIMARY KEY (id)
 );
 
--- Indexes for performance
-CREATE INDEX idx_audit_timestamp ON audit_schema.audit_logs(timestamp DESC);
-CREATE INDEX idx_audit_user ON audit_schema.audit_logs(user_id);
-CREATE INDEX idx_audit_service_action ON audit_schema.audit_logs(service, action);
-CREATE INDEX idx_audit_changes ON audit_schema.audit_logs USING GIN(changes);
+-- Optional: Add indexes for better query performance
+CREATE INDEX idx_audit_log_created_at ON audit_log_jsonb(created_at);
+CREATE INDEX idx_audit_log_updated_at ON audit_log_jsonb(updated_at);
+
+-- Optional: Add GIN index on JSONB column for faster JSON queries
+CREATE INDEX idx_audit_log_data_json ON audit_log_jsonb USING GIN (audit_log_data_json);
 ```
 
 **JSONB Example:**
