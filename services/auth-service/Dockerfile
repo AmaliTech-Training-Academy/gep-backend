@@ -17,6 +17,9 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
+# Install curl
+RUN apk add --no-cache curl
+
 # Copy the built artifact from build stage
 COPY --from=build /app/target/*.jar app.jar
 
