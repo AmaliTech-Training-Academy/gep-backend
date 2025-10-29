@@ -5,8 +5,13 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import lombok.*;
-
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
+import java.time.LocalDateTime;
+
 
 @Entity
 @Table(name = "users",indexes = {
@@ -17,6 +22,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 public class User {
 
     @Id
@@ -40,27 +46,18 @@ public class User {
     @Column(name = "is_active")
     private boolean isActive;
 
-    private String profileImageUrl;
-
-    @Column(name = "phone_number")
-    private String phoneNumber;
-
-    private String address;
-
+    @CreatedDate
     @Column(name = "created_at", nullable =false, updatable = false)
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
+    @LastModifiedDate
     @Column(name = "updated_at")
-    private Instant updatedAt;
+    private LocalDateTime  updatedAt;
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = Instant.now();
-        updatedAt = Instant.now();
-    }
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private UserEventStats userEventStats;
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = Instant.now();
-    }
+    @OneToOne(mappedBy = "user")
+    private Profile profile;
 }

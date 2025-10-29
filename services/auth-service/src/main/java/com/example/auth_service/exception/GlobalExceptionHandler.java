@@ -1,23 +1,36 @@
 package com.example.auth_service.exception;
 
 import com.example.auth_service.dto.response.CustomApiResponse;
+import io.jsonwebtoken.ExpiredJwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-@ControllerAdvice
+
+@RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleResourceNotFoundException(ResourceNotFoundException ex){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(CustomApiResponse.error(ex.getMessage()));
+    }
 
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<CustomApiResponse<?>> handleDuplicateEmailException(DuplicateEmailException ex){
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(CustomApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(CustomApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(PasswordMismatchException.class)
@@ -32,7 +45,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InactiveAccountException.class)
     public ResponseEntity<CustomApiResponse<?>> handleInactiveAccountException(InactiveAccountException ex){
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(CustomApiResponse.error(ex.getMessage()));
     }
 
 
@@ -52,6 +65,35 @@ public class GlobalExceptionHandler {
                 .body(CustomApiResponse.error("Validation failed", errors));
     }
 
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity handleUnauthorizedAccess(DisabledException ex){
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity handleAuthorizationDeniedException(AuthorizationDeniedException ex){
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity handleExpiredJwt(ExpiredJwtException ex){
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error("Token has expired."));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity handleEmptyBody(HttpMessageNotReadableException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(CustomApiResponse.error("Request body is missing or malformed."));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity handleMethodNotSupported(HttpRequestMethodNotSupportedException ex){
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(MissingRequestCookieException.class)
+    public ResponseEntity handleMissingRequestCookie(MissingRequestCookieException ex){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(CustomApiResponse.error(ex.getMessage()));
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CustomApiResponse<?>> handleGenericException(Exception ex){

@@ -7,6 +7,10 @@ import jakarta.validation.constraints.Size;
 
 public record UserRegistrationRequest(
         @NotBlank(message = "Fullname is required")
+        @Pattern(
+                regexp = "^[\\p{L}]+([ '-][\\p{L}]+)*$",
+                message = "Full name must start and end with a letter, and contain only letters, spaces, hyphens, or apostrophes"
+        )
         String fullName,
 
         @NotBlank(message = "Email is required")
@@ -19,7 +23,7 @@ public record UserRegistrationRequest(
                 message = "Password must contain at least one uppercase letter, one number, and one special character.")
         String password,
 
-        @NotBlank(message = "Password confirmation is required")
-        String passwordConfirmation
+        @NotBlank(message = "Confirm Password is required")
+        String confirmPassword
 ) {
 }
