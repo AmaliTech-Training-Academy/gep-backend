@@ -1,6 +1,7 @@
 package com.event_service.event_service.models;
 
 
+import com.event_service.event_service.models.enums.EventTypeEnum;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -8,6 +9,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "event_types")
@@ -22,11 +25,11 @@ public class EventType {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
+    @Enumerated(EnumType.STRING)
+    private EventTypeEnum name;
 
-    @OneToOne(mappedBy = "eventType", cascade = CascadeType.ALL)
-    private Event event;
+    @OneToMany(mappedBy = "eventType", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Event> events = new ArrayList<>();
 
     @CreatedDate
     @Column(name = "created_at", nullable =false, updatable = false)
