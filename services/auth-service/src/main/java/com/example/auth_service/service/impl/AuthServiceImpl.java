@@ -30,6 +30,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -112,16 +113,29 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void loginUser(UserLoginRequest loginRequest){
+        AuthUser authUser = getAuthenticatedUser(loginRequest);
+        if(!authUser.getUser().isActive()){
+            throw new InactiveAccountException("User account is inactive");
+        }
+        otpService.requestLoginOtp(loginRequest.email());
+    }
+
+    public AuthResponse adminLogin(UserLoginRequest loginRequest, HttpServletResponse response){
+        AuthUser authUser = getAuthenticatedUser(loginRequest);
+        User user = getActiveUserByEmail(authUser.getUsername());
+        if(user.getRole() != UserRole.ADMIN){
+            throw new AuthorizationDeniedException("You are not allow to login as admin");
+        }
+        setAuthCookies(response, user);
+        return new AuthResponse(user.getId(), user.getEmail(), user.getRole());
+    }
+
+    private AuthUser getAuthenticatedUser(UserLoginRequest loginRequest){
         try{
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.password())
             );
-
-            AuthUser authUser = (AuthUser) authentication.getPrincipal();
-            if(!authUser.getUser().isActive()){
-                throw new InactiveAccountException("User account is inactive");
-            }
-            otpService.requestLoginOtp(loginRequest.email());
+            return (AuthUser) authentication.getPrincipal();
         }catch(BadCredentialsException e){
             throw new BadCredentialsException("Invalid credentials");
         }
@@ -134,11 +148,7 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Invalid or expired OTP");
         }
         User user = getActiveUserByEmail(request.email());
-
-        String accessToken = jwtUtil.generateAccessToken(user.getEmail());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
-
-        setAuthCookies(response, accessToken, refreshToken);
+        setAuthCookies(response, user);
         return new AuthResponse(user.getId(), user.getEmail(), user.getRole());
     }
 
@@ -151,21 +161,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void refreshAccessToken(String refreshToken, HttpServletResponse response){
         String email = jwtUtil.extractUsername(refreshToken);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new BadCredentialsException("User not found"));
-
-        if(!user.isActive()){
-            throw new InactiveAccountException("User account is inactive");
-        }
-
+        User user = getActiveUserByEmail(email);
         if(!jwtUtil.validateToken(refreshToken)){
             throw new BadCredentialsException("Invalid refresh token");
         }
-
-        String newAccessToken = jwtUtil.generateAccessToken(email);
-        String newRefreshToken = jwtUtil.generateRefreshToken(email);
-
-        setAuthCookies(response, newAccessToken, newRefreshToken);
+        setAuthCookies(response, user);
     }
 
     @Override
@@ -200,7 +200,10 @@ public class AuthServiceImpl implements AuthService {
     }
 
 
-    private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken){
+    private void setAuthCookies(HttpServletResponse response, User user){
+        String accessToken = jwtUtil.generateAccessToken(user);
+        String refreshToken = jwtUtil.generateRefreshToken(user);
+
         ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", accessToken)
                 .httpOnly(true)
                 .secure(true)
