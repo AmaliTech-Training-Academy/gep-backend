@@ -8,6 +8,7 @@ import com.event_service.event_service.mappers.TicketTypeMapper;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.TicketType;
 import com.event_service.event_service.repositories.EventImagesRepository;
+import com.event_service.event_service.repositories.EventOptionsRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketTypeRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class EventDetailServiceImpl implements EventDetailService {
     private final EventRepository eventRepository;
     private final TicketTypeRepository ticketTypeRepository;
     private final EventImagesRepository eventImagesRepository;
+    private final EventOptionsRepository eventOptionsRepository;
 
     @Override
     public EventDetailResponse getEventDetailById(Long id) {
@@ -30,6 +32,8 @@ public class EventDetailServiceImpl implements EventDetailService {
         List<TicketType> ticketTypes = ticketTypeRepository.findAllByEvent(event);
         List<String> eventImagesUrl = eventImagesRepository.findImageUrlsByEvent(event);
         List<TicketTypeResponse> ticketTypeResponses = ticketTypes.stream().map(TicketTypeMapper::toTicketTypeResponse).toList();
-        return EventDetailMapper.toEventDetailResponse(event,eventImagesUrl,ticketTypeResponses);
+        Long capacity = eventOptionsRepository.findCapacityByEvent(event);
+
+        return EventDetailMapper.toEventDetailResponse(event,eventImagesUrl,ticketTypeResponses,capacity);
     }
 }

@@ -2,10 +2,7 @@ package com.event_service.event_service.models;
 
 import com.event_service.event_service.models.enums.TicketStatusEnum;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -16,6 +13,7 @@ import java.time.LocalDateTime;
 @Table(name = "ticket")
 @Getter
 @Setter
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
@@ -40,7 +38,7 @@ public class Ticket {
     private String qrCodeUrl;
 
     @Enumerated(EnumType.STRING)
-    private TicketStatusEnum status;
+    private TicketStatusEnum status = TicketStatusEnum.ACTIVE;
 
     private LocalDateTime checkedInAt;
 

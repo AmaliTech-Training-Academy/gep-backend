@@ -2,13 +2,12 @@ package com.event_service.event_service.dto;
 
 import lombok.Builder;
 
+import java.time.Instant;
 @Builder
-public record TicketTypeResponse(
+public record TicketEventDetailResponse(
         Long id,
-        String type,
+        String title,
         String description,
-        Double price,
-        Boolean isActive,
-        Boolean isPaid
+        Instant startTime
 ) {
 }

@@ -1,5 +1,6 @@
 package com.moadams.notificationservice.service.impl;
 
+import com.moadams.notificationservice.event.TicketPurchasedEvent;
 import com.moadams.notificationservice.event.EventInvitationEvent;
 import com.moadams.notificationservice.service.NotificationService;
 import jakarta.mail.MessagingException;
@@ -82,6 +83,26 @@ public class EmailService implements NotificationService {
 
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send otp email");
+        }
+    }
+
+
+    @Override
+    public void sendTicketPurchasedEmail(TicketPurchasedEvent ticketPurchasedEvent) {
+        try{
+            Context context = new Context();
+            context.setVariable("attendeeName", ticketPurchasedEvent.attendeeName());
+            context.setVariable("attendeeEmail", ticketPurchasedEvent.attendeeEmail());
+            context.setVariable("tickets", ticketPurchasedEvent.tickets());
+            context.setVariable("eventDetails", ticketPurchasedEvent.eventDetails());
+
+            String htmlContent = templateEngine.process("ticket-purchased", context);
+            sendEmail(htmlContent, ticketPurchasedEvent.attendeeEmail(), "Ticket Purchased");
+            log.info("Ticket Purchased Email Sent to {}", ticketPurchasedEvent.attendeeEmail());
+        }catch (MessagingException | UnsupportedEncodingException e){
+            log.error("Failed to send ticket purchase email {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("An Error occurred while sending ticket purchased email {}", e.getMessage());
         }
     }
 

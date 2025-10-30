@@ -12,6 +12,7 @@ public record EventDetailResponse(
         String description,
         Instant startTime,
         String flyerUrl,
+        Long capacity,
         List<String> eventImagesUrl,
         List<TicketTypeResponse> ticketTypes
         //Todo Add venue sections

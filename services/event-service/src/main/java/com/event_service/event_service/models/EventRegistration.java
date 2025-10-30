@@ -1,22 +1,23 @@
 package com.event_service.event_service.models;
 
+import com.event_service.event_service.models.enums.EventRegistrationStatusEnum;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
-@Table(name = "ticket_type")
+@Table(name = "event_registration")
 @Getter
 @Setter
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class TicketType {
+public class EventRegistration {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -25,25 +26,25 @@ public class TicketType {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
-    private String description;
+    private String fullName;
 
-    private Double price;
+    private String email;
 
-    private Integer quantity;
+    @ManyToOne
+    @JoinColumn(name = "ticket_type_id", nullable = false)
+    private TicketType ticketType;
 
-    private Integer soldCount;
+    @Column(nullable = false)
+    private Long ticketQuantity;
 
-    private Boolean isActive;
-
-    private String type;
-
-    private Boolean isPaid;
+    @Enumerated(EnumType.STRING)
+    private EventRegistrationStatusEnum status;
 
     @CreatedDate
     @Column(name = "created_at", nullable =false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 }

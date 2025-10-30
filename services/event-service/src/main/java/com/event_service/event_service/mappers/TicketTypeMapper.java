@@ -12,8 +12,10 @@ public class TicketTypeMapper {
         return TicketTypeResponse
                 .builder()
                 .id(ticketType.getId())
+                .type(ticketType.getType())
                 .description(ticketType.getDescription())
                 .price(ticketType.getPrice())
+                .isPaid(ticketType.getIsPaid())
                 .isActive(ticketType.getIsActive())
                 .build();
     }
