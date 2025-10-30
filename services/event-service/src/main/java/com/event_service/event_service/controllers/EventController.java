@@ -1,8 +1,10 @@
 package com.event_service.event_service.controllers;
 
+import com.event_service.event_service.dto.EventDetailResponse;
 import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
 import com.event_service.event_service.exceptions.ValidationException;
+import com.event_service.event_service.services.EventDetailService;
 import com.event_service.event_service.services.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventController {
 
+    private final EventDetailService eventDetailService;
     private final EventService eventService;
 
     @PostMapping
@@ -27,6 +30,11 @@ public class EventController {
             @RequestPart(value = "eventImages", required = false) List<MultipartFile> eventImages
     ) {
         return ResponseEntity.ok(eventService.createEvent(eventRequest,image,eventImages));
+    }
+
+    @GetMapping("/{eventId}")
+    public ResponseEntity<EventDetailResponse> getEventById(@PathVariable Long eventId) {
+        return ResponseEntity.ok(eventDetailService.getEventDetailById(eventId));
     }
 
 }
