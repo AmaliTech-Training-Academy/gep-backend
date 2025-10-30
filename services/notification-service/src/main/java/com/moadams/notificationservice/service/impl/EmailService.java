@@ -1,5 +1,6 @@
 package com.moadams.notificationservice.service.impl;
 
+import com.moadams.notificationservice.event.EventInvitationEvent;
 import com.moadams.notificationservice.service.NotificationService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -50,6 +51,21 @@ public class EmailService implements NotificationService {
 
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send forgot password email");
+        }
+    }
+
+    @Override
+    public void sendEventInvitationMail(EventInvitationEvent event) {
+        try{
+            Context context = new Context();
+            context.setVariable("invitationTitle", event.eventTitle());
+            context.setVariable("invitationLink", event.inviteLink());
+
+            String htmlContent = templateEngine.process("event-invitation", context);
+            sendEmail(htmlContent, event.inviteeEmail(), "You have been invited");
+
+        }catch (MessagingException | UnsupportedEncodingException e){
+            log.error("Failed to send event invitation email");
         }
     }
 
