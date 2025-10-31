@@ -37,7 +37,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
-    @PreAuthorize("hasRole('ROLE_ORGANIZER')")
+    @PreAuthorize("hasRole('ROLE_ORGANISER')")
     public EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages) {
         eventValidator.validateRequiredGroup(eventRequest);
 
@@ -77,6 +77,7 @@ public class EventServiceImpl implements EventService {
             eventStrategyContext.setEventStrategy(virtualAndMultiDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
         }
+
         return eventMapper.toResponse(event);
     }
 }

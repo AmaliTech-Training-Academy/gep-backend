@@ -30,6 +30,12 @@ public class AuthController {
         return ResponseEntity.ok(CustomApiResponse.success("OTP sent to user's email"));
     }
 
+    @PostMapping("/admin-login")
+    public ResponseEntity<CustomApiResponse<AuthResponse>> adminLogin(@Valid @RequestBody UserLoginRequest request, HttpServletResponse response){
+        AuthResponse authResponse = authService.adminLogin(request, response);
+        return ResponseEntity.ok(CustomApiResponse.success("Login Successful", authResponse));
+    }
+
     @PostMapping("/verify-otp")
     public ResponseEntity<CustomApiResponse<AuthResponse>> verifyOtp(@Valid @RequestBody OtpVerificationRequest request, HttpServletResponse response){
         AuthResponse authResponse = authService.verifyOtp(request, response);

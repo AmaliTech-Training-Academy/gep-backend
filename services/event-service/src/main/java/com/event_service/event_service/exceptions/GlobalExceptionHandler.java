@@ -1,6 +1,7 @@
 package com.event_service.event_service.exceptions;
 
 
+import com.event_service.event_service.dto.CustomApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,12 +10,14 @@ import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
 import java.util.Map;
 
-@ControllerAdvice
+@Slf4j
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     String emptyRequestMessage = "Invalid request body";
@@ -65,12 +68,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AuthorizationDeniedException.class)
-    public ResponseEntity<Object> handleAuthorizationAccessDenied(AuthorizationDeniedException ex, WebRequest request) {
+    public ResponseEntity<CustomApiResponse<Object>> handleAuthorizationAccessDenied(AuthorizationDeniedException ex, WebRequest request) {
         return new ResponseEntity<>(
-                new ApiErrorResponse(LocalDateTime.now(),
-                        ex.getMessage(),
-                        HttpStatus.FORBIDDEN.value()
-                ), HttpStatus.FORBIDDEN);
+                CustomApiResponse.error(ex.getMessage()),
+                HttpStatus.FORBIDDEN
+        );
     }
 
     @ExceptionHandler(ValidationException.class)
@@ -98,6 +100,45 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(DuplicateInvitationException.class)
+    public ResponseEntity<CustomApiResponse<Object>> handleDuplicateInvitationException(
+            DuplicateInvitationException ex,
+            WebRequest request) {
+
+        log.warn("Duplicate invitation attempt: {}", ex.getMessage());
+
+        return new ResponseEntity<>(
+                CustomApiResponse.error(ex.getMessage()),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<CustomApiResponse<Object>> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
+        return new ResponseEntity<>(
+                CustomApiResponse.error(ex.getMessage()),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler(EventNotFoundException.class)
+    public ResponseEntity<CustomApiResponse<Object>> handleEventNotFoundException(EventNotFoundException ex, WebRequest request) {
+        return new ResponseEntity<>(
+                CustomApiResponse.error(ex.getMessage()),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(InvitationPublishException.class)
+    public ResponseEntity<CustomApiResponse<Object>> handleInvitationPublishException(
+            InvitationPublishException ex,
+            WebRequest request) {
+        log.error("Failed to publish invitation email event to SQS", ex);
+        return new ResponseEntity<>(
+                CustomApiResponse.error(ex.getMessage()),
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
+    }
 
 
     @ExceptionHandler(Exception.class)

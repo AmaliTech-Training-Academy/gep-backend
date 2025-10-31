@@ -15,6 +15,8 @@ public interface AuthService {
 
     void loginUser(UserLoginRequest loginRequest);
 
+    AuthResponse adminLogin(UserLoginRequest loginRequest, HttpServletResponse response);
+
     AuthResponse verifyOtp(OtpVerificationRequest request, HttpServletResponse response);
 
     void resendOtp(String email);

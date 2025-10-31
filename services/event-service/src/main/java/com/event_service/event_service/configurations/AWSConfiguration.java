@@ -8,6 +8,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.sqs.SqsClient;
 
 import java.net.URI;
 
@@ -26,6 +27,9 @@ public class AWSConfiguration {
     @Value("${aws.credentials.secret_key}")
     private String secretKey;
 
+    @Value("${spring.cloud.aws.sqs.endpoint}")
+    private String sqsEndpoint;
+
 
     @Bean
     public S3Client s3Client() {
@@ -35,6 +39,14 @@ public class AWSConfiguration {
                 .region(awsRegion)
                 .credentialsProvider(StaticCredentialsProvider.create(awsBasicCredentials))
                 .endpointOverride(URI.create(endpoint))
+                .build();
+    }
+
+    @Bean
+    public SqsClient sqsClient(){
+        return SqsClient.builder()
+                .endpointOverride(java.net.URI.create(sqsEndpoint))
+                .region(Region.EU_WEST_1)
                 .build();
     }
 

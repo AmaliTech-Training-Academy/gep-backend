@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 public class JwtUtil {
@@ -29,10 +31,11 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    private String generateToken(String email, long expiration){
+    private String generateToken(String email, long expiration, Map<String, Object> claims){
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expiration);
         return Jwts.builder()
+                .claims(claims)
                 .subject(email)
                 .issuedAt(now)
                 .expiration(expiry)
@@ -40,12 +43,33 @@ public class JwtUtil {
                 .compact();
     }
 
+    private String generateToken(String email, long expiration){
+        return generateToken(email, expiration, new HashMap<>());
+    }
+
+    public String generateAccessToken(User user){
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", user.getRole());
+        claims.put("userId", user.getId());
+        claims.put("fullName", user.getFullName());
+        return generateToken(user.getEmail(), jwtAccessExpirationMs, claims);
+    }
+
     public String generateAccessToken(String email){
         return generateToken(email, jwtAccessExpirationMs);
     }
 
+
     public String generateRefreshToken(String email){
         return generateToken(email, jwtRefreshExpirationMs);
+    }
+
+    public String generateRefreshToken(User user){
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("role", user.getRole());
+        claims.put("fullName", user.getFullName());
+        return generateToken(user.getEmail(), jwtRefreshExpirationMs, claims);
     }
 
     public Claims extractAllClaims(String token) {
