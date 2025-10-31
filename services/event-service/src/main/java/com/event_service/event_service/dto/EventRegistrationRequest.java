@@ -1,5 +1,6 @@
 package com.event_service.event_service.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 public record EventRegistrationRequest(
@@ -24,5 +25,9 @@ public record EventRegistrationRequest(
         @NotBlank(message = "Email is required.")
         @Email(message = "Please provide a valid email address.")
         @Size(max = 150, message = "Email cannot exceed 150 characters.")
-        String email
+        String email,
+
+        // Optional for free event registration
+        @Valid
+        PaymentRequest paymentRequest
 ) { }

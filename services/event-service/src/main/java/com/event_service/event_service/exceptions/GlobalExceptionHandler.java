@@ -100,6 +100,18 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadRequestException(BadRequestException ex) {
+        return new ResponseEntity<>(
+                new ApiErrorResponse(
+                        LocalDateTime.now(),
+                        ex.getMessage(),
+                        HttpStatus.BAD_REQUEST.value()
+                ),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
     @ExceptionHandler(DuplicateInvitationException.class)
     public ResponseEntity<CustomApiResponse<Object>> handleDuplicateInvitationException(
             DuplicateInvitationException ex,

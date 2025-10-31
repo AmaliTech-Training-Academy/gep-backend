@@ -8,6 +8,7 @@ public record TicketEventDetailResponse(
         Long id,
         String title,
         String description,
-        Instant startTime
+        Instant startTime,
+        String eventMeetingType
 ) {
 }

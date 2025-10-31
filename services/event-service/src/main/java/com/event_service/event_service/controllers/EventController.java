@@ -37,10 +37,10 @@ public class EventController {
     }
 
     @PostMapping("/{eventId}/register")
-    public ResponseEntity<String> registerForEvent(
+    public ResponseEntity<EventRegistrationResponse> registerForEvent(
             @PathVariable Long eventId,
             @Valid @RequestBody EventRegistrationRequest eventRegistrationRequest){
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(eventRegistrationService.registerEvent(eventId,eventRegistrationRequest));
+        return ResponseEntity.status(HttpStatus.OK).body(eventRegistrationService.registerEvent(eventId,eventRegistrationRequest));
     }
 }

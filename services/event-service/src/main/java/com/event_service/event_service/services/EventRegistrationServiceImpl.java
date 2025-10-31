@@ -1,8 +1,10 @@
 package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.*;
+import com.event_service.event_service.exceptions.BadRequestException;
 import com.event_service.event_service.exceptions.ResourceNotFound;
 import com.event_service.event_service.mappers.EventDetailMapper;
+import com.event_service.event_service.mappers.EventMapper;
 import com.event_service.event_service.mappers.TicketPurchasedEventMapper;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.EventRegistration;
@@ -17,6 +19,7 @@ import com.event_service.event_service.repositories.TicketTypeRepository;
 import com.event_service.event_service.utilities.QRCodeGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.WriterException;
+import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +41,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     private final EventRegistrationRepository eventRegistrationRepository;
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
+    private final EventMapper eventMapper;
 
     @Value("${sqs.ticket-purchased-event-queue-url}")
     private String ticketPurchasedEventQueueUrl;
@@ -52,14 +56,14 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     /**
      * Registers an event for a user.
      *
-     * @param eventId The ID of the event to register.
+     * @param eventId             The ID of the event to register.
      * @param registrationRequest The registration request containing user details and ticket type.
      * @return A success message indicating the registration was successful.
      * @throws ResourceNotFound if the event or ticket type is not found, or if tickets are out of stock.
      */
     @Transactional
     @Override
-    public String registerEvent(Long eventId, EventRegistrationRequest registrationRequest) {
+    public EventRegistrationResponse registerEvent(Long eventId, EventRegistrationRequest registrationRequest) {
         Event event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFound("Event not found"));
         TicketType ticketType = ticketTypeRepository.findById(registrationRequest.ticketTypeId()).orElseThrow(()-> new ResourceNotFound("Ticket Type not found"));
         Long quantity = registrationRequest.numberOfTickets();
@@ -77,7 +81,6 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
                 .ticketQuantity(registrationRequest.numberOfTickets())
                 .status(EventRegistrationStatusEnum.PENDING)
                 .build();
-
         // save registration
         eventRegistrationRepository.save(registration);
 
@@ -99,15 +102,64 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
                     );
 
             publishTicketsPurchaseEventToQueue(ticketPurchasedEvent);
-        }
-        // Update ticket type details
-        ticketType.setSoldCount(ticketType.getSoldCount()+quantity);
-        if(ticketType.getQuantity().longValue() == ticketType.getSoldCount().longValue()){
-            ticketType.setIsActive(false);
-        }
-        ticketTypeRepository.save(ticketType);
+        }else{
+            // for paid events send a message to the payment service to process payment
+            if(registrationRequest.paymentRequest() == null){
+                throw new BadRequestException("Payment details is required for paid ticket types");
+            }
+            PaymentRequest paymentRequest = registrationRequest.paymentRequest();
 
-        return "Event Registration Successful";
+            // build process payment event
+            ProcessPaymentEvent processPaymentEvent = ProcessPaymentEvent
+                    .builder()
+                    .eventRegistrationId(registration.getId())
+                    .attendeeEmail(registration.getEmail())
+                    .attendeeName(registration.getFullName())
+                    .paymentRequest(paymentRequest)
+                    .build();
+            publishProcessPaymentEventToQueue(processPaymentEvent);
+
+            // Simulate successful payment for TEST purposes
+            // TODO remove this when payment service is implemented
+            paymentCompletedListener(processPaymentEvent);
+        }
+        EventResponse eventResponse = eventMapper.toResponse(event);
+        return EventRegistrationResponse
+                .builder()
+                .eventTitle(eventResponse.title())
+                .location(eventResponse.meetingLocation())
+                .organizer("Event Organizer")
+                .startDate(eventResponse.startTime())
+                .build();
+    }
+
+
+    // SQS Listener to handle payment success messages
+    //@SqsListener("${sqs.payment-completed-event-queue-url}")
+    public void paymentCompletedListener(ProcessPaymentEvent message){
+        // Generate tickets and send to attendee via email
+        EventRegistration registration = eventRegistrationRepository.findById(message.eventRegistrationId()).orElse(null);
+        if(registration != null){
+            Event event = registration.getEvent();
+            TicketType ticketType = registration.getTicketType();
+            Long quantity = registration.getTicketQuantity();
+            TicketEventDetailResponse eventDetailResponse = EventDetailMapper.toTicketEventDetails(event);
+
+            List<TicketResponse> tickets = generateTicket(ticketType,event,quantity)
+                    .stream()
+                    .map(TicketPurchasedEventMapper::toTicketResponse).toList();
+
+            // Publish to queue for sending tickets to attendees
+            TicketPurchasedEvent ticketPurchasedEvent = TicketPurchasedEventMapper
+                    .toTicketPurchasedEvent(
+                            registration.getFullName(),
+                            registration.getEmail(),
+                            tickets,
+                            eventDetailResponse
+                    );
+
+            publishTicketsPurchaseEventToQueue(ticketPurchasedEvent);
+        }
     }
 
 
@@ -129,7 +181,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
 
                 String ticketUrl = albUrl + "/api/v1/tickets/verify/" + ticketCode;
 
-                String base64QRCode = QRCodeGenerator.generateQRCodeBase64(ticketUrl, 300, 300);
+                String base64QRCode = QRCodeGenerator.generateQRCodeBase64(ticketUrl, 100, 100);
                 ticketsToBeGenerated.add(Ticket.builder()
                         .event(event)
                         .ticketType(ticketType)
@@ -140,6 +192,13 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
                         .build());
 
             }
+            // Update ticket type details
+            ticketType.setSoldCount(ticketType.getSoldCount()+quantity);
+            if(ticketType.getQuantity().longValue() == ticketType.getSoldCount().longValue()){
+                ticketType.setIsActive(false);
+            }
+            ticketTypeRepository.save(ticketType);
+
             // save tickets
             return ticketRepository.saveAll(ticketsToBeGenerated);
         } catch (WriterException e) {
@@ -163,6 +222,18 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             sqsClient.sendMessage(builder -> builder.queueUrl(ticketPurchasedEventQueueUrl).messageBody(messageBody));
         }catch (Exception e){
             log.error("Error sending ticket purchase event to SQS: {}", e.getMessage());
+        }
+    }
+
+
+    private void publishProcessPaymentEventToQueue(ProcessPaymentEvent processPaymentEvent) {
+        try{
+            log.info("Sending process payment event");
+            String messageBody = objectMapper.writeValueAsString(processPaymentEvent);
+            log.info("Process payment event message body: {}", messageBody);
+            sqsClient.sendMessage(builder -> builder.queueUrl(processPaymentQueueUrl).messageBody(messageBody));
+        }catch (Exception e){
+            log.error("Error sending process payment event: {}", e.getMessage());
         }
     }
 }

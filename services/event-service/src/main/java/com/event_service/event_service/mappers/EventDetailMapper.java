@@ -33,6 +33,7 @@ public class EventDetailMapper {
                 .title(event.getTitle())
                 .description(event.getDescription())
                 .startTime(event.getStartTime())
+                .eventMeetingType(event.getEventMeetingType().getName().toString())
                 .build();
     }
 }
