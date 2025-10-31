@@ -99,7 +99,9 @@
 
                                                         <!-- QR Code -->
                                                         <td style="vertical-align: top; text-align: right; width: 35%;">
-                                                            <img th:src="${ticket.qrCodeUrl}" alt="Ticket QR Code" style="width: 120px; height: 120px; border: 2px solid #e0e0e0; border-radius: 8px; display: block; margin-left: auto;" />
+                                                            <img th:src="'cid:qrcode-' + ${ticket.id}"
+                                                                 alt="QR Code"
+                                                                 style="width: 250px; height: 250px; border: 1px solid #ddd;"/>
                                                         </td>
                                                     </tr>
                                                 </table>

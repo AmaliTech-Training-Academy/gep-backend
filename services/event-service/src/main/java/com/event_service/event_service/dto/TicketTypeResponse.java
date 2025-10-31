@@ -9,6 +9,7 @@ public record TicketTypeResponse(
         String description,
         Double price,
         Boolean isActive,
+        Long remainingTickets,
         Boolean isPaid
 ) {
 }

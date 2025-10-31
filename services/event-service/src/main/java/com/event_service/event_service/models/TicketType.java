@@ -29,9 +29,9 @@ public class TicketType {
 
     private Double price;
 
-    private Integer quantity;
+    private Long quantity;
 
-    private Integer soldCount;
+    private Long soldCount;
 
     private Boolean isActive;
 

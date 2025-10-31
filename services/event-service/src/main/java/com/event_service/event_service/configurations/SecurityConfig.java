@@ -52,9 +52,10 @@ public class SecurityConfig {
                 .cors(corsConfigurer -> corsConfigurer.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(events -> events
-                        .requestMatchers(
-                                "/actuator/health"
-                        ).permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/api/v1/events/**").permitAll()
+                        .requestMatchers("/api/v1/tickets/verify/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

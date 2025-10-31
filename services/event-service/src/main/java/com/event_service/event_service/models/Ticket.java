@@ -35,6 +35,7 @@ public class Ticket {
 
     private String ticketCode;
 
+    @Column(columnDefinition = "TEXT")
     private String qrCodeUrl;
 
     @Enumerated(EnumType.STRING)

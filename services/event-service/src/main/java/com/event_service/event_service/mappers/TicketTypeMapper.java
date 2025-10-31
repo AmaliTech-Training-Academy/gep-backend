@@ -15,6 +15,7 @@ public class TicketTypeMapper {
                 .type(ticketType.getType())
                 .description(ticketType.getDescription())
                 .price(ticketType.getPrice())
+                .remainingTickets(ticketType.getQuantity()- ticketType.getSoldCount())
                 .isPaid(ticketType.getIsPaid())
                 .isActive(ticketType.getIsActive())
                 .build();

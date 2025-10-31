@@ -1,10 +1,12 @@
 package com.moadams.notificationservice.service.impl;
 
 import com.moadams.notificationservice.event.TicketPurchasedEvent;
+import com.moadams.notificationservice.event.TicketResponse;
 import com.moadams.notificationservice.event.EventInvitationEvent;
 import com.moadams.notificationservice.service.NotificationService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.util.ByteArrayDataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +17,8 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Base64;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -96,8 +100,12 @@ public class EmailService implements NotificationService {
             context.setVariable("tickets", ticketPurchasedEvent.tickets());
             context.setVariable("eventDetails", ticketPurchasedEvent.eventDetails());
 
-            String htmlContent = templateEngine.process("ticket-purchased", context);
-            sendEmail(htmlContent, ticketPurchasedEvent.attendeeEmail(), "Ticket Purchased");
+            String htmlContent = templateEngine.process("tickets-purchased", context);
+
+            // Send email with embedded QR codes
+            sendEmailWithQRCodes(htmlContent, ticketPurchasedEvent.attendeeEmail(),
+                    "Your Event Tickets", ticketPurchasedEvent.tickets());
+
             log.info("Ticket Purchased Email Sent to {}", ticketPurchasedEvent.attendeeEmail());
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send ticket purchase email {}", e.getMessage());
@@ -105,6 +113,39 @@ public class EmailService implements NotificationService {
             log.error("An Error occurred while sending ticket purchased email {}", e.getMessage());
         }
     }
+
+
+    private void sendEmailWithQRCodes(String htmlContent, String recipientEmail,
+                                      String subject, List<TicketResponse> tickets)
+            throws MessagingException, UnsupportedEncodingException {
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+        helper.setFrom(adminEmail, "EventHub");
+        helper.setTo(recipientEmail);
+        helper.setSubject(subject);
+        helper.setText(htmlContent, true);
+
+        // Embed QR codes as inline images
+        for (TicketResponse ticket : tickets) {
+            if (ticket.qrCodeUrl() != null && ticket.qrCodeUrl().startsWith("data:image/png;base64,")) {
+                // Extract base64 data
+                String base64Data = ticket.qrCodeUrl().substring("data:image/png;base64,".length());
+                byte[] qrCodeBytes = Base64.getDecoder().decode(base64Data);
+
+                // Create data source
+                ByteArrayDataSource dataSource = new ByteArrayDataSource(qrCodeBytes, "image/png");
+
+                // Add as inline resource with CID
+                String cid = "qrcode-" + ticket.id();
+                helper.addInline(cid, dataSource);
+            }
+        }
+
+        mailSender.send(message);
+    }
+
 
     private void sendEmail( String htmlContent, String recipientEmail, String subject) throws MessagingException, UnsupportedEncodingException {
 
