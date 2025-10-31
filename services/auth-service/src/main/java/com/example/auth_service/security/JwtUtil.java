@@ -51,6 +51,7 @@ public class JwtUtil {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole());
         claims.put("userId", user.getId());
+        claims.put("fullName", user.getFullName());
         return generateToken(user.getEmail(), jwtAccessExpirationMs, claims);
     }
 
@@ -67,6 +68,7 @@ public class JwtUtil {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
         claims.put("role", user.getRole());
+        claims.put("fullName", user.getFullName());
         return generateToken(user.getEmail(), jwtRefreshExpirationMs, claims);
     }
 
