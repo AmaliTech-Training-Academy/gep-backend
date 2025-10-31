@@ -2,6 +2,7 @@ package com.example.auth_service.exception;
 
 import com.example.auth_service.dto.response.CustomApiResponse;
 import io.jsonwebtoken.ExpiredJwtException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -19,7 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -97,6 +98,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CustomApiResponse<?>> handleGenericException(Exception ex){
+        log.error("Unexpected error occured: {}", ex.getMessage());
         return ResponseEntity.internalServerError().body(CustomApiResponse.error("Unexpected error occured"));
     }
 }
