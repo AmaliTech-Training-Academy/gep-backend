@@ -2,19 +2,19 @@
 * @zena4L
 
 # Service-specific ownership
-/services/auth-service/ @Moadams @myspace20 @XzibiT-Collins @zena4L
-/services/user-service/ @Moadams @myspace20 @XzibiT-Collins @zena4L
-/services/event-service/ @Moadams @myspace20 @XzibiT-Collins @zena4L
-/services/notification-service/ @Moadams @myspace20 @XzibiT-Collins @zena4L
-/services/api-gateway/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+/services/auth-service/ @zena4L
+/services/user-service/ @zena4L
+/services/event-service/ @zena4L
+/services/notification-service/ @zena4L
+/services/api-gateway/ @zena4L
 
 # Infrastructure and configuration
-/services/config-server/ @Moadams @myspace20 @XzibiT-Collins @zena4L
-/services/discovery-server/ @Moadams @myspace20 @XzibiT-Collins @zena4L
-/services/docker-compose.yml @mangucletus @kistlerk19 @jsabrokwah
+/services/config-server/ @zena4L
+/services/discovery-server/ @zena4L
+/services/docker-compose.yml @kistlerk19
 
 # Shared libraries
-/shared/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+/shared/ @zena4L
 
 # Documentation and architecture
 /docs/ @zena4L
@@ -22,11 +22,11 @@
 /DEVELOPMENT_GUIDELINES.md @zena4L
 
 # CI/CD and deployment
-/.github/ @mangucletus @kistlerk19 @jsabrokwah
-/scripts/ @mangucletus @kistlerk19 @jsabrokwah
+/.github/ @kistlerk19
+/scripts/ @kistlerk19
 
 # Configuration files
-*.yml @mangucletus @kistlerk19 @jsabrokwah
-*.yaml @mangucletus @kistlerk19 @jsabrokwah
-*.properties @Moadams @myspace20 @XzibiT-Collins
-Dockerfile @mangucletus @kistlerk19 @jsabrokwah
+*.yml @kistlerk19 
+*.yaml @kistlerk19 
+<!-- *.properties @zena4L -->
+Dockerfile @kistlerk19 
