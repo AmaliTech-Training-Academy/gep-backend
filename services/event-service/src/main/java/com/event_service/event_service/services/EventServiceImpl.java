@@ -77,10 +77,7 @@ public class EventServiceImpl implements EventService {
             eventStrategyContext.setEventStrategy(virtualAndMultiDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
         }
-        if (event != null){
-            event.setUserId(1L);
-            eventRepository.save(event);
-        }
+
         return eventMapper.toResponse(event);
     }
 }
