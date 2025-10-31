@@ -50,16 +50,15 @@ public class JWTFilter extends OncePerRequestFilter {
             }
             jwtUtil.validateToken(token);
             Claims userDetails = jwtUtil.parseToken(token);
-            Long userId = Long.valueOf(userDetails.getSubject());
-            List<String> roles = userDetails.get("roles", List.class);
+            String userEmail = userDetails.getSubject();
+            Long userId = jwtUtil.extractUserId(token);
+            String role = jwtUtil.extractRole(token);
 
-            List<GrantedAuthority> authorities = roles.stream().map(SimpleGrantedAuthority::new)
-                    .collect(Collectors.toList());
 
-            AppUser appUser = new AppUser(userId,roles);
+            AppUser appUser = new AppUser(userId,role, userEmail);
 
             Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    appUser, null, authorities);
+                    appUser, null, appUser.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
             filterChain.doFilter(request, response);
         } catch (Exception e) {

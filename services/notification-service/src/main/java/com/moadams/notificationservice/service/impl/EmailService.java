@@ -20,7 +20,7 @@ import java.io.UnsupportedEncodingException;
 @RequiredArgsConstructor
 public class EmailService implements NotificationService {
 
-    @Value("${GOOGLE_USER}")
+    @Value("${spring.mail.username}")
     private String adminEmail;
 
     private final JavaMailSender mailSender;
@@ -58,6 +58,7 @@ public class EmailService implements NotificationService {
     public void sendEventInvitationMail(EventInvitationEvent event) {
         try{
             Context context = new Context();
+            context.setVariable("inviteeName", event.inviteeName());
             context.setVariable("invitationTitle", event.eventTitle());
             context.setVariable("invitationLink", event.inviteLink());
 

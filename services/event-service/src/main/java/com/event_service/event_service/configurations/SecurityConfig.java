@@ -47,11 +47,14 @@ public class SecurityConfig {
         return source;
     }
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JWTFilter jWTFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return  http
                 .cors(corsConfigurer -> corsConfigurer.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(events -> events
+                        .requestMatchers(
+                                "/actuator/health"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
