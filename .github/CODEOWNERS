@@ -1,0 +1,32 @@
+# Global ownership - requires approval from reviewer
+* @zena4L
+
+# Service-specific ownership
+/services/auth-service/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+/services/user-service/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+/services/event-service/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+/services/notification-service/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+/services/api-gateway/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+
+# Infrastructure and configuration
+/services/config-server/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+/services/discovery-server/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+/services/docker-compose.yml @mangucletus @kistlerk19 @jsabrokwah
+
+# Shared libraries
+/shared/ @Moadams @myspace20 @XzibiT-Collins @zena4L
+
+# Documentation and architecture
+/docs/ @zena4L
+/README.md @zena4L
+/DEVELOPMENT_GUIDELINES.md @zena4L
+
+# CI/CD and deployment
+/.github/ @mangucletus @kistlerk19 @jsabrokwah
+/scripts/ @mangucletus @kistlerk19 @jsabrokwah
+
+# Configuration files
+*.yml @mangucletus @kistlerk19 @jsabrokwah
+*.yaml @mangucletus @kistlerk19 @jsabrokwah
+*.properties @mangucletus @kistlerk19 @jsabrokwah
+Dockerfile @mangucletus @kistlerk19 @jsabrokwah
