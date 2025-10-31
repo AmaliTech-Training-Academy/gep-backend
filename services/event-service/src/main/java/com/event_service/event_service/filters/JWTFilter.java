@@ -45,8 +45,9 @@ public class JWTFilter extends OncePerRequestFilter {
                     }
                 }
             }
-            if (token == null) {
-                throw new InvalidJWTTokenException("JWT token not found");
+            if (token == null || token.isEmpty()) {
+                filterChain.doFilter(request, response);
+                return;
             }
             jwtUtil.validateToken(token);
             Claims userDetails = jwtUtil.parseToken(token);
