@@ -34,6 +34,7 @@ public class EventDetailMapper {
                 .description(event.getDescription())
                 .startTime(event.getStartTime())
                 .eventMeetingType(event.getEventMeetingType().getName().toString())
+                .zoneId(event.getStartTimeZoneId())
                 .build();
     }
 }

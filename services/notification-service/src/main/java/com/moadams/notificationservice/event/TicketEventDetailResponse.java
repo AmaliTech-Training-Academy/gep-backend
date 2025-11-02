@@ -10,6 +10,10 @@ public record TicketEventDetailResponse(
         String title,
         String description,
         Instant startTime,
-        String eventMeetingType
+        String eventMeetingType,
+        String zoneId
 ) {
+    public Instant endTime() {
+        return startTime.plusSeconds(300000);
+    }
 }

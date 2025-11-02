@@ -4,18 +4,21 @@ import com.moadams.notificationservice.event.TicketPurchasedEvent;
 import com.moadams.notificationservice.event.TicketResponse;
 import com.moadams.notificationservice.event.EventInvitationEvent;
 import com.moadams.notificationservice.service.NotificationService;
+import com.moadams.notificationservice.utils.ICSGenerator;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.util.ByteArrayDataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.util.Base64;
 import java.util.List;
@@ -28,8 +31,12 @@ public class EmailService implements NotificationService {
     @Value("${spring.mail.username}")
     private String adminEmail;
 
+    @Value("${events.virtual.ticket.verification.url}")
+    private String virtualTicketVerificationUrl;
+
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
+    private final ICSGenerator icsGenerator;
 
     @Override
     public void sendWelcomeEmail(String recipientEmail, String recipientName) {
@@ -99,12 +106,27 @@ public class EmailService implements NotificationService {
             context.setVariable("attendeeEmail", ticketPurchasedEvent.attendeeEmail());
             context.setVariable("tickets", ticketPurchasedEvent.tickets());
             context.setVariable("eventDetails", ticketPurchasedEvent.eventDetails());
+            context.setVariable("organizer", "Organizer Name");
+            context.setVariable("duration", "N/A");
 
-            String htmlContent = templateEngine.process("tickets-purchased", context);
+            if(ticketPurchasedEvent.eventDetails().eventMeetingType().equals("VIRTUAL")){
+                String verificationLink = String.format(
+                        "%s?ticketCode=%s",
+                        virtualTicketVerificationUrl,
+                        ticketPurchasedEvent.tickets().getFirst().ticketCode()
+                );
 
-            // Send email with embedded QR codes
-            sendEmailWithQRCodes(htmlContent, ticketPurchasedEvent.attendeeEmail(),
-                    "Your Event Tickets", ticketPurchasedEvent.tickets());
+                context.setVariable("verificationLink", verificationLink);
+                // send email for virtual event with ICS
+                String htmlContent = templateEngine.process("virtual-tickets-purchased", context);
+                sendICSEmailForVirtualEvent(htmlContent, ticketPurchasedEvent);
+            }else{
+
+                // Send email with embedded QR codes
+                String htmlContent = templateEngine.process("tickets-purchased", context);
+                sendEmailWithQRCodes(htmlContent, ticketPurchasedEvent.attendeeEmail(),
+                        "Your Event Tickets", ticketPurchasedEvent.tickets());
+            }
 
             log.info("Ticket Purchased Email Sent to {}", ticketPurchasedEvent.attendeeEmail());
         }catch (MessagingException | UnsupportedEncodingException e){
@@ -141,6 +163,25 @@ public class EmailService implements NotificationService {
                 String cid = "qrcode-" + ticket.id();
                 helper.addInline(cid, dataSource);
             }
+        }
+
+        mailSender.send(message);
+    }
+
+
+    public void sendICSEmailForVirtualEvent(String htmlContent,TicketPurchasedEvent ticketPurchasedEvent) throws MessagingException, UnsupportedEncodingException{
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+        helper.setFrom(adminEmail, "EventHub");
+        helper.setTo(ticketPurchasedEvent.attendeeEmail());
+        helper.setSubject("Your Virtual Event");
+        helper.setText(htmlContent, true);
+
+        //generate and attach ICS file
+        ByteArrayResource icsFile = icsGenerator.generateICS(ticketPurchasedEvent);
+        if(icsFile.getFilename() != null){
+            helper.addAttachment(icsFile.getFilename(), icsFile, "text/calendar; charset=UTF-8; method=REQUEST");
         }
 
         mailSender.send(message);

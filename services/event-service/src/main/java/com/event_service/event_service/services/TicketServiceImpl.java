@@ -48,4 +48,31 @@ public class TicketServiceImpl implements TicketService{
                 .message("Ticket verified successfully ✅")
                 .build();
     }
+
+    @Override
+    public Boolean isTicketCodeValid(String ticketCode) {
+        if(ticketCode.isBlank() || ticketCode.trim().isEmpty()){
+            return false;
+        }
+        Ticket ticket = ticketRepository.findByTicketCode(ticketCode);
+        if(ticket == null){
+            throw new ResourceNotFound("Ticket not found");
+        }
+        if(ticket.getStatus() != TicketStatusEnum.ACTIVE){
+            return false;
+        }
+
+        // update status to used
+        ticket.setStatus(TicketStatusEnum.USED);
+        ticket.setCheckedInAt(LocalDateTime.now());
+        ticketRepository.save(ticket);
+        return true;
+    }
+
+    @Override
+    public String getMeetingUrl(String ticketCode) {
+        Ticket ticket = ticketRepository.findByTicketCode(ticketCode);
+
+        return ticket.getEvent().getZoomMeetingLink();
+    }
 }

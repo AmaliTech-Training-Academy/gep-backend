@@ -9,6 +9,7 @@ public record TicketEventDetailResponse(
         String title,
         String description,
         Instant startTime,
-        String eventMeetingType
+        String eventMeetingType,
+        String zoneId
 ) {
 }

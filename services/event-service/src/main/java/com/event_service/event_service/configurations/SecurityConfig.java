@@ -54,8 +54,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(events -> events
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/api/v1/events/**").permitAll()
-                        .requestMatchers("/api/v1/tickets/verify/**").permitAll()
+                        .requestMatchers("/api/v1/events/{eventId}/register").permitAll()
+                        .requestMatchers("/api/v1/tickets/verify/**", "/api/v1/tickets/verifyVirtualTicket/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

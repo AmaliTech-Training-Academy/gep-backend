@@ -10,6 +10,7 @@ import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.EventRegistration;
 import com.event_service.event_service.models.Ticket;
 import com.event_service.event_service.models.TicketType;
+import com.event_service.event_service.models.enums.EventMeetingTypeEnum;
 import com.event_service.event_service.models.enums.EventRegistrationStatusEnum;
 import com.event_service.event_service.models.enums.TicketStatusEnum;
 import com.event_service.event_service.repositories.EventRegistrationRepository;
@@ -86,7 +87,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
 
         // if a ticket type is free, save registration and then send tickets via email
         if(Boolean.FALSE.equals(ticketType.getIsPaid())){
-            quantity = 1L;
+            quantity = 1L; // One ticket for free ticket types
             //generate ticket and send to attendee email
             List<Ticket> tickets = generateTicket(ticketType,event,quantity);
             TicketEventDetailResponse eventDetailResponse = EventDetailMapper.toTicketEventDetails(event);
@@ -124,10 +125,17 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             paymentCompletedListener(processPaymentEvent);
         }
         EventResponse eventResponse = eventMapper.toResponse(event);
+
+        String location;
+        if(event.getEventMeetingType().getName() == EventMeetingTypeEnum.VIRTUAL){
+            location = "Virtual via Zoom";
+        }else{
+            location = event.getLocation();
+        }
         return EventRegistrationResponse
                 .builder()
                 .eventTitle(eventResponse.title())
-                .location(eventResponse.meetingLocation())
+                .location(location)
                 .organizer("Event Organizer")
                 .startDate(eventResponse.startTime())
                 .build();
@@ -140,10 +148,16 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
         // Generate tickets and send to attendee via email
         EventRegistration registration = eventRegistrationRepository.findById(message.eventRegistrationId()).orElse(null);
         if(registration != null){
+            Long quantity;
             Event event = registration.getEvent();
             TicketType ticketType = registration.getTicketType();
-            Long quantity = registration.getTicketQuantity();
             TicketEventDetailResponse eventDetailResponse = EventDetailMapper.toTicketEventDetails(event);
+
+            if(event.getEventMeetingType().getName() == EventMeetingTypeEnum.VIRTUAL ){
+                quantity = 1L; // One ticket for virtual events
+            }else{
+                quantity = registration.getTicketQuantity();
+            }
 
             List<TicketResponse> tickets = generateTicket(ticketType,event,quantity)
                     .stream()
