@@ -1,6 +1,7 @@
 package com.event_service.event_service.configurations;
 
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,7 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 
 import java.net.URI;
 
+@Slf4j
 @Configuration
 public class AWSConfiguration {
 
@@ -44,10 +46,19 @@ public class AWSConfiguration {
 
     @Bean
     public SqsClient sqsClient(){
+        log.info("SQS Endpoint from properties: '{}'", sqsEndpoint);
+        log.info("SQS Endpoint length: {}", sqsEndpoint != null ? sqsEndpoint.length() : "null");
+
+        if (sqsEndpoint == null || sqsEndpoint.trim().isEmpty()) {
+            throw new IllegalStateException("SQS endpoint is not configured");
+        }
+
+        String cleanEndpoint = sqsEndpoint.trim();
+        log.info("Creating SQS client with endpoint: '{}'", cleanEndpoint);
+
         return SqsClient.builder()
                 .endpointOverride(java.net.URI.create(sqsEndpoint))
                 .region(Region.EU_WEST_1)
                 .build();
     }
-
 }

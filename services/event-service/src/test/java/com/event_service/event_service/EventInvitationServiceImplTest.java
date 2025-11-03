@@ -67,7 +67,7 @@ class EventInvitationServiceImplTest {
 
         event = Event.builder()
                 .id(1L)
-                .userId(1L)
+//                .userId(1L)
                 .title("Test Event")
                 .description("Test Description")
                 .flyerUrl("http://example.com/flyer.jpg")

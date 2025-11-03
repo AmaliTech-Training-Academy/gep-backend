@@ -107,12 +107,32 @@
             <version>0.11.5</version>
             <scope>runtime</scope>
         </dependency>
+
+<!--        QR Code Libraries-->
         <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>sqs</artifactId>
-            <version>2.25.0</version>
-            <scope>compile</scope>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+
+<!--        SQS Dependency-->
+<!--        <dependency>-->
+<!--            <groupId>software.amazon.awssdk</groupId>-->
+<!--            <artifactId>sqs</artifactId>-->
+<!--            <version>2.25.0</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
+        <dependency>
+            <groupId>io.awspring.cloud</groupId>
+            <artifactId>spring-cloud-aws-starter-sqs</artifactId>
+            <version>3.1.1</version>
+        </dependency>
+
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -158,4 +178,3 @@
     </build>
 
 </project>
-
