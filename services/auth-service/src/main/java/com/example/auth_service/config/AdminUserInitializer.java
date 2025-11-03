@@ -22,13 +22,13 @@ public class AdminUserInitializer {
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${admin@example.com}")
+    @Value("admin@example.com")
     private String adminEmail;
 
-    @Value("${Admin@123}")
+    @Value("Admin@123")
     private String adminPassword;
 
-    @Value("${System Administrator}")
+    @Value("System Administrator")
     private String adminFullName;
 
     @PostConstruct

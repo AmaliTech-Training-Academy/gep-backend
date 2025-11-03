@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Your EventHub Tickets</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+<table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+        <td align="center" style="padding: 20px 0;">
+            <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+                <!-- Header -->
+                <tr>
+                    <td align="center" style="padding: 30px 20px 20px 20px;">
+                        <h1 style="margin: 0; font-size: 28px; color: #333;">
+                            <span style="color: #d84315;">Event</span> Hub
+                        </h1>
+                    </td>
+                </tr>
+
+                <!-- Success Icon -->
+                <tr>
+                    <td align="center" style="padding: 20px 0 10px 0;">
+                        <div style="width: 60px; height: 60px; background-color: #4caf50; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
+                            <span style="color: white; font-size: 36px; line-height: 60px;">✓</span>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                    <td style="padding: 20px 40px;">
+                        <h2 style="margin: 0 0 10px 0; font-size: 24px; color: #333; text-align: center;">
+                            Tickets Confirmed!
+                        </h2>
+                        <p style="margin: 10px 0 20px 0; font-size: 16px; line-height: 1.6; color: #666; text-align: center;">
+                            Hi <span th:text="${attendeeName}" style="color: #333; font-weight: 600;">Attendee</span>, your tickets are ready!
+                        </p>
+                    </td>
+                </tr>
+
+                <!-- Event Details -->
+                <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                        <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9f9f9; border-radius: 8px; overflow: hidden;">
+                            <tr>
+                                <td style="padding: 20px;">
+                                    <h3 style="margin: 0 0 15px 0; font-size: 20px; color: #d84315;" th:text="${eventDetails.title}">
+                                        Event Title
+                                    </h3>
+                                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;" th:text="${eventDetails.description}">
+                                        Event description goes here
+                                    </p>
+                                    <p style="margin: 0; font-size: 14px; color: #333;">
+                                        <strong>Date & Time:</strong>
+                                        <span th:text="${#temporals.format(eventDetails.startTime, 'EEEE, MMMM d, yyyy - h:mm a')}">
+                                            Event Date
+                                        </span>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Tickets Section -->
+                <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                        <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #333;">Your Tickets</h3>
+
+                        <!-- Ticket Loop -->
+                        <table role="presentation" style="width: 100%; border-collapse: collapse;" th:each="ticket, iterStat : ${tickets}">
+                            <tr>
+                                <td style="padding-bottom: 20px;">
+                                    <table role="presentation" style="width: 100%; border-collapse: collapse; border: 2px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                                        <tr>
+                                            <td style="padding: 20px; background-color: #ffffff;">
+                                                <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                                    <tr>
+                                                        <!-- Ticket Info -->
+                                                        <td style="vertical-align: top; width: 65%;">
+                                                            <p style="margin: 0 0 8px 0; font-size: 16px; color: #333; font-weight: 600;" th:text="${ticket.ticketType}">
+                                                                Ticket Type
+                                                            </p>
+                                                            <p style="margin: 0 0 8px 0; font-size: 13px; color: #666;">
+                                                                <strong>Ticket Code:</strong>
+                                                                <span th:text="${ticket.ticketCode}" style="font-family: 'Courier New', monospace; color: #d84315;">
+                                                                    ABC123XYZ
+                                                                </span>
+                                                            </p>
+                                                            <p style="margin: 0; font-size: 12px; color: #999;">
+                                                                <span style="display: inline-block; padding: 4px 10px; background-color: #e8f5e9; color: #2e7d32; border-radius: 4px; font-weight: 500;" th:text="${ticket.status}">
+                                                                    ACTIVE
+                                                                </span>
+                                                            </p>
+                                                        </td>
+
+                                                        <!-- QR Code -->
+                                                        <td style="vertical-align: top; text-align: right; width: 35%;">
+                                                            <img th:src="'cid:qrcode-' + ${ticket.id}"
+                                                                 alt="QR Code"
+                                                                 style="width: 100px; height: 100px; border: 1px solid #ddd;"/>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Important Note -->
+                <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                        <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fff3e0; border-left: 4px solid #ff9800; border-radius: 4px;">
+                            <tr>
+                                <td style="padding: 15px 20px;">
+                                    <p style="margin: 0; font-size: 13px; color: #e65100; line-height: 1.5;">
+                                        <strong>Important:</strong> Please present your QR code at the event entrance. Save this email or take a screenshot for easy access.
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td style="padding: 20px 40px; background-color: #f9f9f9; text-align: center; border-top: 1px solid #e0e0e0;">
+                        <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">
+                            Questions? Contact us at <a href="mailto:support@eventhub.com" style="color: #d84315; text-decoration: none;">support@eventhub.com</a>
+                        </p>
+                        <p style="margin: 0; font-size: 12px; color: #999; line-height: 1.5;">
+                            © 2025 EventHub. All rights reserved.<br/>
+                            You're receiving this email because you purchased tickets on EventHub.
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
