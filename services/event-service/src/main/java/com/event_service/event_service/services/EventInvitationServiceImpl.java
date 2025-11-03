@@ -1,14 +1,17 @@
 package com.event_service.event_service.services;
 
-import com.event_service.event_service.dto.EventInvitationRequest;
+import com.event_service.event_service.client.AuthServiceClient;
+import com.event_service.event_service.dto.*;
 import com.event_service.event_service.event.EventInvitationEvent;
-import com.event_service.event_service.exceptions.DuplicateInvitationException;
-import com.event_service.event_service.exceptions.EventNotFoundException;
-import com.event_service.event_service.exceptions.InvitationPublishException;
+import com.event_service.event_service.exceptions.*;
+import com.event_service.event_service.mappers.EventInvitationMapper;
 import com.event_service.event_service.models.AppUser;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.EventInvitation;
+import com.event_service.event_service.models.EventOrganizer;
+import com.event_service.event_service.models.enums.InviteStatus;
 import com.event_service.event_service.repositories.EventInvitationRepository;
+import com.event_service.event_service.repositories.EventOrganizerRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.utilities.SecurityUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -16,12 +19,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Slf4j
@@ -34,6 +40,10 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     private final SqsClient sqsClient;
     private final EventRepository eventRepository;
     private final EventInvitationRepository eventInvitationRepository;
+    private final EventOrganizerRepository eventOrganizerRepository;
+    private final EventInvitationMapper eventInvitationMapper;
+    private final AuthServiceClient authServiceClient;
+
 
     private static final long INVITATION_EXPIRATION_DAYS = 2;
 
@@ -57,6 +67,83 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
         publishInvitationEmail(savedInvitation);
 
+    }
+
+    @Override
+    @Transactional
+    public void acceptInvitation(EventInvitationAcceptanceRequest acceptanceRequest) {
+        EventInvitation eventInvitation = getInvitationByToken(acceptanceRequest.invitationCode());
+        validateInvitation(eventInvitation);
+        createInviteeAccount(acceptanceRequest, eventInvitation);
+        eventInvitation.setStatus(InviteStatus.ACCEPTED);
+    }
+
+    private void validateInvitation(EventInvitation eventInvitation) {
+        if(eventInvitation.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new InvalidInvitationException("Invitation has expired");
+        }
+
+        if(eventInvitation.getStatus() == InviteStatus.ACCEPTED) {
+            throw new InvalidInvitationException("Invite has already been accepted");
+        }
+    }
+
+    private void createInviteeAccount(EventInvitationAcceptanceRequest request, EventInvitation eventInvitation){
+        InviteeRegistrationRequest registrationRequest = new InviteeRegistrationRequest(
+                request.fullName(),
+                eventInvitation.getInviteeEmail(),
+                request.password(),
+                String.valueOf(eventInvitation.getRole())
+        );
+        UserResponse createdUser = authServiceClient.createUser(registrationRequest);
+
+        EventOrganizer eventOrganizer = EventOrganizer.builder()
+                .event(eventInvitation.getEvent())
+                .userId(createdUser.id())
+                .role(eventInvitation.getRole())
+                .invitedBy(eventInvitation.getInviterId())
+                .invitation(eventInvitation)
+                .build();
+
+        eventOrganizerRepository.save(eventOrganizer);
+
+    }
+
+
+    private EventInvitation getInvitationByToken(String token){
+        return eventInvitationRepository.findByInvitationToken(token)
+                .orElseThrow(() -> {
+                    log.error("Invitation not found with token: {}", token);
+                    return new EventNotFoundException("Invitation not found");
+                });
+    }
+
+
+    @Override
+    @Transactional
+    public void resendInvitation(Long invitationId) {
+        EventInvitation invitation = eventInvitationRepository.findById(invitationId)
+                .orElseThrow(() -> new EventNotFoundException("Invitation not found"));
+
+        if (!Objects.equals(invitation.getInviterId(), securityUtils.getCurrentUser().getId())) {
+            throw new InvitationPublishException("You are not authorized to resend this invitation");
+        }
+
+        if(invitation.getStatus() == InviteStatus.ACCEPTED) {
+            log.warn("Attempt to resend already accepted invitation ID: {}", invitationId);
+            throw new InvitationPublishException("Cannot resend an already accepted invitation");
+        }
+        invitation.setInvitationToken(generateInvitationToken());
+        invitation.setExpiresAt(calculateExpirationTime());
+        invitation.setStatus(InviteStatus.PENDING);
+        eventInvitationRepository.save(invitation);
+
+        publishInvitationEmail(invitation);
+    }
+
+    @Override
+    public Page<EventInvitationListResponse> getInvitationList(Pageable pageable) {
+        return eventInvitationRepository.findAll(pageable).map(eventInvitationMapper::toEventInvitationList);
     }
 
     private Event findEventOrThrow(Long eventId) {

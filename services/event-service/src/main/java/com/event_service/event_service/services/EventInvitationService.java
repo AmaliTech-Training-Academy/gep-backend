@@ -1,8 +1,17 @@
 package com.event_service.event_service.services;
 
+import com.event_service.event_service.dto.EventInvitationAcceptanceRequest;
+import com.event_service.event_service.dto.EventInvitationListResponse;
 import com.event_service.event_service.dto.EventInvitationRequest;
 import com.event_service.event_service.models.AppUser;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 
 public interface EventInvitationService {
     void sendEventInvitation(EventInvitationRequest request);
+    void acceptInvitation(EventInvitationAcceptanceRequest acceptanceRequest);
+    void resendInvitation(Long invitationId);
+    Page<EventInvitationListResponse> getInvitationList(Pageable pageable);
 }
