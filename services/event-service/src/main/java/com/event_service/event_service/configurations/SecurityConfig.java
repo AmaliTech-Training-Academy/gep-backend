@@ -53,7 +53,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(events -> events
                         .requestMatchers(
-                                "/actuator/health"
+                                "/actuator/health", "/api/v1/event-invitations/accept-invitation"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
