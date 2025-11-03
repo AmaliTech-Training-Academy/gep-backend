@@ -1,9 +1,6 @@
 package com.example.auth_service.service;
 
-import com.example.auth_service.dto.request.OtpVerificationRequest;
-import com.example.auth_service.dto.request.ResetPasswordRequest;
-import com.example.auth_service.dto.request.UserLoginRequest;
-import com.example.auth_service.dto.request.UserRegistrationRequest;
+import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 public interface AuthService {
     @Transactional
     UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest);
+
+    UserCreationResponse registerInvitee(InviteeAccountCreationRequest inviteeRequest);
 
     void loginUser(UserLoginRequest loginRequest);
 

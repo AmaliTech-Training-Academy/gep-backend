@@ -24,6 +24,11 @@ public class AuthController {
         return ResponseEntity.ok(CustomApiResponse.success("User registered successfully", creationResponse));
     }
 
+    @PostMapping("/register-invitee")
+    public UserCreationResponse registerInvitee(@Valid @RequestBody InviteeAccountCreationRequest inviteeRequest){
+        return authService.registerInvitee(inviteeRequest);
+    }
+
     @PostMapping("/login")
     public ResponseEntity<CustomApiResponse<?>> login(@Valid @RequestBody UserLoginRequest loginRequest){
         authService.loginUser(loginRequest);
