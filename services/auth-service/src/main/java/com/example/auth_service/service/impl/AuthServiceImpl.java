@@ -1,9 +1,6 @@
 package com.example.auth_service.service.impl;
 
-import com.example.auth_service.dto.request.OtpVerificationRequest;
-import com.example.auth_service.dto.request.ResetPasswordRequest;
-import com.example.auth_service.dto.request.UserLoginRequest;
-import com.example.auth_service.dto.request.UserRegistrationRequest;
+import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
@@ -69,20 +66,46 @@ public class AuthServiceImpl implements AuthService {
             validateRequest(registrationRequest);
             User savedUser = createAndSaveUser(registrationRequest);
 
-            Profile userProfile = Profile.builder().user(savedUser).build();
-            profileRepository.save(userProfile);
-            UserEventStats userEventStats = UserEventStats.builder().user(savedUser).build();
-            userEventStatsRepository.save(userEventStats);
-
+            createUserRelatedEntities(savedUser);
             sendRegistrationMessageToQueue(savedUser);
             return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
+    }
+
+    @Override
+    @Transactional
+    public UserCreationResponse registerInvitee(InviteeAccountCreationRequest inviteeRequest) {
+        String email = inviteeRequest.email().toLowerCase().trim();
+        if(userRepository.existsByEmail(email)){
+            throw new DuplicateEmailException("Email already registered");
+        }
+
+        User user = User.builder()
+                .fullName(inviteeRequest.fullName())
+                .email(inviteeRequest.email().toLowerCase().trim())
+                .password(passwordEncoder.encode(inviteeRequest.password()))
+                .role(inviteeRequest.role())
+                .isActive(true)
+                .build();
+        userRepository.save(user);
+
+        createUserRelatedEntities(user);
+        return new UserCreationResponse(user.getId(), user.getFullName());
+    }
+
+    @Transactional
+    protected void createUserRelatedEntities(User user) {
+        Profile userProfile = Profile.builder().user(user).build();
+        profileRepository.save(userProfile);
+
+        UserEventStats userEventStats = UserEventStats.builder().user(user).build();
+        userEventStatsRepository.save(userEventStats);
     }
 
     private void validateRequest(UserRegistrationRequest registrationRequest){
         if(!registrationRequest.password().equals(registrationRequest.confirmPassword())){
             throw new PasswordMismatchException("Passwords do not match");
         }
-        String email = registrationRequest.email().toLowerCase().trim();
+        String email = normalizeEmail(registrationRequest.email());
         if(userRepository.existsByEmail(email)){
             throw new DuplicateEmailException("Email already registered");
         }
@@ -132,8 +155,9 @@ public class AuthServiceImpl implements AuthService {
 
     private AuthUser getAuthenticatedUser(UserLoginRequest loginRequest){
         try{
+            String normalizedEmail = normalizeEmail(loginRequest.email());
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.password())
+                    new UsernamePasswordAuthenticationToken(normalizedEmail, loginRequest.password())
             );
             return (AuthUser) authentication.getPrincipal();
         }catch(BadCredentialsException e){
@@ -154,17 +178,21 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void resendOtp(String email) {
-        User user = getActiveUserByEmail(email);
+        User user = getActiveUserByEmail(normalizeEmail(email));
         otpService.requestLoginOtp(user.getEmail());
+    }
+
+    private String normalizeEmail(String email) {
+        return email != null ? email.toLowerCase().trim() : null;
     }
 
     @Override
     public void refreshAccessToken(String refreshToken, HttpServletResponse response){
-        String email = jwtUtil.extractUsername(refreshToken);
-        User user = getActiveUserByEmail(email);
         if(!jwtUtil.validateToken(refreshToken)){
             throw new BadCredentialsException("Invalid refresh token");
         }
+        String email = jwtUtil.extractUsername(refreshToken);
+        User user = getActiveUserByEmail(email);
         setAuthCookies(response, user);
     }
 

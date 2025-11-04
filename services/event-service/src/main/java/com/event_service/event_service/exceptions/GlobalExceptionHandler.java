@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -47,13 +48,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Object> handleEmptyRequestBody(HttpMessageNotReadableException ex, WebRequest request){
+    public ResponseEntity<CustomApiResponse<Object>> handleEmptyRequestBody(HttpMessageNotReadableException ex, WebRequest request){
         return new ResponseEntity<>(
-                new ApiErrorResponse(
-                        LocalDateTime.now(),
-                        emptyRequestMessage,
-                        HttpStatus.BAD_REQUEST.value()
-                ),
+                CustomApiResponse.error(emptyRequestMessage),
                 HttpStatus.BAD_REQUEST
         );
     }
@@ -67,6 +64,20 @@ public class GlobalExceptionHandler {
                 ), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(InvalidInvitationException.class)
+    public ResponseEntity<CustomApiResponse<Object>> handleInvalidInvitation(InvalidInvitationException ex, WebRequest request) {
+        return new ResponseEntity<>(
+                CustomApiResponse.error(ex.getMessage()),
+                HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<CustomApiResponse<Object>> handleUserAlreadyExistException(UserAlreadyExistsException ex, WebRequest request) {
+        return new ResponseEntity<>(
+                CustomApiResponse.error(ex.getMessage()),
+                HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<CustomApiResponse<Object>> handleAuthorizationAccessDenied(AuthorizationDeniedException ex, WebRequest request) {
         return new ResponseEntity<>(
@@ -76,13 +87,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<ApiErrorResponse> handleCustomValidationException(ValidationException ex) {
+    public ResponseEntity<CustomApiResponse<Object>> handleCustomValidationException(ValidationException ex) {
         String errorMessage = String.join("; ", ex.getErrors());
         return new ResponseEntity<>(
-                new ApiErrorResponse(
-                        LocalDateTime.now(),
-                        "Validation failed: " + errorMessage,
-                        HttpStatus.UNPROCESSABLE_ENTITY.value()
+                CustomApiResponse.error(
+                        "Validation failed: ",
+                        errorMessage
                 ),
                 HttpStatus.UNPROCESSABLE_ENTITY
         );
@@ -139,6 +149,11 @@ public class GlobalExceptionHandler {
                 CustomApiResponse.error(ex.getMessage()),
                 HttpStatus.NOT_FOUND
         );
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<CustomApiResponse<Object>> handleNoResourceFoundException(NoResourceFoundException ex){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(CustomApiResponse.error(ex.getMessage()));
     }
 
     @ExceptionHandler(InvitationPublishException.class)
