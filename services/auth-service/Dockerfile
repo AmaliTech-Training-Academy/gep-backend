@@ -2,33 +2,33 @@
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
-# Copy parent pom (needed for inheritance)
-COPY pom.xml ./pom.xml
+# Copy parent pom from services directory
+COPY ../pom.xml ./pom.xml
 
-# Copy auth-service pom
-COPY auth-service/pom.xml ./auth-service/pom.xml
+# Copy service pom
+COPY pom.xml ./auth-service/pom.xml
 
-# Preload dependencies for this module ONLY
+# Download dependencies
 RUN mvn -f auth-service/pom.xml dependency:go-offline -B
 
-# Copy the source code
-COPY auth-service/src ./auth-service/src
+# Copy source code
+COPY src ./auth-service/src
 
-# Build this module
-RUN mvn -f auth-service/pom.xml clean package -DskipTests
+# Build the service
+RUN mvn -f auth-service/pom.xml clean package -DskipTests -B
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Install curl
+# Install curl for health checks
 RUN apk add --no-cache curl
 
-# Copy the built artifact from build stage
+# Copy the built JAR
 COPY --from=build /app/auth-service/target/*.jar app.jar
 
-# Expose the port the service runs on
+# Expose port
 EXPOSE 8081
 
 # Run the application
-ENTRYPOINT ["java",  "-jar", "app.jar", "--server.port=8081"]
+ENTRYPOINT ["java", "-jar", "app.jar", "--server.port=8081"]
