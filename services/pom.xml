@@ -4,11 +4,211 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.example</groupId>
+    <groupId>com.eventplanner</groupId>
     <artifactId>Project</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
 
+    <name>Event Planner System</name>
+    <description>Parent POM for all services</description>
+
+<!--    Common Properties   -->
+    <properties>
+        <java.version>21</java.version>
+        <spring.boot.version>3.5.6</spring.boot.version>
+        <spring.cloud.version>2025.0.0</spring.cloud.version>
+        <spring.aws.version>3.1.1</spring.aws.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
+        <lombok.version>1.18.32</lombok.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <springdoc.version>2.8.8</springdoc.version>
+        <jacoco.version>0.8.12</jacoco.version>
+    </properties>
+
+<!--    Dependency Management   -->
+    <dependencyManagement>
+        <dependencies>
+            <!--    Spring Boot BOM    -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!--    Spring Cloud BOM    -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring.cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- AWS Spring Cloud BOM -->
+            <dependency>
+                <groupId>io.awspring.cloud</groupId>
+                <artifactId>spring-cloud-aws-dependencies</artifactId>
+                <version>${spring.aws.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!--  AWSSDK dependencies  -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>2.25.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!--    SpringDoc Dependency    -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+                <optional>true</optional>
+            </dependency>
+            <!--  Lombok Dependency  -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <!--  MapStruct Dependency  -->
+            <dependency>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct</artifactId>
+                <version>${mapstruct.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+<!--    Dependencies    -->
+    <dependencies>
+
+    </dependencies>
+
+<!--    Plugin Management   -->
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!--  Spring Boot Plugin  -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring.boot.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!--  Maven Compiler Plugin  -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <source>${java.version}</source>
+                        <target>${java.version}</target>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.mapstruct</groupId>
+                                <artifactId>mapstruct-processor</artifactId>
+                                <version>${mapstruct.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+
+                <!-- JaCoCo Plugin -->
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                            <!--  Prepare agent before unit tests  -->
+                            <execution>
+                                <id>prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- Set Destination -->
+                                    <destFile>${project.build.directory}/jacoco.exec</destFile>
+                                </configuration>
+                            </execution>
+
+                            <!--  Generate report after tests  -->
+                            <execution>
+                                <id>report</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+
+                            <!--  Enforce coverage rules  -->
+                            <execution>
+                                <id>check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <rule>
+                                            <element>BUNDLE</element>
+                                            <limits>
+                                                <limit>
+                                                    <counter>LINE</counter>
+                                                    <value>COVEREDRATIO</value>
+                                                    <minimum>0.80</minimum> <!-- 80% line coverage -->
+                                                </limit>
+                                                <limit>
+                                                    <counter>BRANCH</counter>
+                                                    <value>COVEREDRATIO</value>
+                                                    <minimum>0.80</minimum> <!-- 80% branch coverage -->
+                                                </limit>
+                                            </limits>
+                                        </rule>
+                                    </rules>
+
+                                    <!-- Exclude specific classes from coverage check -->
+                                    <excludes>
+                                        <eclude>**/model/**</eclude>
+                                        <eclude>**/dto/**</eclude>
+                                        <eclude>**/exception/**</eclude>
+                                        <exclude>**/exceptions/**</exclude>
+                                        <exclude>**/enums/**</exclude>
+                                        <exclude>**/repository/**</exclude>
+                                        <exclude>**/config/**</exclude>
+                                        <exclude>**/configurations/**</exclude>
+                                        <exclude>**/controller/**</exclude>
+                                        <exclude>**/event/**</exclude>
+                                        <exclude>**/validations/**</exclude>
+                                        <exclude>**/listener/**</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+<!--    Modules     -->
     <modules>
         <module>auth-service</module>
         <module>discovery-server</module>
