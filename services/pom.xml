@@ -22,6 +22,7 @@
         <lombok.version>1.18.32</lombok.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <springdoc.version>2.8.8</springdoc.version>
+        <jacoco.version>0.8.12</jacoco.version>
     </properties>
 
 <!--    Dependency Management   -->
@@ -129,6 +130,79 @@
                             </path>
                         </annotationProcessorPaths>
                     </configuration>
+                </plugin>
+
+                <!-- JaCoCo Plugin -->
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                            <!--  Prepare agent before unit tests  -->
+                            <execution>
+                                <id>prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                                <configuration>
+                                    <!-- Set Destination -->
+                                    <destFile>${project.build.directory}/jacoco.exec</destFile>
+                                </configuration>
+                            </execution>
+
+                            <!--  Generate report after tests  -->
+                            <execution>
+                                <id>report</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+
+                            <!--  Enforce coverage rules  -->
+                            <execution>
+                                <id>check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <rule>
+                                            <element>BUNDLE</element>
+                                            <limits>
+                                                <limit>
+                                                    <counter>LINE</counter>
+                                                    <value>COVEREDRATIO</value>
+                                                    <minimum>0.80</minimum> <!-- 80% line coverage -->
+                                                </limit>
+                                                <limit>
+                                                    <counter>BRANCH</counter>
+                                                    <value>COVEREDRATIO</value>
+                                                    <minimum>0.80</minimum> <!-- 80% branch coverage -->
+                                                </limit>
+                                            </limits>
+                                        </rule>
+                                    </rules>
+
+                                    <!-- Exclude specific classes from coverage check -->
+                                    <excludes>
+                                        <eclude>**/model/**</eclude>
+                                        <eclude>**/dto/**</eclude>
+                                        <eclude>**/exception/**</eclude>
+                                        <exclude>**/exceptions/**</exclude>
+                                        <exclude>**/enums/**</exclude>
+                                        <exclude>**/repository/**</exclude>
+                                        <exclude>**/config/**</exclude>
+                                        <exclude>**/configurations/**</exclude>
+                                        <exclude>**/controller/**</exclude>
+                                        <exclude>**/event/**</exclude>
+                                        <exclude>**/validations/**</exclude>
+                                        <exclude>**/listener/**</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
