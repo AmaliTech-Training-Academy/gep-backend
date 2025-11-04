@@ -2,18 +2,13 @@
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
-# Copy parent pom and install it first
-COPY ../pom.xml ./pom.xml
+# Copy parent pom and install it
+COPY pom.xml ./
 RUN mvn install -N -B
 
-# Copy service pom
-COPY pom.xml ./auth-service/pom.xml
-
-# Download dependencies
-RUN mvn -f auth-service/pom.xml dependency:go-offline -B
-
-# Copy source code
-COPY src ./auth-service/src
+# Copy auth-service pom and source
+COPY auth-service/pom.xml ./auth-service/
+COPY auth-service/src ./auth-service/src
 
 # Build the service
 RUN mvn -f auth-service/pom.xml clean package -DskipTests -B
