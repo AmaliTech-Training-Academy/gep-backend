@@ -21,6 +21,7 @@ public class AppUser implements UserDetails {
     private final Long id;
     private final String role;
     private final String email;
+    private final String fullName;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -5,12 +5,11 @@ import com.event_service.event_service.dto.*;
 import com.event_service.event_service.event.EventInvitationEvent;
 import com.event_service.event_service.exceptions.*;
 import com.event_service.event_service.mappers.EventInvitationMapper;
-import com.event_service.event_service.models.AppUser;
-import com.event_service.event_service.models.Event;
-import com.event_service.event_service.models.EventInvitation;
-import com.event_service.event_service.models.EventOrganizer;
+import com.event_service.event_service.models.*;
+import com.event_service.event_service.models.enums.InvitationStatus;
 import com.event_service.event_service.models.enums.InviteStatus;
 import com.event_service.event_service.repositories.EventInvitationRepository;
+import com.event_service.event_service.repositories.EventInviteeRepository;
 import com.event_service.event_service.repositories.EventOrganizerRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.utilities.SecurityUtils;
@@ -21,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.sqs.SqsClient;
@@ -40,6 +40,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     private final SqsClient sqsClient;
     private final EventRepository eventRepository;
     private final EventInvitationRepository eventInvitationRepository;
+    private final EventInviteeRepository eventInviteeRepository;
     private final EventOrganizerRepository eventOrganizerRepository;
     private final EventInvitationMapper eventInvitationMapper;
     private final AuthServiceClient authServiceClient;
@@ -60,25 +61,29 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         AppUser currentUser = securityUtils.getCurrentUser();
         Event event = findEventOrThrow(request.event());
 
-        validateInvitationDoesNotExist(request.event(), request.inviteeEmail());
-
-        EventInvitation invitation = createInvitation(request, event, currentUser.getId());
+        EventInvitation invitation = createInvitation(request, event, currentUser);
         EventInvitation savedInvitation = eventInvitationRepository.save(invitation);
 
-        publishInvitationEmail(savedInvitation);
-
+        for(InviteeRequest invitee: request.invitees()){
+            validateInvitationDoesNotExist(request.event(), invitee.inviteeEmail());
+            EventInvitee eventInvitee = createEventInvitee(invitee, savedInvitation);
+            EventInvitee savedEventInvitee = eventInviteeRepository.save(eventInvitee);
+            if(invitation.getStatus() == InvitationStatus.SEND) {
+                publishInvitationEmail(savedEventInvitee);
+            }
+        }
     }
 
     @Override
     @Transactional
     public void acceptInvitation(EventInvitationAcceptanceRequest acceptanceRequest) {
-        EventInvitation eventInvitation = getInvitationByToken(acceptanceRequest.invitationCode());
+        EventInvitee eventInvitation = getInvitationByToken(acceptanceRequest.invitationCode());
         validateInvitation(eventInvitation);
         createInviteeAccount(acceptanceRequest, eventInvitation);
         eventInvitation.setStatus(InviteStatus.ACCEPTED);
     }
 
-    private void validateInvitation(EventInvitation eventInvitation) {
+    private void validateInvitation(EventInvitee eventInvitation) {
         if(eventInvitation.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new InvalidInvitationException("Invitation has expired");
         }
@@ -88,7 +93,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         }
     }
 
-    private void createInviteeAccount(EventInvitationAcceptanceRequest request, EventInvitation eventInvitation){
+    private void createInviteeAccount(EventInvitationAcceptanceRequest request, EventInvitee eventInvitation){
         InviteeRegistrationRequest registrationRequest = new InviteeRegistrationRequest(
                 request.fullName(),
                 eventInvitation.getInviteeEmail(),
@@ -98,52 +103,55 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         UserResponse createdUser = authServiceClient.createUser(registrationRequest);
 
         EventOrganizer eventOrganizer = EventOrganizer.builder()
-                .event(eventInvitation.getEvent())
+                .event(eventInvitation.getInvitation().getEvent())
                 .userId(createdUser.id())
                 .role(eventInvitation.getRole())
-                .invitedBy(eventInvitation.getInviterId())
-                .invitation(eventInvitation)
+                .invitedBy(eventInvitation.getInvitation().getInviterId())
                 .build();
 
         eventOrganizerRepository.save(eventOrganizer);
 
     }
 
-
-    private EventInvitation getInvitationByToken(String token){
-        return eventInvitationRepository.findByInvitationToken(token)
+    private EventInvitee getInvitationByToken(String token){
+        return eventInviteeRepository.findByInvitationToken(token)
                 .orElseThrow(() -> {
                     log.error("Invitation not found with token: {}", token);
                     return new EventNotFoundException("Invitation not found");
                 });
     }
 
-
     @Override
     @Transactional
     public void resendInvitation(Long invitationId) {
-        EventInvitation invitation = eventInvitationRepository.findById(invitationId)
+        EventInvitee invitation = eventInviteeRepository.findById(invitationId)
                 .orElseThrow(() -> new EventNotFoundException("Invitation not found"));
 
-        if (!Objects.equals(invitation.getInviterId(), securityUtils.getCurrentUser().getId())) {
-            throw new InvitationPublishException("You are not authorized to resend this invitation");
+        if (!Objects.equals(invitation.getInvitation().getInviterId(), securityUtils.getCurrentUser().getId())) {
+            throw new AuthorizationDeniedException("You are not authorized to resend this invitation");
         }
 
         if(invitation.getStatus() == InviteStatus.ACCEPTED) {
             log.warn("Attempt to resend already accepted invitation ID: {}", invitationId);
-            throw new InvitationPublishException("Cannot resend an already accepted invitation");
+            throw new DuplicateInvitationException("Cannot resend an already accepted invitation");
         }
         invitation.setInvitationToken(generateInvitationToken());
         invitation.setExpiresAt(calculateExpirationTime());
         invitation.setStatus(InviteStatus.PENDING);
-        eventInvitationRepository.save(invitation);
+        eventInviteeRepository.save(invitation);
 
         publishInvitationEmail(invitation);
     }
 
     @Override
     public Page<EventInvitationListResponse> getInvitationList(Pageable pageable) {
-        return eventInvitationRepository.findAll(pageable).map(eventInvitationMapper::toEventInvitationList);
+        return null;
+    }
+
+    @Override
+    public Page<EventInvitationListResponse> getSavedInvitations(Pageable pageable) {
+        return eventInvitationRepository.findAllByStatus(InvitationStatus.SAVE, pageable)
+                .map(eventInvitationMapper::toEventInvitationList);
     }
 
     private Event findEventOrThrow(Long eventId) {
@@ -155,7 +163,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     }
 
     private void validateInvitationDoesNotExist(Long eventId, String inviteeEmail) {
-        if (eventInvitationRepository.existsByEventIdAndInviteeEmail(eventId, inviteeEmail)) {
+        if (eventInviteeRepository.existsByEmailAndEventId(inviteeEmail, eventId)) {
             log.warn("Duplicate invitation attempt for event ID: {} and email: {}", eventId, inviteeEmail);
             throw new DuplicateInvitationException(
                     String.format("An invitation already exists for email '%s' for this event",
@@ -164,21 +172,30 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         }
     }
 
-    private EventInvitation createInvitation(EventInvitationRequest request, Event event, Long inviterId) {
+    private EventInvitation createInvitation(EventInvitationRequest request, Event event, AppUser currentUser) {
         return EventInvitation.builder()
                 .event(event)
-                .inviteeName(request.inviteeName())
                 .invitationTitle(request.invitationTitle())
-                .inviterId(inviterId)
+                .inviterId(currentUser.getId())
+                .inviterName(currentUser.getFullName())
+                .message(request.message())
+                .status(request.status())
+                .build();
+    }
+
+    private EventInvitee createEventInvitee(InviteeRequest request, EventInvitation invitation) {
+        return EventInvitee.builder()
+                .inviteeName(request.inviteeName())
+                .inviteeEmail(request.inviteeEmail())
                 .invitationToken(generateInvitationToken())
                 .role(request.role())
-                .message(request.message())
-                .inviteeEmail(request.inviteeEmail())
+                .invitation(invitation)
+                .status(InviteStatus.PENDING)
                 .expiresAt(calculateExpirationTime())
                 .build();
     }
 
-    private void publishInvitationEmail(EventInvitation invitation) {
+    private void publishInvitationEmail(EventInvitee invitation) {
         try {
             String inviteLink = buildInvitationLink(invitation.getInvitationToken());
             EventInvitationEvent event = createInvitationEvent(invitation, inviteLink);
@@ -203,9 +220,9 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         return String.format("%s/invitations/accept?token=%s", frontendBaseUrl, token);
     }
 
-    private EventInvitationEvent createInvitationEvent(EventInvitation invitation, String inviteLink) {
+    private EventInvitationEvent createInvitationEvent(EventInvitee invitation, String inviteLink) {
         return new EventInvitationEvent(
-                invitation.getInvitationTitle(),
+                invitation.getInvitation().getInvitationTitle(),
                 invitation.getInviteeName(),
                 invitation.getInviteeEmail(),
                 inviteLink
@@ -228,7 +245,11 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     }
 
     private String generateInvitationToken() {
-        return UUID.randomUUID().toString();
+        String token;
+        do {
+            token = UUID.randomUUID().toString();
+        } while (eventInviteeRepository.findByInvitationToken(token).isPresent());
+        return token;
     }
 
     private LocalDateTime calculateExpirationTime() {

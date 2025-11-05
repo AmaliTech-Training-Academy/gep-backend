@@ -36,10 +36,6 @@ public class EventOrganizer {
     @Column(name = "invited_by")
     private Long invitedBy;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invitation_id")
-    private EventInvitation invitation;
-
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
