@@ -59,6 +59,7 @@ public class User {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserEventStats userEventStats;
 
-    @OneToOne(mappedBy = "user")
+    @OneToOne(cascade = CascadeType.ALL,
+            mappedBy = "user")
     private Profile profile;
 }
