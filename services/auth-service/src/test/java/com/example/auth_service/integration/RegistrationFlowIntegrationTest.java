@@ -1,6 +1,7 @@
 package com.example.auth_service.integration;
 
 import com.example.auth_service.dto.request.UserRegistrationRequest;
+import com.example.auth_service.dto.response.CustomApiResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.model.User;
@@ -82,20 +83,21 @@ class RegistrationFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", notNullValue()))
-                .andExpect(jsonPath("$.fullName", is("Jane Smith")))
+                .andExpect(jsonPath("$.data.id", notNullValue()))
+                .andExpect(jsonPath("$.data.fullName", is("Jane Smith")))
                 .andReturn();
 
         // Parse response
         String responseBody = result.getResponse().getContentAsString();
-        UserCreationResponse response = objectMapper.readValue(responseBody, UserCreationResponse.class);
+        CustomApiResponse<UserCreationResponse> response = objectMapper.readValue(responseBody,
+                objectMapper.getTypeFactory().constructParametricType(CustomApiResponse.class, UserCreationResponse.class));
 
         // Assert - Verify user in database
-        User savedUser = userRepository.findById(response.id()).orElse(null);
+        User savedUser = userRepository.findById(response.data().id()).orElse(null);
         assertThat(savedUser).isNotNull();
         assertThat(savedUser.getFullName()).isEqualTo("Jane Smith");
         assertThat(savedUser.getEmail()).isEqualTo("jane.smith@example.com");
-        assertThat(savedUser.getRole()).isEqualTo(UserRole.ATTENDEE);
+        assertThat(savedUser.getRole()).isEqualTo(UserRole.ORGANISER);
         assertThat(savedUser.isActive()).isTrue();
         assertThat(passwordEncoder.matches("SecurePass123!", savedUser.getPassword())).isTrue();
 
@@ -109,7 +111,7 @@ class RegistrationFlowIntegrationTest {
                 .fullName("Existing User")
                 .email("existing@example.com")
                 .password(passwordEncoder.encode("Password123!"))
-                .role(UserRole.ATTENDEE)
+                .role(UserRole.ORGANISER)
                 .isActive(true)
                 .build();
         userRepository.save(existingUser);
@@ -172,21 +174,25 @@ class RegistrationFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").exists())
                 .andReturn();
+
 
         // Parse response
         String responseBody = result.getResponse().getContentAsString();
-        UserCreationResponse response = objectMapper.readValue(responseBody, UserCreationResponse.class);
+        CustomApiResponse<UserCreationResponse> response = objectMapper.readValue(responseBody,
+                objectMapper.getTypeFactory().constructParametricType(CustomApiResponse.class, UserCreationResponse.class));
 
         // Assert - Password should be encrypted
-        User savedUser = userRepository.findById(response.id()).orElseThrow();
+        User savedUser = userRepository.findById(response.data().id()).orElseThrow();
         assertThat(savedUser.getPassword()).isNotEqualTo(plainPassword);
         assertThat(savedUser.getPassword()).startsWith("$2");
         assertThat(passwordEncoder.matches(plainPassword, savedUser.getPassword())).isTrue();
+
     }
 
     @Test
-    @DisplayName("Should create user with ATTENDEE role by default")
+    @DisplayName("Should create user with ORGANISER role by default")
     void testRegistration_DefaultRole() throws Exception {
         // Arrange
         UserRegistrationRequest request = new UserRegistrationRequest(
@@ -201,15 +207,17 @@ class RegistrationFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").exists())
                 .andReturn();
 
         // Parse response
         String responseBody = result.getResponse().getContentAsString();
-        UserCreationResponse response = objectMapper.readValue(responseBody, UserCreationResponse.class);
+        CustomApiResponse<UserCreationResponse> response = objectMapper.readValue(responseBody,
+                objectMapper.getTypeFactory().constructParametricType(CustomApiResponse.class, UserCreationResponse.class));
 
         // Assert
-        User savedUser = userRepository.findById(response.id()).orElseThrow();
-        assertThat(savedUser.getRole()).isEqualTo(UserRole.ATTENDEE);
+        User savedUser = userRepository.findById(response.data().id()).orElseThrow();
+        assertThat(savedUser.getRole()).isEqualTo(UserRole.ORGANISER);
     }
 
     @Test
@@ -228,15 +236,18 @@ class RegistrationFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").exists())
                 .andReturn();
 
         // Parse response
         String responseBody = result.getResponse().getContentAsString();
-        UserCreationResponse response = objectMapper.readValue(responseBody, UserCreationResponse.class);
+        CustomApiResponse<UserCreationResponse> response = objectMapper.readValue(responseBody,
+                objectMapper.getTypeFactory().constructParametricType(CustomApiResponse.class, UserCreationResponse.class));
 
         // Assert
-        User savedUser = userRepository.findById(response.id()).orElseThrow();
+        User savedUser = userRepository.findById(response.data().id()).orElseThrow();
         assertThat(savedUser.isActive()).isTrue();
+
     }
 
 
@@ -257,16 +268,20 @@ class RegistrationFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.fullName", is("María José O'Brien-García")))
+                .andExpect(jsonPath("$.data.fullName", is("María José O'Brien-García")))  // Changed path to $.data.fullName
+                .andExpect(jsonPath("$.description", is("User registered successfully")))     // Added message check
                 .andReturn();
+
 
         // Parse response
         String responseBody = result.getResponse().getContentAsString();
-        UserCreationResponse response = objectMapper.readValue(responseBody, UserCreationResponse.class);
+        CustomApiResponse<UserCreationResponse> response = objectMapper.readValue(responseBody,
+                objectMapper.getTypeFactory().constructParametricType(CustomApiResponse.class, UserCreationResponse.class));
 
         // Assert
-        User savedUser = userRepository.findById(response.id()).orElseThrow();
+        User savedUser = userRepository.findById(response.data().id()).orElseThrow();
         assertThat(savedUser.getFullName()).isEqualTo("María José O'Brien-García");
+
     }
 
     @Test
@@ -395,19 +410,20 @@ class RegistrationFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").exists())
                 .andReturn();
 
         // Parse response
         String responseBody = result.getResponse().getContentAsString();
-        UserCreationResponse response = objectMapper.readValue(responseBody, UserCreationResponse.class);
+        CustomApiResponse<UserCreationResponse> response = objectMapper.readValue(responseBody, objectMapper.getTypeFactory().constructParametricType(CustomApiResponse.class, UserCreationResponse.class));
 
         // Assert - Verify all data is consistent
-        User user = userRepository.findById(response.id()).orElseThrow();
+        User user = userRepository.findById(response.data().id()).orElseThrow();
 
 
         // Verify data consistency
-        assertThat(response.id()).isEqualTo(user.getId());
-        assertThat(response.fullName()).isEqualTo(user.getFullName());
+        assertThat(response.data().id()).isEqualTo(user.getId());
+        assertThat(response.data().fullName()).isEqualTo(user.getFullName());
     }
 
     @Test
@@ -508,18 +524,19 @@ class RegistrationFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.fullName").exists())
+                .andExpect(jsonPath("$.data.id").exists())
+                .andExpect(jsonPath("$.data.id").isNumber())
+                .andExpect(jsonPath("$.data.fullName").exists())
                 .andReturn();
 
         // Parse and verify response
         String responseBody = result.getResponse().getContentAsString();
-        UserCreationResponse response = objectMapper.readValue(responseBody, UserCreationResponse.class);
+        CustomApiResponse<UserCreationResponse> response = objectMapper.readValue(responseBody,
+                objectMapper.getTypeFactory().constructParametricType(CustomApiResponse.class, UserCreationResponse.class));
 
-        assertThat(response.id()).isNotNull();
-        assertThat(response.id()).isGreaterThan(0L);
-        assertThat(response.fullName()).isEqualTo("Response Test User");
+        assertThat(response.data().id()).isNotNull();
+        assertThat(response.data().id()).isGreaterThan(0L);
+        assertThat(response.data().fullName()).isEqualTo("Response Test User");
     }
 
     @Test

@@ -188,11 +188,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void refreshAccessToken(String refreshToken, HttpServletResponse response){
+
+        String email = jwtUtil.extractUsername(refreshToken);
+        User user = getActiveUserByEmail(email);
         if(!jwtUtil.validateToken(refreshToken)){
             throw new BadCredentialsException("Invalid refresh token");
         }
-        String email = jwtUtil.extractUsername(refreshToken);
-        User user = getActiveUserByEmail(email);
         setAuthCookies(response, user);
     }
 
@@ -236,6 +237,7 @@ public class AuthServiceImpl implements AuthService {
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
+                .sameSite("None")
                 .maxAge(Duration.ofMillis(accessTokenExpiration))
                 .build();
 
@@ -243,6 +245,7 @@ public class AuthServiceImpl implements AuthService {
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
+                .sameSite("None")
                 .maxAge(Duration.ofMillis(refreshTokenExpiration))
                 .build();
 

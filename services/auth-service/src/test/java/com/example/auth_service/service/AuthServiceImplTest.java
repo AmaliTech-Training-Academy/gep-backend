@@ -129,21 +129,23 @@ public class AuthServiceImplTest {
         String refreshToken = "refresh-token";
 
         User user = User.builder()
+                .id(1L)
                 .email(email)
                 .isActive(true)
+                .role(UserRole.ORGANISER)
                 .build();
 
         when(otpService.verifyOtp(email, otp)).thenReturn(true);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
-        when(jwtUtil.generateAccessToken(email)).thenReturn(accessToken);
-        when(jwtUtil.generateRefreshToken(email)).thenReturn(refreshToken);
+        when(jwtUtil.generateAccessToken(user)).thenReturn(accessToken);
+        when(jwtUtil.generateRefreshToken(user)).thenReturn(refreshToken);
 
         authService.verifyOtp(new OtpVerificationRequest(email, otp), response);
 
         verify(otpService, times(1)).verifyOtp(email, otp);
         verify(userRepository, times(1)).findByEmail(email);
-        verify(jwtUtil, times(1)).generateAccessToken(email);
-        verify(jwtUtil, times(1)).generateRefreshToken(email);
+        verify(jwtUtil, times(1)).generateAccessToken(user);
+        verify(jwtUtil, times(1)).generateRefreshToken(user);
         verify(response, times(2)).addHeader(eq("Set-Cookie"), anyString());
     }
 
@@ -218,15 +220,15 @@ public class AuthServiceImplTest {
         when(jwtUtil.extractUsername(oldRefreshToken)).thenReturn(email);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
         when(jwtUtil.validateToken(oldRefreshToken)).thenReturn(true);
-        when(jwtUtil.generateAccessToken(email)).thenReturn(newAccessToken);
-        when(jwtUtil.generateRefreshToken(email)).thenReturn(newRefreshToken);
+        when(jwtUtil.generateAccessToken(user)).thenReturn(newAccessToken);
+        when(jwtUtil.generateRefreshToken(user)).thenReturn(newRefreshToken);
 
         authService.refreshAccessToken(oldRefreshToken, response);
 
         verify(jwtUtil, times(1)).extractUsername(oldRefreshToken);
         verify(jwtUtil, times(1)).validateToken(oldRefreshToken);
-        verify(jwtUtil, times(1)).generateAccessToken(email);
-        verify(jwtUtil, times(1)).generateRefreshToken(email);
+        verify(jwtUtil, times(1)).generateAccessToken(user);
+        verify(jwtUtil, times(1)).generateRefreshToken(user);
         verify(response, times(2)).addHeader(eq("Set-Cookie"), anyString());
     }
 

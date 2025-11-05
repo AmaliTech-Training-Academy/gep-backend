@@ -33,9 +33,12 @@ public class EventInvitationController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CustomApiResponse<Page<EventInvitationListResponse>>> getInvitations(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id,asc") String[] sort
+            @RequestParam(name = "page",
+                    defaultValue = "0") int page,
+            @RequestParam(name = "size",
+                    defaultValue = "10") int size,
+            @RequestParam(name = "sort",
+                    defaultValue = "id,asc") String[] sort
     ){
         String[] sortParts = sort[0].split(",");
         Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc") ?
@@ -62,5 +65,25 @@ public class EventInvitationController {
         eventInvitationService.acceptInvitation(request);
         return ResponseEntity.ok(CustomApiResponse.success("Event invitation accepted successfully"));
     }
+
+    @GetMapping("/saved-invites")
+    public ResponseEntity<CustomApiResponse<Page<EventInvitationListResponse>>> getSavedInvitations(
+            @RequestParam(name = "page",
+                    defaultValue = "0") int page,
+            @RequestParam(name = "size",
+                    defaultValue = "10") int size,
+            @RequestParam(name = "sort",
+                    defaultValue = "id,asc") String[] sort
+    ){
+        String[] sortParts = sort[0].split(",");
+        Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc") ?
+                Sort.Direction.DESC : Sort.Direction.ASC;
+
+        Page<EventInvitationListResponse> invitations = eventInvitationService.getSavedInvitations(
+                PageRequest.of(page, size, Sort.by(direction, sortParts[0]))
+        );
+        return ResponseEntity.ok(CustomApiResponse.success(invitations));
+    }
+
 
 }

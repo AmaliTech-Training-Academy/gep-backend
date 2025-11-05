@@ -1,17 +1,18 @@
 package com.event_service.event_service.models;
 
+import com.event_service.event_service.models.enums.InvitationStatus;
 import com.event_service.event_service.models.enums.InviteStatus;
 import com.event_service.event_service.models.enums.InviteeRole;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "event_invitations", indexes = {
-        @Index(name = "idx_invitee_email", columnList = "inviteeEmail"),
-        @Index(name = "idx_invitation_token", columnList = "invitationToken"),
-        @Index(name = "idx_event_id", columnList = "event_id"),
+        @Index(name = "idx_event_id", columnList = "event_id")
 })
 @Setter
 @Getter
@@ -24,9 +25,6 @@ public class EventInvitation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "invitee_name", nullable = false)
-    private String inviteeName;
-
     @Column(name = "invitation_title", nullable = false)
     private String invitationTitle;
 
@@ -37,29 +35,20 @@ public class EventInvitation {
     @Column(name = "inviter_id", nullable = false)
     private Long inviterId;
 
-    @Column(name = "invitee_email", nullable = false)
-    private String inviteeEmail;
+    @Column(name = "inviter_name")
+    private String inviterName;
 
-    @Column(name = "invitation_token", unique = true, nullable = false)
-    private String invitationToken;
-
+    @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private InviteeRole role;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private InviteStatus status;
+    @Builder.Default
+    private InvitationStatus status = InvitationStatus.SEND;
 
     @Column(columnDefinition = "TEXT")
     private String message;
 
-
-    @Column(name = "responded_at")
-    LocalDateTime respondedAt;
-
-    @Column(name = "expires_at", nullable = false)
-    LocalDateTime expiresAt;
+    @OneToMany(mappedBy = "invitation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<EventInvitee> invitees = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false)
     LocalDateTime createdAt;
@@ -69,7 +58,6 @@ public class EventInvitation {
 
     @PrePersist
     protected void onCreate() {
-        status = InviteStatus.PENDING;
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
@@ -77,10 +65,6 @@ public class EventInvitation {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-    }
-
-    public boolean isExpired() {
-        return LocalDateTime.now().isAfter(expiresAt);
     }
 
 }

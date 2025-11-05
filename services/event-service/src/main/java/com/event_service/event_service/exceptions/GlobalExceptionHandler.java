@@ -49,6 +49,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<CustomApiResponse<Object>> handleEmptyRequestBody(HttpMessageNotReadableException ex, WebRequest request){
+        log.error(ex.getMessage());
         return new ResponseEntity<>(
                 CustomApiResponse.error(emptyRequestMessage),
                 HttpStatus.BAD_REQUEST

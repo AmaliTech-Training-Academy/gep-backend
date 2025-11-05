@@ -52,6 +52,10 @@ public class JWTUtil {
         return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
+    public String extractFullName(String token) {
+        return extractClaim(token, claims -> claims.get("fullName", String.class));
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = parseToken(token);
         return claimsResolver.apply(claims);

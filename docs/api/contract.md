@@ -5,11 +5,8 @@ info:
     Enterprise-grade API contract for the Global Events Platform (GEP) - a comprehensive event management system.
     
     ## Microservices Architecture
-    - **User Service**: Authentication, authorization, and user management
+    - **Auth Service**: Authentication, authorization, and user management
     - **Event Service**: Event creation, management, and publishing
-    - **Registration Service**: Attendee registration and ticket management
-    - **Venue Service**: Venue and layout management
-    - **Analytics Service**: Event and platform analytics
     - **Notification Service**: Email and notification delivery
     - **Payment Service**: Payment gateway integration (future)
     
@@ -22,11 +19,11 @@ info:
     email: api-support@gep.com
 
 servers:
-  - url: https://api.gep.com/v1
+  - url: https://api.sankofagrid.com/
     description: Production
   - url: https://api-staging.gep.com/v1
     description: Staging
-  - url: http://localhost:8080/v1
+  - url: http://localhost:8000/
     description: Local Development
 
 tags:
@@ -61,8 +58,8 @@ paths:
   ```yaml
     endpoints:
       - name: Login
-        description: Authenticates a user and returns a JWT token.
-        path: /auth/login
+        description: Authenticates a user and sends an OTP for verification.
+        path: /api/v1/auth/auth/login
         method: POST
         request:
           headers:
@@ -83,24 +80,16 @@ paths:
                 example: P@ssword123
         responses:
           200:
-            description: Successful login.
-            body:
-              type: object
-              properties:
-                message:
-                  type: string
-                  example: "correct credentials, proceed to enter otp"
+            description: "OTP sent to user's email".
+            
           401:
             description: Invalid credentials.
-            body:
-              type: object
-              properties:
-                error: string
-                message: string
-    
+          
+          403:
+            description: "User account is inactive"
       - name: Register
         description: Registers a new user account.
-        path: /auth/register
+        path: /api/v1/auth/register
         method: POST
         request:
           headers:
@@ -133,15 +122,23 @@ paths:
             body:
               type: object
               properties:
-                message:
+                id:
+                  type: long
+                  example: 200
+                fullName:
                   type: string
-                  example: "Account created successfully. OTP sent to email."
+                  example: John Doe
           400:
             description: Invalid registration details.
+          409:
+            description: Email already in use.
+          500:
+            description: Unexpected Error Occurred
+          
     
       - name: Verify OTP
         description: Verifies the OTP sent to the user’s email after registration.
-        path: /auth/verify-otp
+        path: /api/v1/auth/verify-otp
         method: POST
         request:
           headers:
@@ -150,6 +147,7 @@ paths:
             type: object
             required:
               - otp
+              - email
             properties:
               otp:
                 type: string
@@ -163,18 +161,25 @@ paths:
             body:
               type: object
               properties:
-                access_token:
+                id:
+                  type: long
+                  description: User's id
+                email:
                   type: string
-                  description: JWT access token.
-                refresh_token:
+                  description: User's email
+                role:
                   type: string
-                  description: JWT refresh token.
-          400:
+                  description: User's role
+          409:
             description: Invalid or expired OTP.
+          401:
+            description: User account not found
+          403:
+            description: User account not active
     
       - name: Forgot Password
         description: Sends a password reset link or code to the user's email.
-        path: /auth/forgot-password
+        path: /api/v1/auth/forgot-password
         method: POST
         request:
           headers:
@@ -190,19 +195,15 @@ paths:
                 example: user@example.com
         responses:
           200:
-            description: Password reset link sent successfully.
-            body:
-              type: object
-              properties:
-                message:
-                  type: string
-                  example: "Password reset link sent to your email."
-          404:
-            description: Email not found.
+            description: Password reset email sent.
+          401:
+            description: User account not found
+          403:
+            description: User account not active
             
-      - name: Refresh Token
-        description: Refreshes the access token.
-        path: /auth/refresh-token
+      - name: Reset Password
+        description: Resets the user's password after verifying otp.
+        path: /api/v1/auth/reset-password
         method: POST
         request:
           headers:
@@ -210,7 +211,42 @@ paths:
           body:
             type: object
             required:
-              - refresh_token
+              - otp
+              - email
+              - password
+            properties:
+              otp:
+                type: string
+                example: "123456"
+              email:
+                type: string
+                format: email
+                example: user@example.com
+              password:
+                type: string
+                format: password
+                minLength: 8
+        responses:
+          200:
+            description: Password has been reset successfully
+          401:
+            description: User account not found
+          403:
+            description: User account not active
+          409:
+            description: Invalid or expired OTP.
+            
+      - name: Refresh Token
+        description: Refreshes the access token.
+        path: /api/v1/auth/refresh-token
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - refreshToken
             properties:
               refresh_token:
                 type: string
@@ -1309,120 +1345,193 @@ paths:
   # ============================================
   # INVITATION ENDPOINTS
   # ============================================
-  /events/{eventId}/invitations:
-    post:
-      tags:
-        - Invitations
-      summary: Invite co-organizers
-      description: Sends invitation to co-organizers
-      operationId: inviteCoOrganizers
-      parameters:
-        - $ref: '#/components/parameters/EventId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/InviteCoOrganizerRequest'
-      responses:
-        '201':
-          description: Invitations sent successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  invitations:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/InvitationResponse'
-                  message:
-                    type: string
-
-    get:
-      tags:
-        - Invitations
-      summary: Get event invitations
-      description: Retrieves all invitations for an event
-      operationId: getEventInvitations
-      parameters:
-        - $ref: '#/components/parameters/EventId'
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [PENDING, ACCEPTED, DECLINED, EXPIRED]
-      responses:
-        '200':
-          description: Invitations retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/InvitationResponse'
-
-  /invitations/{invitationId}/accept:
-    post:
-      tags:
-        - Invitations
-      summary: Accept invitation
-      description: Accepts co-organizer invitation
-      operationId: acceptInvitation
-      parameters:
-        - $ref: '#/components/parameters/InvitationId'
-      responses:
-        '200':
-          description: Invitation accepted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InvitationResponse'
-
-  /invitations/{invitationId}/decline:
-    post:
-      tags:
-        - Invitations
-      summary: Decline invitation
-      description: Declines co-organizer invitation
-      operationId: declineInvitation
-      parameters:
-        - $ref: '#/components/parameters/InvitationId'
-      requestBody:
-        content:
-          application/json:
-            schema:
+  ```yaml
+    endpoints:
+      - name: Send Invitation
+        description: Allows admin or event organiser to send invite
+        path: /api/v1/event-invitations
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - invitationTitle
+              - inviteeName
+              - inviteeEmail
+              - role
+              - event
+            properties:
+              invitationTitle:
+                type: string
+                example: Hackathon 2024 Invitation
+              inviteeName:
+                type: string
+                example: Benjamin Asare
+              inviteeEmail:
+                type: string
+                format: email
+                example: basare@example.com  
+              role:
+                type: string
+                allowedValues: [ORGANISER, CO_ORGANIZER, VENUE_STAFF, ATTENDEE]
+              event:
+                type: long
+                example: 100
+              message:
+                type: string
+                
+        responses:
+          200:
+            description: "Event invitation sent successfully".
+            
+          404:
+            description: Event not found.
+          409:
+            description: "An invitation already exists for this email for this event"
+          403:
+            description: "User account is inactive"
+          500:
+            description: "Failed to publish invitation email to sqs"
+            
+      - name: Get Invitations
+        description: Retrieves all invitations.
+        path: /api/v1/event-invitations
+        method: GET
+        
+        responses:
+          200:
+            description: Invitations List.
+            body:
               type: object
               properties:
-                reason:
+                id:
+                  type: long
+                  example: 200
+                invitationTitle:
                   type: string
-      responses:
-        '200':
-          description: Invitation declined successfully
+                  example: Hackathon 2025 invitation
+                inviteeName:
+                  type: string
+                  example: Benjamin Asare
+                invitationCode:
+                  type: string
+                  example: INV-123456
+                    
+          400:
+            description: Invalid registration details.
+          409:
+            description: Email already in use.
+          500:
+            description: Unexpected Error Occurred
+          
+    
+      - name: Resend Invitation
+        description: Resend Invitation.
+        path: /api/v1/event-invitations/{id}/resend
+        method: PUT
+        
+        responses:
+          200:
+            description: Event invitation resent successfully.
+            
+          404:
+            description: Invitation Not Found.
+          409:
+            description: "Cannot resend an already accepted invitation"
+          403:
+            description: "You are not authorized to resend this invitation"
+          500:
+            description: "Failed to publish invitation email to sqs"
+    
+      - name: Accept Invitation
+        description: Sends a password reset link or code to the user's email.
+        path: /api/v1/event-invitations/accept-invitation
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - invitationCode
+              - fullName
+              - password
+            properties:
+              invitationCode:
+                type: string
+                example: INV-123456
+        responses:
+          200:
+            description: Password reset email sent.
+          401:
+            description: User account not found
+          403:
+            description: User account not active
+            
+      - name: Reset Password
+        description: Resets the user's password after verifying otp.
+        path: /api/v1/auth/reset-password
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - otp
+              - email
+              - password
+            properties:
+              otp:
+                type: string
+                example: "123456"
+              email:
+                type: string
+                format: email
+                example: user@example.com
+              password:
+                type: string
+                format: password
+                minLength: 8
+        responses:
+          200:
+            description: Password has been reset successfully
+          401:
+            description: User account not found
+          403:
+            description: User account not active
+          409:
+            description: Invalid or expired OTP.
+            
+      - name: Refresh Token
+        description: Refreshes the access token.
+        path: /api/v1/auth/refresh-token
+        method: POST
+        request:
+          headers:
+            Content-Type: application/json
+          body:
+            type: object
+            required:
+              - refreshToken
+            properties:
+              refresh_token:
+                type: string
+          responses:
+            200:
+              description: Access token refreshed successfully.
+              body:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT access token.
+            400:
+              description: Invalid refresh token.
 
-  /invitations/me:
-    get:
-      tags:
-        - Invitations
-      summary: Get my invitations
-      description: Retrieves all invitations for current user
-      operationId: getMyInvitations
-      parameters:
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [PENDING, ACCEPTED, DECLINED, EXPIRED]
-      responses:
-        '200':
-          description: Invitations retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/InvitationResponse'
-
+  ```
   # ============================================
   # ANALYTICS ENDPOINTS
   # ============================================
