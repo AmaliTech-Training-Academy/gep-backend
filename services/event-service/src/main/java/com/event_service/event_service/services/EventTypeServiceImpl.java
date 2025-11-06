@@ -2,7 +2,7 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventTypeRequest;
 import com.event_service.event_service.dto.EventTypeResponse;
-import com.event_service.event_service.exceptions.ResourceNotFound;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.mappers.EventTypeMapper;
 import com.event_service.event_service.models.EventType;
 import com.event_service.event_service.repositories.EventTypeRepository;
@@ -31,7 +31,7 @@ public class EventTypeServiceImpl implements EventTypeService {
     @PreAuthorize("isAuthenticated()")
     public EventType findById(Long id) {
         return eventTypeRepository.findById(id)
-                .orElseThrow(()-> new ResourceNotFound("Event Type Not Found"));
+                .orElseThrow(()-> new ResourceNotFoundException("Event Type Not Found"));
     }
 
     @Override

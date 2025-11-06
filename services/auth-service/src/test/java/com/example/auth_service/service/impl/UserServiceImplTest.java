@@ -6,7 +6,7 @@ import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserStatistics;
 import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
-import com.example.auth_service.exception.ResourceNotFoundException;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.example.auth_service.model.Profile;
 import com.example.auth_service.model.User;
 import com.example.auth_service.model.UserEventStats;
@@ -22,7 +22,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;

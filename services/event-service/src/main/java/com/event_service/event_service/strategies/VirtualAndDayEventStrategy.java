@@ -4,7 +4,7 @@ import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.services.S3Service;
-import com.event_service.event_service.utilities.TimeZoneUtils;
+import com.event_service.event_service.utils.TimeZoneUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

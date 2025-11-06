@@ -6,7 +6,7 @@ import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserStatistics;
 import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
-import com.example.auth_service.exception.ResourceNotFoundException;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.example.auth_service.mapper.UserMapper;
 import com.example.auth_service.model.User;
 import com.example.auth_service.repository.ProfileRepository;

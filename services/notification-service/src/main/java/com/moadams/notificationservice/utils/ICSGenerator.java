@@ -1,6 +1,6 @@
 package com.moadams.notificationservice.utils;
 
-import com.moadams.notificationservice.event.TicketPurchasedEvent;
+import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;

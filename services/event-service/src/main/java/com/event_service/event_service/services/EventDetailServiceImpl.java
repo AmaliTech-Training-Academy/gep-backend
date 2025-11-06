@@ -2,7 +2,7 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventDetailResponse;
 import com.event_service.event_service.dto.TicketTypeResponse;
-import com.event_service.event_service.exceptions.ResourceNotFound;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.mappers.EventDetailMapper;
 import com.event_service.event_service.mappers.TicketTypeMapper;
 import com.event_service.event_service.models.Event;
@@ -27,7 +27,7 @@ public class EventDetailServiceImpl implements EventDetailService {
 
     @Override
     public EventDetailResponse getEventDetailById(Long id) {
-        Event event = eventRepository.findById(id).orElseThrow(() -> new ResourceNotFound("Event not found"));
+        Event event = eventRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
         List<TicketType> ticketTypes = ticketTypeRepository.findAllByEvent(event);
         List<String> eventImagesUrl = eventImagesRepository.findImageUrlsByEvent(event);

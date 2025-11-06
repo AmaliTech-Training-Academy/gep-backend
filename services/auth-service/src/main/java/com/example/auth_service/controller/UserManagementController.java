@@ -1,7 +1,6 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.request.UserUpdateRequest;
-import com.example.auth_service.dto.response.CustomApiResponse;
 import com.example.auth_service.dto.response.UserManagementResponse;
 import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserSummaryReport;
@@ -12,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.example.common_libraries.dto.CustomApiResponse;
 
 @RestController
 @RequestMapping("/api/v1/users")

@@ -8,9 +8,11 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-import org.springframework.transaction.annotation.Transactional;
-import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+
+import com.example.common_libraries.interfaces.JwtUserDetails;
 
 
 @Entity
@@ -23,8 +25,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class User {
-
+public class User implements JwtUserDetails{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -61,4 +62,9 @@ public class User {
 
     @OneToOne(mappedBy = "user")
     private Profile profile;
+
+    @Override
+    public Collection<String> getRoles() {
+        return List.of(role.name());
+    }
 }

@@ -2,8 +2,6 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.client.AuthServiceClient;
 import com.event_service.event_service.dto.*;
-import com.event_service.event_service.event.EventInvitationEvent;
-import com.event_service.event_service.exceptions.*;
 import com.event_service.event_service.mappers.EventInvitationMapper;
 import com.event_service.event_service.models.AppUser;
 import com.event_service.event_service.models.Event;
@@ -13,7 +11,9 @@ import com.event_service.event_service.models.enums.InviteStatus;
 import com.event_service.event_service.repositories.EventInvitationRepository;
 import com.event_service.event_service.repositories.EventOrganizerRepository;
 import com.event_service.event_service.repositories.EventRepository;
-import com.event_service.event_service.utilities.SecurityUtils;
+import com.event_service.event_service.utils.SecurityUtils;
+import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
+import com.example.common_libraries.exception.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -80,11 +80,11 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
     private void validateInvitation(EventInvitation eventInvitation) {
         if(eventInvitation.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new InvalidInvitationException("Invitation has expired");
+            throw new BadRequestException("Invitation has expired");
         }
 
         if(eventInvitation.getStatus() == InviteStatus.ACCEPTED) {
-            throw new InvalidInvitationException("Invite has already been accepted");
+            throw new BadRequestException("Invite has already been accepted");
         }
     }
 
@@ -114,7 +114,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         return eventInvitationRepository.findByInvitationToken(token)
                 .orElseThrow(() -> {
                     log.error("Invitation not found with token: {}", token);
-                    return new EventNotFoundException("Invitation not found");
+                    return new ResourceNotFoundException("Invitation not found");
                 });
     }
 
@@ -123,15 +123,15 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     @Transactional
     public void resendInvitation(Long invitationId) {
         EventInvitation invitation = eventInvitationRepository.findById(invitationId)
-                .orElseThrow(() -> new EventNotFoundException("Invitation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
 
         if (!Objects.equals(invitation.getInviterId(), securityUtils.getCurrentUser().getId())) {
-            throw new InvitationPublishException("You are not authorized to resend this invitation");
+            throw new BadRequestException("You are not authorized to resend this invitation");
         }
 
         if(invitation.getStatus() == InviteStatus.ACCEPTED) {
             log.warn("Attempt to resend already accepted invitation ID: {}", invitationId);
-            throw new InvitationPublishException("Cannot resend an already accepted invitation");
+            throw new BadRequestException("Cannot resend an already accepted invitation");
         }
         invitation.setInvitationToken(generateInvitationToken());
         invitation.setExpiresAt(calculateExpirationTime());
@@ -150,14 +150,14 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         return eventRepository.findById(eventId)
                 .orElseThrow(() -> {
                     log.error("Event not found with ID: {}", eventId);
-                    return new EventNotFoundException("Event not found");
+                    return new ResourceNotFoundException("Event not found");
                 });
     }
 
     private void validateInvitationDoesNotExist(Long eventId, String inviteeEmail) {
         if (eventInvitationRepository.existsByEventIdAndInviteeEmail(eventId, inviteeEmail)) {
             log.warn("Duplicate invitation attempt for event ID: {} and email: {}", eventId, inviteeEmail);
-            throw new DuplicateInvitationException(
+            throw new DuplicateResourceException(
                     String.format("An invitation already exists for email '%s' for this event",
                             inviteeEmail)
             );
@@ -191,11 +191,11 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         } catch (JsonProcessingException e) {
             log.error("Failed to serialize invitation event for email: {}",
                     invitation.getInviteeEmail(), e);
-            throw new InvitationPublishException("Failed to serialize invitation event");
+            throw new BadRequestException("Failed to serialize invitation event");
         } catch (Exception e) {
             log.error("Failed to publish invitation email event to SQS for email: {}",
                     invitation.getInviteeEmail(), e);
-            throw new InvitationPublishException("Failed to publish invitation email event");
+            throw new BadRequestException("Failed to publish invitation email event");
         }
     }
 

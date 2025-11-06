@@ -1,8 +1,7 @@
 package com.event_service.event_service;
 
 import com.event_service.event_service.dto.EventInvitationRequest;
-import com.event_service.event_service.event.EventInvitationEvent;
-import com.event_service.event_service.exceptions.InvitationPublishException;
+import com.example.common_libraries.exception.BadRequestException;
 import com.event_service.event_service.models.AppUser;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.EventInvitation;
@@ -10,7 +9,8 @@ import com.event_service.event_service.models.enums.InviteeRole;
 import com.event_service.event_service.repositories.EventInvitationRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.services.EventInvitationServiceImpl;
-import com.event_service.event_service.utilities.SecurityUtils;
+import com.event_service.event_service.utils.SecurityUtils;
+import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -143,8 +143,8 @@ class EventInvitationServiceImplTest {
                 .thenThrow(new RuntimeException("SQS error"));
 
         // Act & Assert
-        InvitationPublishException exception = assertThrows(
-                InvitationPublishException.class,
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
                 () -> invitationService.sendEventInvitation(request)
         );
 

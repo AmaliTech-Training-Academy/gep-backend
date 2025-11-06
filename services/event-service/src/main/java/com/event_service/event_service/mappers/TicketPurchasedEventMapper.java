@@ -1,10 +1,9 @@
 package com.event_service.event_service.mappers;
 
-import com.event_service.event_service.dto.EventDetailResponse;
-import com.event_service.event_service.dto.TicketEventDetailResponse;
-import com.event_service.event_service.dto.TicketPurchasedEvent;
-import com.event_service.event_service.dto.TicketResponse;
 import com.event_service.event_service.models.Ticket;
+import com.example.common_libraries.dto.TicketEventDetailResponse;
+import com.example.common_libraries.dto.TicketResponse;
+import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 
 
 import java.util.List;
