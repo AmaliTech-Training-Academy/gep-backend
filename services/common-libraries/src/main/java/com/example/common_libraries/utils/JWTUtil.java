@@ -6,6 +6,7 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+@Slf4j
 @Component
 @ConditionalOnProperty(prefix = "application.security.jwt", name = "secret-key")
 public class JWTUtil {
@@ -94,11 +96,14 @@ public class JWTUtil {
 
     public void validateToken(String token){
         try {
+            log.info("Validating JWT token: {}", token);
             var parser = Jwts.parser().verifyWith(getKey()).build();
             parser.parseSignedClaims(token);
         } catch (ExpiredJwtException e) {
+            log.error("JWT token expired: {}", e.getMessage());
             throw new InvalidJWTTokenException("Expired JWT token");
         } catch (JwtException exception ) {
+            log.error("Invalid JWT token: {}", exception.getMessage());
             throw new InvalidJWTTokenException("Invalid JWT token");
         }
     }

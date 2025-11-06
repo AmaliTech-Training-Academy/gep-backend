@@ -84,6 +84,4 @@ public class EventInvitationController {
         );
         return ResponseEntity.ok(CustomApiResponse.success(invitations));
     }
-
-
 }

@@ -1,8 +1,6 @@
 package com.example.auth_service.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.lang.Nullable;
-import org.springframework.web.multipart.MultipartFile;
 
 public record UserUpdateRequest(
         @NotBlank(message = "Full name is required")
@@ -13,8 +11,6 @@ public record UserUpdateRequest(
         String phone,
         @NotBlank(message = "Address is required")
         String address,
-        @Nullable
-        MultipartFile profilePicture,
         boolean status
 ) {
 }

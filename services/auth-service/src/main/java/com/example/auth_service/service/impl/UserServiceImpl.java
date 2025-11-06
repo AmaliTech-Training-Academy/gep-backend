@@ -22,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Objects;
 
@@ -131,14 +132,15 @@ public class UserServiceImpl implements UserService {
      * Updates the details and profile information of an existing user based on the provided request.
      * Fields in the user object are updated only if there are changes.
      *
-     * @param userId the ID of the user to update
-     * @param request an instance of {@code UserUpdateRequest} containing the new user details
+     * @param userId         the ID of the user to update
+     * @param request        an instance of {@code UserUpdateRequest} containing the new user details
+     * @param profilePicture
      * @return a {@code UserResponse} object representing the updated user data
      * @throws ResourceNotFoundException if the user with the given ID is not found
      */
     @Override
     @Transactional
-    public UserResponse updateUser(Long userId, UserUpdateRequest request) {
+    public UserResponse updateUser(Long userId, UserUpdateRequest request, MultipartFile profilePicture) {
         User userToUpdate = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         // User updates
@@ -160,9 +162,9 @@ public class UserServiceImpl implements UserService {
         if(!Objects.equals(request.address(), userToUpdate.getProfile().getAddress())){
             userToUpdate.getProfile().setAddress(request.address());
         }
-        if(request.profilePicture() != null){
+        if(profilePicture != null){
             // upload to s3 bucket
-            String profilePictureUrl = s3Service.uploadImage(request.profilePicture());
+            String profilePictureUrl = s3Service.uploadImage(profilePicture);
             userToUpdate.getProfile().setProfileImageUrl(profilePictureUrl);
         }
 

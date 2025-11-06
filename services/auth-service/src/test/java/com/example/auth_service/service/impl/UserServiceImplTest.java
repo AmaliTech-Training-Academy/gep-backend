@@ -86,7 +86,6 @@ class UserServiceImplTest {
                 "jane.doe@example.com",
                 "9876543210",
                 "456 New Avenue",
-                null,
                 false
         );
     }
@@ -338,7 +337,7 @@ class UserServiceImplTest {
         when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
 
         // Act
-        UserResponse result = userService.updateUser(1L, testUpdateRequest);
+        UserResponse result = userService.updateUser(1L, testUpdateRequest, null);
 
         // Assert
         assertNotNull(result);
@@ -364,7 +363,6 @@ class UserServiceImplTest {
                 "new.email@example.com",  // Changed
                 "1234567890",  // Same as original
                 "123 Test Street",  // Same as original
-                null,
                 true  // Same as original
         );
 
@@ -373,7 +371,7 @@ class UserServiceImplTest {
         when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
 
         // Act
-        UserResponse result = userService.updateUser(1L, partialUpdate);
+        UserResponse result = userService.updateUser(1L, partialUpdate, null);
 
         // Assert
         assertNotNull(result);
@@ -393,7 +391,6 @@ class UserServiceImplTest {
                 "john.doe@example.com",
                 "1234567890",
                 "123 Test Street",
-                null,
                 true
         );
 
@@ -402,7 +399,7 @@ class UserServiceImplTest {
         when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
 
         // Act
-        UserResponse result = userService.updateUser(1L, sameDataRequest);
+        UserResponse result = userService.updateUser(1L, sameDataRequest, null);
 
         // Assert
         assertNotNull(result);
@@ -418,7 +415,7 @@ class UserServiceImplTest {
         // Act & Assert
         ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
-                () -> userService.updateUser(999L, testUpdateRequest)
+                () -> userService.updateUser(999L, testUpdateRequest, null)
         );
         assertEquals("User not found with id: 999", exception.getMessage());
         verify(userRepository, never()).save(any(User.class));
@@ -432,7 +429,7 @@ class UserServiceImplTest {
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, 
-                () -> userService.updateUser(null, testUpdateRequest));
+                () -> userService.updateUser(null, testUpdateRequest, null));
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -445,7 +442,6 @@ class UserServiceImplTest {
                 "john.doe@example.com",
                 "1234567890",
                 "123 Test Street",
-                null,
                 false
         );
 
@@ -454,7 +450,7 @@ class UserServiceImplTest {
         when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
 
         // Act
-        userService.updateUser(1L, statusChangeRequest);
+        userService.updateUser(1L, statusChangeRequest, null);
 
         // Assert
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
