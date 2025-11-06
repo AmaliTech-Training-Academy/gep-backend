@@ -2,8 +2,8 @@ package com.event_service.event_service.client;
 
 import com.event_service.event_service.dto.InviteeRegistrationRequest;
 import com.event_service.event_service.dto.UserResponse;
-import com.event_service.event_service.exceptions.ServiceCommunicationException;
-import com.event_service.event_service.exceptions.UserAlreadyExistsException;
+import com.example.common_libraries.exception.DuplicateResourceException;
+import com.example.common_libraries.exception.ServiceCommunicationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -36,7 +36,7 @@ public class AuthServiceClient {
             log.error("Error calling Auth Service: Status {}, Body: {}",
                     e.getStatusCode(), e.getResponseBodyAsString());
             if (e.getStatusCode() == HttpStatus.CONFLICT) {
-                throw new UserAlreadyExistsException("User already exists with email: " + request.email());
+                throw new DuplicateResourceException("User already exists with email: " + request.email());
             }
 
             throw new ServiceCommunicationException

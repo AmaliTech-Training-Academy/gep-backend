@@ -1,8 +1,8 @@
 package com.moadams.notificationservice.service;
 
-import com.moadams.notificationservice.event.TicketPurchasedEvent;
 
-import com.moadams.notificationservice.event.EventInvitationEvent;
+import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
+import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 
 public interface NotificationService {
     void sendWelcomeEmail(String recipientEmail, String recipientName);

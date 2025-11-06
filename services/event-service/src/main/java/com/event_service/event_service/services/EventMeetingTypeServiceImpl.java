@@ -2,10 +2,10 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventMeetingTypeRequest;
 import com.event_service.event_service.dto.EventMeetingTypeResponse;
-import com.event_service.event_service.exceptions.ResourceNotFound;
 import com.event_service.event_service.mappers.EventMeetingMapper;
 import com.event_service.event_service.models.EventMeetingType;
 import com.event_service.event_service.repositories.EventMeetingTypeRepository;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -31,7 +31,7 @@ public class EventMeetingTypeServiceImpl implements EventMeetingTypeService {
     @PreAuthorize("isAuthenticated()")
     public EventMeetingType findEventMeetingTypeById(Long id) {
         return eventMeetingTypeRepository.findById(id)
-                .orElseThrow(()-> new ResourceNotFound("EventMeetingType not found"));
+                .orElseThrow(()-> new ResourceNotFoundException("EventMeetingType not found"));
     }
 
     @Override

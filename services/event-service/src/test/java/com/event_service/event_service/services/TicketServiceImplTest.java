@@ -1,7 +1,7 @@
 package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.TicketVerificationResponse;
-import com.event_service.event_service.exceptions.ResourceNotFound;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.Ticket;
 import com.event_service.event_service.models.TicketType;
@@ -81,11 +81,11 @@ class TicketServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw ResourceNotFound when ticket is missing")
+        @DisplayName("should throw ResourceNotFoundException when ticket is missing")
         void shouldThrowWhenTicketNotFound() {
             when(ticketRepository.findByTicketCode("MISSING")).thenReturn(null);
 
-            ResourceNotFound ex = assertThrows(ResourceNotFound.class, () ->
+            ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () ->
                     ticketService.verifyTicket("MISSING")
             );
 
@@ -94,12 +94,12 @@ class TicketServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw ResourceNotFound when ticket is not active")
+        @DisplayName("should throw ResourceNotFoundException when ticket is not active")
         void shouldThrowWhenTicketNotActive() {
             activeTicket.setStatus(TicketStatusEnum.CANCELLED);
             when(ticketRepository.findByTicketCode("ABC123")).thenReturn(activeTicket);
 
-            ResourceNotFound ex = assertThrows(ResourceNotFound.class, () ->
+            ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () ->
                     ticketService.verifyTicket("ABC123")
             );
 
@@ -151,11 +151,11 @@ class TicketServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw ResourceNotFound for non-existent ticket")
+        @DisplayName("should throw ResourceNotFoundException for non-existent ticket")
         void shouldThrowWhenTicketNotFound() {
             when(ticketRepository.findByTicketCode("UNKNOWN")).thenReturn(null);
 
-            ResourceNotFound ex = assertThrows(ResourceNotFound.class, () ->
+            ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () ->
                     ticketService.isTicketCodeValid("UNKNOWN")
             );
 

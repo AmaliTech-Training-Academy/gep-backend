@@ -4,11 +4,9 @@ import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
-import com.example.auth_service.event.ResetPasswordEvent;
-import com.example.auth_service.event.UserRegisteredEvent;
-import com.example.auth_service.exception.DuplicateEmailException;
-import com.example.auth_service.exception.InactiveAccountException;
-import com.example.auth_service.exception.PasswordMismatchException;
+import com.example.common_libraries.exception.BadRequestException;
+import com.example.common_libraries.exception.DuplicateResourceException;
+import com.example.common_libraries.exception.InactiveAccountException;
 import com.example.auth_service.model.Profile;
 import com.example.auth_service.model.User;
 import com.example.auth_service.model.UserEventStats;
@@ -16,9 +14,9 @@ import com.example.auth_service.repository.ProfileRepository;
 import com.example.auth_service.repository.UserEventStatsRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.AuthUser;
-import com.example.auth_service.security.JwtUtil;
 import com.example.auth_service.service.AuthService;
 import com.example.auth_service.service.OtpService;
+import com.example.common_libraries.dto.queue_events.UserRegisteredEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import org.springframework.beans.factory.annotation.Value;
+import com.example.common_libraries.utils.JWTUtil;
 
 import java.time.Duration;
 
@@ -50,7 +49,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
-    private final JwtUtil jwtUtil;
+    private final JWTUtil jwtUtil;
 
     @Value("${sqs.user-registration-queue-url}")
     private String userRegistrationQueueUrl;
@@ -76,7 +75,7 @@ public class AuthServiceImpl implements AuthService {
     public UserCreationResponse registerInvitee(InviteeAccountCreationRequest inviteeRequest) {
         String email = inviteeRequest.email().toLowerCase().trim();
         if(userRepository.existsByEmail(email)){
-            throw new DuplicateEmailException("Email already registered");
+            throw new DuplicateResourceException("Email already registered");
         }
 
         User user = User.builder()
@@ -103,11 +102,11 @@ public class AuthServiceImpl implements AuthService {
 
     private void validateRequest(UserRegistrationRequest registrationRequest){
         if(!registrationRequest.password().equals(registrationRequest.confirmPassword())){
-            throw new PasswordMismatchException("Passwords do not match");
+            throw new BadRequestException("Passwords do not match");
         }
         String email = normalizeEmail(registrationRequest.email());
         if(userRepository.existsByEmail(email)){
-            throw new DuplicateEmailException("Email already registered");
+            throw new DuplicateResourceException("Email already registered");
         }
     }
 
@@ -188,12 +187,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void refreshAccessToken(String refreshToken, HttpServletResponse response){
+        jwtUtil.validateToken(refreshToken); // Throws InvalidTokenException if invalid
 
         String email = jwtUtil.extractUsername(refreshToken);
         User user = getActiveUserByEmail(email);
-        if(!jwtUtil.validateToken(refreshToken)){
-            throw new BadCredentialsException("Invalid refresh token");
-        }
         setAuthCookies(response, user);
     }
 

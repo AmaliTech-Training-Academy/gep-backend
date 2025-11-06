@@ -3,11 +3,10 @@ package com.example.auth_service.service;
 import com.example.auth_service.dto.request.OtpVerificationRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.enums.UserRole;
-import com.example.auth_service.exception.InactiveAccountException;
+import com.example.common_libraries.exception.InactiveAccountException;
 import com.example.auth_service.model.User;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.AuthUser;
-import com.example.auth_service.security.JwtUtil;
 import com.example.auth_service.service.impl.AuthServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,8 +18,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import software.amazon.awssdk.services.sqs.SqsClient;
+import com.example.common_libraries.utils.JWTUtil;
 
 import java.util.Optional;
 
@@ -38,7 +36,7 @@ public class AuthServiceImplTest {
     private AuthenticationManager authenticationManager;
 
     @Mock
-    private JwtUtil jwtUtil;
+    private JWTUtil jwtUtil;
 
     @Mock
     private HttpServletResponse response;
@@ -219,7 +217,7 @@ public class AuthServiceImplTest {
 
         when(jwtUtil.extractUsername(oldRefreshToken)).thenReturn(email);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
-        when(jwtUtil.validateToken(oldRefreshToken)).thenReturn(true);
+//      when(jwtUtil.validateToken(oldRefreshToken)).thenReturn(true);
         when(jwtUtil.generateAccessToken(user)).thenReturn(newAccessToken);
         when(jwtUtil.generateRefreshToken(user)).thenReturn(newRefreshToken);
 
@@ -283,7 +281,7 @@ public class AuthServiceImplTest {
 
         when(jwtUtil.extractUsername(refreshToken)).thenReturn(email);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
-        when(jwtUtil.validateToken(refreshToken)).thenReturn(false);
+//        when(jwtUtil.validateToken(refreshToken)).thenReturn(false);
 
         BadCredentialsException ex = assertThrows(
                 BadCredentialsException.class,

@@ -1,5 +1,6 @@
 package com.event_service.event_service.dto;
 
+import com.example.common_libraries.dto.PaymentRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 

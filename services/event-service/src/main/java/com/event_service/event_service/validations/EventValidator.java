@@ -1,7 +1,7 @@
 package com.event_service.event_service.validations;
 
 import com.event_service.event_service.dto.EventRequest;
-import com.event_service.event_service.exceptions.ValidationException;
+import com.example.common_libraries.exception.ValidationException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;

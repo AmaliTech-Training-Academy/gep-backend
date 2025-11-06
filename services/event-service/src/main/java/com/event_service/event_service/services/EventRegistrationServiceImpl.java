@@ -1,8 +1,9 @@
 package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.*;
-import com.event_service.event_service.exceptions.BadRequestException;
-import com.event_service.event_service.exceptions.ResourceNotFound;
+import com.example.common_libraries.exception.BadRequestException;
+import com.example.common_libraries.exception.InputOutputException;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.mappers.EventDetailMapper;
 import com.event_service.event_service.mappers.EventMapper;
 import com.event_service.event_service.mappers.TicketPurchasedEventMapper;
@@ -17,10 +18,14 @@ import com.event_service.event_service.repositories.EventRegistrationRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketRepository;
 import com.event_service.event_service.repositories.TicketTypeRepository;
-import com.event_service.event_service.utilities.QRCodeGenerator;
+import com.event_service.event_service.utils.QRCodeGenerator;
+import com.example.common_libraries.dto.PaymentRequest;
+import com.example.common_libraries.dto.TicketEventDetailResponse;
+import com.example.common_libraries.dto.TicketResponse;
+import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
+import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.WriterException;
-import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,17 +65,17 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
      * @param eventId             The ID of the event to register.
      * @param registrationRequest The registration request containing user details and ticket type.
      * @return A success message indicating the registration was successful.
-     * @throws ResourceNotFound if the event or ticket type is not found, or if tickets are out of stock.
+     * @throws ResourceNotFoundException if the event or ticket type is not found, or if tickets are out of stock.
      */
     @Transactional
     @Override
     public EventRegistrationResponse registerEvent(Long eventId, EventRegistrationRequest registrationRequest) {
-        Event event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFound("Event not found"));
-        TicketType ticketType = ticketTypeRepository.findById(registrationRequest.ticketTypeId()).orElseThrow(()-> new ResourceNotFound("Ticket Type not found"));
+        Event event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        TicketType ticketType = ticketTypeRepository.findById(registrationRequest.ticketTypeId()).orElseThrow(()-> new ResourceNotFoundException("Ticket Type not found"));
         Long quantity = registrationRequest.numberOfTickets();
 
         if(ticketType.getQuantity() - ticketType.getSoldCount() < quantity){
-            throw new ResourceNotFound("Ticket Type is out of stock");
+            throw new ResourceNotFoundException("Ticket Type is out of stock");
         }
 
         EventRegistration registration = EventRegistration
@@ -184,7 +189,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
      * @param event The event for which tickets are being generated.
      * @param quantity The number of tickets to generate.
      * @return A list of generated tickets.
-     * @throws ResourceNotFound if QR code generation or ticket saving fails.
+     * @throws ResourceNotFoundException if QR code generation or ticket saving fails.
      */
     private List<Ticket> generateTicket(TicketType ticketType,Event event,Long quantity){
         List<Ticket> ticketsToBeGenerated = new java.util.ArrayList<>(List.of());
@@ -216,9 +221,9 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             // save tickets
             return ticketRepository.saveAll(ticketsToBeGenerated);
         } catch (WriterException e) {
-            throw new ResourceNotFound("QR Code Generation Failed");
+            throw new InputOutputException("QR Code Generation Failed");
         } catch (IOException e){
-            throw new ResourceNotFound("Ticket Generation Failed");
+            throw new InputOutputException("Ticket Generation Failed");
         }
     }
 
