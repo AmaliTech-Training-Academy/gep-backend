@@ -6,17 +6,20 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+@Slf4j
 @Component
 @ConditionalOnProperty(prefix = "application.security.jwt", name = "secret-key")
 public class JWTUtil {
@@ -96,9 +99,12 @@ public class JWTUtil {
         try {
             var parser = Jwts.parser().verifyWith(getKey()).build();
             parser.parseSignedClaims(token);
+            log.info("Valid token");
         } catch (ExpiredJwtException e) {
+            log.error("JWT token expired: {}", e.getMessage());
             throw new InvalidJWTTokenException("Expired JWT token");
         } catch (JwtException exception ) {
+            log.error("Invalid JWT token: {}", exception.getMessage());
             throw new InvalidJWTTokenException("Invalid JWT token");
         }
     }
@@ -113,8 +119,15 @@ public class JWTUtil {
     }
 
     public String extractRole(String token) {
-        return extractClaim(token, claims -> claims.get("role", String.class));
+        return extractClaim(token, claims -> {
+            Object roleObj = claims.get("role");
+            if (roleObj instanceof ArrayList<?> roles) {
+                return roles.isEmpty() ? null : roles.getFirst().toString();
+            }
+            return roleObj != null ? roleObj.toString() : null;
+        });
     }
+
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = parseToken(token);

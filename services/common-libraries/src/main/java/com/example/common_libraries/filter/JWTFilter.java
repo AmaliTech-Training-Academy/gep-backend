@@ -8,6 +8,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,6 +24,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "application.security.jwt", name = "secret-key")
@@ -59,7 +61,7 @@ public class JWTFilter extends OncePerRequestFilter {
                         String role = jwtUtil.extractRole(token);
                         String userEmail = claims.getSubject();
 
-                        AppUser user = new AppUser(userId, userEmail, role);
+                        AppUser user = new AppUser(userId, role, userEmail);
                         UsernamePasswordAuthenticationToken auth =
                                 new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                         auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

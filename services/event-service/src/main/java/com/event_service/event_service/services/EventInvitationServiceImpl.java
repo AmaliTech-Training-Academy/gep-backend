@@ -2,6 +2,7 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.client.AuthServiceClient;
 import com.event_service.event_service.dto.*;
+import com.event_service.event_service.exceptions.NotFoundException;
 import com.event_service.event_service.mappers.EventInvitationMapper;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.models.enums.InvitationStatus;
@@ -20,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.sqs.SqsClient;
