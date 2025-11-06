@@ -1,14 +1,16 @@
 package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.*;
-import com.event_service.event_service.exceptions.BadRequestException;
-import com.event_service.event_service.exceptions.ResourceNotFound;
+import com.example.common_libraries.exception.BadRequestException;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.mappers.EventMapper;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.models.enums.EventMeetingTypeEnum;
 import com.event_service.event_service.models.enums.EventRegistrationStatusEnum;
-import com.event_service.event_service.models.enums.PaymentMethod;
+import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
+import com.example.common_libraries.enums.PaymentMethod;
 import com.event_service.event_service.repositories.*;
+import com.example.common_libraries.dto.PaymentRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -135,22 +137,22 @@ class EventRegistrationServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should throw ResourceNotFound when event ID does not exist")
+    @DisplayName("Should throw ResourceNotFoundException when event ID does not exist")
     void registerEvent_EventNotFound_ThrowsException() {
         when(eventRepository.findById(99L)).thenReturn(Optional.empty());
 
-        ResourceNotFound ex = assertThrows(ResourceNotFound.class,
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> eventRegistrationService.registerEvent(99L, freeRequest));
         assertEquals("Event not found", ex.getMessage());
     }
 
     @Test
-    @DisplayName("Should throw ResourceNotFound when ticket type does not exist")
+    @DisplayName("Should throw ResourceNotFoundException when ticket type does not exist")
     void registerEvent_TicketTypeNotFound_ThrowsException() {
         when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
         when(ticketTypeRepository.findById(1L)).thenReturn(Optional.empty());
 
-        ResourceNotFound ex = assertThrows(ResourceNotFound.class,
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> eventRegistrationService.registerEvent(1L, freeRequest));
         assertEquals("Ticket Type not found", ex.getMessage());
     }
@@ -162,7 +164,7 @@ class EventRegistrationServiceImplTest {
         when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
         when(ticketTypeRepository.findById(1L)).thenReturn(Optional.of(freeTicketType));
 
-        ResourceNotFound ex = assertThrows(ResourceNotFound.class,
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                 () -> eventRegistrationService.registerEvent(1L, freeRequest));
         assertEquals("Ticket Type is out of stock", ex.getMessage());
     }

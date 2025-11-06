@@ -6,7 +6,7 @@ import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserStatistics;
 import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
-import com.example.auth_service.exception.ResourceNotFoundException;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.example.auth_service.model.Profile;
 import com.example.auth_service.model.User;
 import com.example.auth_service.model.UserEventStats;
@@ -22,7 +22,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -338,7 +337,7 @@ class UserServiceImplTest {
         when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
 
         // Act
-        UserResponse result = userService.updateUser(1L, testUpdateRequest);
+        UserResponse result = userService.updateUser(1L, testUpdateRequest, null);
 
         // Assert
         assertNotNull(result);
@@ -372,7 +371,7 @@ class UserServiceImplTest {
         when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
 
         // Act
-        UserResponse result = userService.updateUser(1L, partialUpdate);
+        UserResponse result = userService.updateUser(1L, partialUpdate, null);
 
         // Assert
         assertNotNull(result);
@@ -400,7 +399,7 @@ class UserServiceImplTest {
         when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
 
         // Act
-        UserResponse result = userService.updateUser(1L, sameDataRequest);
+        UserResponse result = userService.updateUser(1L, sameDataRequest, null);
 
         // Assert
         assertNotNull(result);
@@ -416,7 +415,7 @@ class UserServiceImplTest {
         // Act & Assert
         ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
-                () -> userService.updateUser(999L, testUpdateRequest)
+                () -> userService.updateUser(999L, testUpdateRequest, null)
         );
         assertEquals("User not found with id: 999", exception.getMessage());
         verify(userRepository, never()).save(any(User.class));
@@ -430,7 +429,7 @@ class UserServiceImplTest {
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, 
-                () -> userService.updateUser(null, testUpdateRequest));
+                () -> userService.updateUser(null, testUpdateRequest, null));
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -451,7 +450,7 @@ class UserServiceImplTest {
         when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
 
         // Act
-        userService.updateUser(1L, statusChangeRequest);
+        userService.updateUser(1L, statusChangeRequest, null);
 
         // Assert
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);

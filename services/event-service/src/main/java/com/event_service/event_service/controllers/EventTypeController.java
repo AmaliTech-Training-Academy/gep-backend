@@ -1,7 +1,7 @@
 package com.event_service.event_service.controllers;
 
 
-import com.event_service.event_service.dto.EventMeetingTypeResponse;
+
 import com.event_service.event_service.dto.EventTypeRequest;
 import com.event_service.event_service.dto.EventTypeResponse;
 import com.event_service.event_service.services.EventTypeService;

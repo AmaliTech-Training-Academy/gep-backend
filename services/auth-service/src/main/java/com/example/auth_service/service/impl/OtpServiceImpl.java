@@ -1,8 +1,8 @@
 package com.example.auth_service.service.impl;
 
-import com.example.auth_service.event.ResetPasswordEvent;
-import com.example.auth_service.event.UserLoginEvent;
 import com.example.auth_service.service.OtpService;
+import com.example.common_libraries.dto.queue_events.ResetPasswordEvent;
+import com.example.common_libraries.dto.queue_events.UserLoginEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

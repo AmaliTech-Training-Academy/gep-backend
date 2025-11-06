@@ -1,8 +1,9 @@
 package com.moadams.notificationservice.utils;
 
-import com.moadams.notificationservice.event.TicketPurchasedEvent;
-import com.moadams.notificationservice.event.TicketEventDetailResponse;
-import com.moadams.notificationservice.event.TicketResponse;
+
+import com.example.common_libraries.dto.TicketEventDetailResponse;
+import com.example.common_libraries.dto.TicketResponse;
+import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

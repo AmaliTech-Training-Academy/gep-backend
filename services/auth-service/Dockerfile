@@ -1,17 +1,12 @@
-# Build stage
+# build stage
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
-# Copy parent pom and install it
-COPY pom.xml ./
-RUN mvn install -N -B
+# Copy files from current context
+COPY ../ /app
 
-# Copy auth-service pom and source
-COPY auth-service/pom.xml ./auth-service/
-COPY auth-service/src ./auth-service/src
-
-# Build the service
-RUN mvn -f auth-service/pom.xml clean package -DskipTests -B
+# Then build event-service
+RUN mvn clean package -DskipTests -pl auth-service -am -B
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine

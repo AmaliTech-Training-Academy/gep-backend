@@ -1,8 +1,8 @@
 package com.moadams.notificationservice.service.impl;
 
-import com.moadams.notificationservice.event.TicketPurchasedEvent;
-import com.moadams.notificationservice.event.TicketResponse;
-import com.moadams.notificationservice.event.EventInvitationEvent;
+import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
+import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
+import com.example.common_libraries.dto.TicketResponse;
 import com.moadams.notificationservice.service.NotificationService;
 import com.moadams.notificationservice.utils.ICSGenerator;
 import jakarta.mail.MessagingException;
@@ -91,7 +91,7 @@ public class EmailService implements NotificationService {
             String htmlContent = templateEngine.process("verify-otp", context);
 
             sendEmail(htmlContent, recipientEmail, "Verify OTP");
-
+            log.info("OTP Email Sent to {}", recipientEmail);
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send otp email");
         }

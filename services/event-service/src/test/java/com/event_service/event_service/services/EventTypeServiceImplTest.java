@@ -3,7 +3,7 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventTypeRequest;
 import com.event_service.event_service.dto.EventTypeResponse;
-import com.event_service.event_service.exceptions.ResourceNotFound;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.mappers.EventTypeMapper;
 import com.event_service.event_service.models.EventType;
 import com.event_service.event_service.models.enums.EventTypeEnum;
@@ -11,7 +11,6 @@ import com.event_service.event_service.repositories.EventTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Arrays;
@@ -65,7 +64,7 @@ class EventTypeServiceImplTest {
     @Test
     void findById_ShouldThrowResourceNotFound_WhenNotFound() {
         when(eventTypeRepository.findById(1L)).thenReturn(Optional.empty());
-        assertThrows(ResourceNotFound.class, () -> eventTypeService.findById(1L));
+        assertThrows(ResourceNotFoundException.class, () -> eventTypeService.findById(1L));
         verify(eventTypeRepository, times(1)).findById(1L);
     }
 
@@ -89,7 +88,7 @@ class EventTypeServiceImplTest {
         when(eventTypeRepository.findById(1L)).thenReturn(Optional.empty());
         EventTypeRequest request = new EventTypeRequest(EventTypeEnum.MULTI_DAY_EVENT);
 
-        assertThrows(ResourceNotFound.class, () -> eventTypeService.update(1L, request));
+        assertThrows(ResourceNotFoundException.class, () -> eventTypeService.update(1L, request));
     }
 
 
