@@ -144,8 +144,8 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(EventNotFoundException.class)
-    public ResponseEntity<CustomApiResponse<Object>> handleEventNotFoundException(EventNotFoundException ex, WebRequest request) {
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<CustomApiResponse<Object>> handleNotFoundException(NotFoundException ex, WebRequest request) {
         return new ResponseEntity<>(
                 CustomApiResponse.error(ex.getMessage()),
                 HttpStatus.NOT_FOUND

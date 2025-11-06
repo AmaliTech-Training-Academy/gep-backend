@@ -1,9 +1,6 @@
 package com.event_service.event_service.controllers;
 
-import com.event_service.event_service.dto.CustomApiResponse;
-import com.event_service.event_service.dto.EventInvitationAcceptanceRequest;
-import com.event_service.event_service.dto.EventInvitationListResponse;
-import com.event_service.event_service.dto.EventInvitationRequest;
+import com.event_service.event_service.dto.*;
 import com.event_service.event_service.services.EventInvitationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/event-invitations")
@@ -23,7 +22,7 @@ public class EventInvitationController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CustomApiResponse<?>> sendInvitation(
+    public ResponseEntity<CustomApiResponse<Object>> sendInvitation(
             @Valid @RequestBody EventInvitationRequest request
             ){
         eventInvitationService.sendEventInvitation(request);
@@ -53,13 +52,13 @@ public class EventInvitationController {
 
     @PutMapping("/{id}/resend")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CustomApiResponse<?>> resendInvitation(@PathVariable Long id){
+    public ResponseEntity<CustomApiResponse<Object>> resendInvitation(@PathVariable Long id){
         eventInvitationService.resendInvitation(id);
         return ResponseEntity.ok(CustomApiResponse.success("Event invitation resent successfully"));
     }
 
     @PostMapping("/accept-invitation")
-    public ResponseEntity<CustomApiResponse<?>> acceptInvitation(
+    public ResponseEntity<CustomApiResponse<Object>> acceptInvitation(
             @Valid @RequestBody EventInvitationAcceptanceRequest request
     ){
         eventInvitationService.acceptInvitation(request);
@@ -85,5 +84,16 @@ public class EventInvitationController {
         return ResponseEntity.ok(CustomApiResponse.success(invitations));
     }
 
+    @DeleteMapping("/invite/{id}")
+    public ResponseEntity<CustomApiResponse<Object>> deleteInvitation(@PathVariable Long id){
+        eventInvitationService.deleteEventInvitation(id);
+        return ResponseEntity.ok(CustomApiResponse.success("Event invitation deleted successfully"));
+    }
+
+    @GetMapping("/invite/{id}")
+    public ResponseEntity<CustomApiResponse<EventInvitationDetailsResponse>> getInvitationDetails(@PathVariable Long id){
+        EventInvitationDetailsResponse details = eventInvitationService.getEventInvitationDetail(id);
+        return ResponseEntity.ok(CustomApiResponse.success(details));
+    }
 
 }

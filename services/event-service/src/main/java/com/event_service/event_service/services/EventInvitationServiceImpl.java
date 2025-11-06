@@ -27,8 +27,11 @@ import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -66,12 +69,86 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
         for(InviteeRequest invitee: request.invitees()){
             validateInvitationDoesNotExist(request.event(), invitee.inviteeEmail());
-            EventInvitee eventInvitee = createEventInvitee(invitee, savedInvitation);
+            EventInvitee eventInvitee = createEventInvitee(invitee, savedInvitation, invitation.getStatus());
             EventInvitee savedEventInvitee = eventInviteeRepository.save(eventInvitee);
             if(invitation.getStatus() == InvitationStatus.SEND) {
                 publishInvitationEmail(savedEventInvitee);
             }
         }
+    }
+
+    @Override
+    @Transactional
+    public void deleteEventInvitation(Long invitationId) {
+        EventInvitation invitation = eventInvitationRepository.findById(invitationId).orElseThrow(()-> new NotFoundException("Invitation not found"));
+        if (!Objects.equals(invitation.getInviterId(), securityUtils.getCurrentUser().getId())) {
+            throw new AuthorizationDeniedException("You are not authorized to delete this invitation");
+        }
+        eventInvitationRepository.delete(invitation);
+    }
+
+    @Override
+    @Transactional
+    public void updateEventInvitation(Long invitationId, EventInvitationRequest request){
+        EventInvitation invitation = eventInvitationRepository.findById(invitationId).orElseThrow(()-> new NotFoundException("Invitation not found"));
+        if (!Objects.equals(invitation.getInviterId(), securityUtils.getCurrentUser().getId())) {
+            throw new AuthorizationDeniedException("You are not authorized to update this invitation");
+        }
+
+        if (request.invitationTitle() != null) {
+            invitation.setInvitationTitle(request.invitationTitle());
+        }
+
+        if (request.message() != null) {
+            invitation.setMessage(request.message());
+        }
+
+        if (request.status() != null) {
+            invitation.setStatus(request.status());
+        }
+
+        updateInvitees(invitation, request.invitees());
+
+
+    }
+
+    private void updateInvitees(EventInvitation invitation, List<InviteeRequest> inviteeDtos){
+        List<EventInvitee> existingInvitees = invitation.getInvitees();
+
+        for (InviteeRequest inviteeDto : inviteeDtos) {
+            EventInvitee matchingInvitee = existingInvitees.stream()
+                    .filter(e -> e.getInviteeEmail().equals(inviteeDto.inviteeEmail()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (matchingInvitee != null) {
+                if (inviteeDto.inviteeName() != null) {
+                    matchingInvitee.setInviteeName(inviteeDto.inviteeName());
+                }
+                if (inviteeDto.role() != null) {
+                    matchingInvitee.setRole(inviteeDto.role());
+                }
+                if(invitation.getStatus() == InvitationStatus.SEND) {
+                    matchingInvitee.setInvitationToken(generateInvitationToken());
+                    matchingInvitee.setExpiresAt(calculateExpirationTime());
+                    publishInvitationEmail(matchingInvitee);
+                }
+            } else {
+                EventInvitee newInvitee = createEventInvitee(inviteeDto, invitation, invitation.getStatus());
+                eventInviteeRepository.save(newInvitee);
+                if(invitation.getStatus() == InvitationStatus.SEND) {
+                    publishInvitationEmail(newInvitee);
+                }
+            }
+        }
+    }
+
+    @Override
+    public EventInvitationDetailsResponse getEventInvitationDetail(Long invitationId) {
+        EventInvitation invitation = eventInvitationRepository.findByIdWithInvitees(invitationId)
+                .orElseThrow(() -> new NotFoundException("Invitation not found"));
+
+        return eventInvitationMapper.mapToDetailsResponse(invitation);
     }
 
     @Override
@@ -117,7 +194,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         return eventInviteeRepository.findByInvitationToken(token)
                 .orElseThrow(() -> {
                     log.error("Invitation not found with token: {}", token);
-                    return new EventNotFoundException("Invitation not found");
+                    return new NotFoundException("Invitation not found");
                 });
     }
 
@@ -125,7 +202,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     @Transactional
     public void resendInvitation(Long invitationId) {
         EventInvitee invitation = eventInviteeRepository.findById(invitationId)
-                .orElseThrow(() -> new EventNotFoundException("Invitation not found"));
+                .orElseThrow(() -> new NotFoundException("Invitation not found"));
 
         if (!Objects.equals(invitation.getInvitation().getInviterId(), securityUtils.getCurrentUser().getId())) {
             throw new AuthorizationDeniedException("You are not authorized to resend this invitation");
@@ -158,7 +235,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         return eventRepository.findById(eventId)
                 .orElseThrow(() -> {
                     log.error("Event not found with ID: {}", eventId);
-                    return new EventNotFoundException("Event not found");
+                    return new NotFoundException("Event not found");
                 });
     }
 
@@ -183,15 +260,17 @@ public class EventInvitationServiceImpl implements EventInvitationService {
                 .build();
     }
 
-    private EventInvitee createEventInvitee(InviteeRequest request, EventInvitation invitation) {
+    private EventInvitee createEventInvitee(InviteeRequest request, EventInvitation invitation, InvitationStatus status) {
+        String invitationToken = status == InvitationStatus.SEND ? generateInvitationToken() : null;
+        LocalDateTime expiresAt = status == InvitationStatus.SEND ? calculateExpirationTime() : null;
         return EventInvitee.builder()
                 .inviteeName(request.inviteeName())
                 .inviteeEmail(request.inviteeEmail())
-                .invitationToken(generateInvitationToken())
+                .invitationToken(invitationToken)
                 .role(request.role())
                 .invitation(invitation)
                 .status(InviteStatus.PENDING)
-                .expiresAt(calculateExpirationTime())
+                .expiresAt(expiresAt)
                 .build();
     }
 
