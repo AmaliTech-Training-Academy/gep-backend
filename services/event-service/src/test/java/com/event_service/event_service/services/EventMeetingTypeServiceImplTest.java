@@ -3,7 +3,7 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventMeetingTypeRequest;
 import com.event_service.event_service.dto.EventMeetingTypeResponse;
-import com.event_service.event_service.exceptions.ResourceNotFound;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.mappers.EventMeetingMapper;
 import com.event_service.event_service.models.EventMeetingType;
 import com.event_service.event_service.models.enums.EventMeetingTypeEnum;
@@ -58,7 +58,7 @@ class EventMeetingTypeServiceImplTest {
     void findEventMeetingTypeById_shouldThrowWhenNotFound() {
         when(repository.findById(1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.findEventMeetingTypeById(1L))
-                .isInstanceOf(ResourceNotFound.class);
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

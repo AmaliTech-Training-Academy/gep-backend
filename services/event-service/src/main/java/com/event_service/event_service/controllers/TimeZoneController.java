@@ -2,7 +2,7 @@ package com.event_service.event_service.controllers;
 
 
 import com.event_service.event_service.dto.TimeZoneResponse;
-import com.event_service.event_service.utilities.TimeZoneUtils;
+import com.event_service.event_service.utils.TimeZoneUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

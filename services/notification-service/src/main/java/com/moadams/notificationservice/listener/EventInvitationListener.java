@@ -1,6 +1,6 @@
 package com.moadams.notificationservice.listener;
 
-import com.moadams.notificationservice.event.EventInvitationEvent;
+import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
 import com.moadams.notificationservice.service.impl.EmailService;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;

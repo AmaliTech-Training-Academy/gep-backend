@@ -1,7 +1,11 @@
 package com.event_service.event_service.controllers;
 
 import com.event_service.event_service.dto.*;
+import com.event_service.event_service.dto.EventInvitationAcceptanceRequest;
+import com.event_service.event_service.dto.EventInvitationListResponse;
+import com.event_service.event_service.dto.EventInvitationRequest;
 import com.event_service.event_service.services.EventInvitationService;
+import com.example.common_libraries.dto.CustomApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

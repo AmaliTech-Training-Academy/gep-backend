@@ -3,7 +3,7 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
-import com.event_service.event_service.exceptions.ValidationException;
+import com.example.common_libraries.exception.ValidationException;
 import com.event_service.event_service.mappers.EventMapper;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.models.enums.EventMeetingTypeEnum;

@@ -1,8 +1,7 @@
 package com.event_service.event_service.services;
 
-import com.event_service.event_service.exceptions.FileUploadException;
+import com.example.common_libraries.exception.FileUploadException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

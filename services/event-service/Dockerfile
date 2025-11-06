@@ -1,32 +1,24 @@
-# Build stage
+# build stage
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
-# Copy parent pom (needed for inheritance)
-COPY pom.xml ./pom.xml
+# Copy files from current context
+COPY ../ /app
 
-# Copy event-service pom
-COPY event-service/pom.xml ./event-service/pom.xml
-
-# Preload dependencies for this module ONLY
-RUN mvn -f event-service/pom.xml dependency:go-offline -B
-
-# Copy the source code
-COPY event-service/src ./event-service/src
-
-# Build this module
-RUN mvn -f event-service/pom.xml clean package -DskipTests
+# Then build event-service
+RUN mvn clean package -DskipTests -pl event-service -am -B
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Install curl
+# Install curl for health checks
 RUN apk add --no-cache curl
 
+# Copy the built JAR
 COPY --from=build /app/event-service/target/*.jar app.jar
 
-# Expose the port the service runs on
+# Expose port
 EXPOSE 8082
 
 # Run the application

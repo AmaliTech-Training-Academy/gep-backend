@@ -6,6 +6,7 @@ import com.event_service.event_service.services.EventRegistrationService;
 import com.event_service.event_service.services.EventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/events")
 @RequiredArgsConstructor
@@ -40,7 +42,7 @@ public class EventController {
     public ResponseEntity<EventRegistrationResponse> registerForEvent(
             @PathVariable Long eventId,
             @Valid @RequestBody EventRegistrationRequest eventRegistrationRequest){
-
+        log.info("Registering for event with id: {}",eventId);
         return ResponseEntity.status(HttpStatus.OK).body(eventRegistrationService.registerEvent(eventId,eventRegistrationRequest));
     }
 }

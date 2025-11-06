@@ -1,7 +1,7 @@
 package com.example.auth_service.integration;
 
 import com.example.auth_service.dto.request.UserRegistrationRequest;
-import com.example.auth_service.dto.response.CustomApiResponse;
+import com.example.common_libraries.dto.CustomApiResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.model.User;

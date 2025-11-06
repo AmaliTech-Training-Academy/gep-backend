@@ -4,7 +4,7 @@ import com.example.auth_service.dto.request.AuditLogData;
 import com.example.auth_service.dto.request.AuditLogRequest;
 import com.example.auth_service.dto.response.AuditResponse;
 import com.example.auth_service.dto.response.PagedAuditResponse;
-import com.example.auth_service.mappers.AuditMapper;
+import com.example.auth_service.mapper.AuditMapper;
 import com.example.auth_service.model.AuditLogJSONB;
 import com.example.auth_service.repository.AuditLogJSONBRepository;
 import com.example.auth_service.service.AuditService;

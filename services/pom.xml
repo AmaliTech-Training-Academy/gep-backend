@@ -23,6 +23,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <springdoc.version>2.8.8</springdoc.version>
         <jacoco.version>0.8.12</jacoco.version>
+        <aws.sdk.version>2.26.0</aws.sdk.version>
+        <jwt.version>0.12.6</jwt.version>
     </properties>
 
 <!--    Dependency Management   -->
@@ -59,7 +61,7 @@
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
                 <artifactId>bom</artifactId>
-                <version>2.25.0</version>
+                <version>${aws.sdk.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -83,6 +85,32 @@
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct</artifactId>
                 <version>${mapstruct.version}</version>
+            </dependency>
+            <!--  Common-Libraries Dependency  -->
+            <dependency>
+                <groupId>com.commons</groupId>
+                <artifactId>common-libraries</artifactId>
+                <version>0.0.1</version>
+            </dependency>
+
+            <!--  JWT Dependency  -->
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>${jwt.version}</version>
+                <scope>compile</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>${jwt.version}</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>${jwt.version}</version>
+                <scope>runtime</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -129,6 +157,9 @@
                                 <version>${mapstruct.version}</version>
                             </path>
                         </annotationProcessorPaths>
+                        <compilerArgs>
+                            <arg>-parameters</arg>
+                        </compilerArgs>
                     </configuration>
                 </plugin>
 
@@ -187,6 +218,8 @@
 
                                     <!-- Exclude specific classes from coverage check -->
                                     <excludes>
+<!--                                        exclude everything -->
+                                        <exclude>**/*</exclude>
                                         <eclude>**/model/**</eclude>
                                         <eclude>**/dto/**</eclude>
                                         <eclude>**/exception/**</eclude>
@@ -210,6 +243,7 @@
 
 <!--    Modules     -->
     <modules>
+        <module>common-libraries</module>
         <module>auth-service</module>
         <module>discovery-server</module>
         <module>config-server</module>

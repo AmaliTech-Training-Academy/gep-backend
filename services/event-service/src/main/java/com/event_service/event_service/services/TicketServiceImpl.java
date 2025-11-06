@@ -1,7 +1,7 @@
 package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.TicketVerificationResponse;
-import com.event_service.event_service.exceptions.ResourceNotFound;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.models.Ticket;
 import com.event_service.event_service.models.enums.TicketStatusEnum;
 import com.event_service.event_service.repositories.TicketRepository;
@@ -21,18 +21,18 @@ public class TicketServiceImpl implements TicketService{
      *
      * @param ticketCode The unique code of the ticket to verify.
      * @return A response containing ticket verification details.
-     * @throws ResourceNotFound if the ticket is not found or is not active.
+     * @throws ResourceNotFoundException if the ticket is not found or is not active.
      */
     @Override
     public TicketVerificationResponse verifyTicket(String ticketCode) {
         Ticket ticket = ticketRepository.findByTicketCode(ticketCode);
         if(ticket == null){
-            throw new ResourceNotFound("Ticket not found");
+            throw new ResourceNotFoundException("Ticket not found");
         }
 
         // Verify ticket
         if(ticket.getStatus() != TicketStatusEnum.ACTIVE){
-            throw new ResourceNotFound("Ticket is not active, ticket status:" + ticket.getStatus());
+            throw new ResourceNotFoundException("Ticket is not active, ticket status:" + ticket.getStatus());
         }
 
         // update status to used
@@ -56,7 +56,7 @@ public class TicketServiceImpl implements TicketService{
         }
         Ticket ticket = ticketRepository.findByTicketCode(ticketCode);
         if(ticket == null){
-            throw new ResourceNotFound("Ticket not found");
+            throw new ResourceNotFoundException("Ticket not found");
         }
         if(ticket.getStatus() != TicketStatusEnum.ACTIVE){
             return false;
