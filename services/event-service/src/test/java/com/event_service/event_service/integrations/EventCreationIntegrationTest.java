@@ -7,7 +7,7 @@ import com.event_service.event_service.models.enums.EventTypeEnum;
 import com.event_service.event_service.repositories.EventMeetingTypeRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.EventTypeRepository;
-import com.event_service.event_service.services.S3Service;
+import com.example.common_libraries.service.S3Service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

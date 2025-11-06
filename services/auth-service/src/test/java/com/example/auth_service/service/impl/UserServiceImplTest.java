@@ -86,6 +86,7 @@ class UserServiceImplTest {
                 "jane.doe@example.com",
                 "9876543210",
                 "456 New Avenue",
+                null,
                 false
         );
     }
@@ -363,6 +364,7 @@ class UserServiceImplTest {
                 "new.email@example.com",  // Changed
                 "1234567890",  // Same as original
                 "123 Test Street",  // Same as original
+                null,
                 true  // Same as original
         );
 
@@ -391,6 +393,7 @@ class UserServiceImplTest {
                 "john.doe@example.com",
                 "1234567890",
                 "123 Test Street",
+                null,
                 true
         );
 
@@ -442,6 +445,7 @@ class UserServiceImplTest {
                 "john.doe@example.com",
                 "1234567890",
                 "123 Test Street",
+                null,
                 false
         );
 

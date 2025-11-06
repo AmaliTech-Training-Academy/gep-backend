@@ -13,6 +13,7 @@ import com.example.auth_service.repository.ProfileRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.service.UserService;
 import com.example.auth_service.utils.UserSpecifications;
+import com.example.common_libraries.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +31,7 @@ import java.util.Objects;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
+    private final S3Service s3Service;
 
     /**
      * Generates a summary report of user-related metrics including total users, total organizers,
@@ -150,12 +152,18 @@ public class UserServiceImpl implements UserService {
             userToUpdate.setActive(request.status());
         }
 
+
         // Profile updates
         if(!Objects.equals(request.phone(), userToUpdate.getProfile().getPhoneNumber())){
             userToUpdate.getProfile().setPhoneNumber(request.phone());
         }
         if(!Objects.equals(request.address(), userToUpdate.getProfile().getAddress())){
             userToUpdate.getProfile().setAddress(request.address());
+        }
+        if(request.profilePicture() != null){
+            // upload to s3 bucket
+            String profilePictureUrl = s3Service.uploadImage(request.profilePicture());
+            userToUpdate.getProfile().setProfileImageUrl(profilePictureUrl);
         }
 
         // save user updates
