@@ -9,6 +9,7 @@ import com.example.auth_service.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -96,14 +97,23 @@ public class UserManagementController {
      * @param userUpdateRequest the new details for the user, including fields such as full name, email, phone, address, and status
      * @return a ResponseEntity containing a CustomApiResponse with the updated user's details
      */
-    @PutMapping("/{userId}")
-    @PreAuthorize("hasRole('ADMIN') or @resourceOwner.isOwner(#userId,principal)")
+    @PutMapping(
+            path = "/{userId}",
+            consumes = { MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE }
+    )
+    @PreAuthorize("hasRole('ADMIN') or @resourceOwner.isOwner(#userId, principal)")
     public ResponseEntity<CustomApiResponse<UserResponse>> updateUser(
             @PathVariable Long userId,
-            @Valid @RequestBody UserUpdateRequest userUpdateRequest,
-            @RequestPart MultipartFile profilePicture
-    ){
-        CustomApiResponse<UserResponse> response = CustomApiResponse.success(userService.updateUser(userId, userUpdateRequest, profilePicture));
+            @RequestPart(value = "userUpdateRequest", required = false) @Valid UserUpdateRequest userUpdateRequest,
+            @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture,
+            @RequestBody(required = false) @Valid UserUpdateRequest userUpdateRequestBody
+    ) {
+        // handle both multipart and plain JSON
+        UserUpdateRequest request = userUpdateRequest != null ? userUpdateRequest : userUpdateRequestBody;
+
+        CustomApiResponse<UserResponse> response =
+                CustomApiResponse.success(userService.updateUser(userId, request, profilePicture));
+
         return ResponseEntity.ok(response);
     }
 }

@@ -4,10 +4,13 @@ import com.example.auth_service.dto.response.UserManagementResponse;
 import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserStatistics;
 import com.example.auth_service.dto.response.UserSummaryReport;
+import com.example.auth_service.model.Profile;
 import com.example.auth_service.model.User;
+import com.example.auth_service.model.UserEventStats;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
+import java.util.Optional;
 
 public class UserMapper {
     private UserMapper(){
@@ -21,9 +24,21 @@ public class UserMapper {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .status(user.isActive())
-                .profileImageUrl(user.getProfile().getProfileImageUrl())
-                .eventsOrganized(user.getUserEventStats().getTotalEventsCreated())
-                .eventsAttended(user.getUserEventStats().getTotalEventsAttended())
+                .profileImageUrl(
+                        Optional.ofNullable(user.getProfile())
+                                .map(Profile::getProfileImageUrl)
+                                .orElse(null)
+                )
+                .eventsOrganized(
+                        Optional.ofNullable(user.getUserEventStats())
+                                .map(UserEventStats::getTotalEventsAttended)
+                                .orElse(0)
+                )
+                .eventsAttended(
+                        Optional.ofNullable(user.getUserEventStats())
+                                .map(UserEventStats::getTotalEventsAttended)
+                                .orElse(0)
+                )
                 .build();
     }
 
