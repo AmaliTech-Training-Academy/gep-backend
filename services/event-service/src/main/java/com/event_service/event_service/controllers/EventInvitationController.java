@@ -63,7 +63,6 @@ public class EventInvitationController {
     }
 
     @PostMapping("/accept-invitation")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CustomApiResponse<Object>> acceptInvitation(
             @Valid @RequestBody EventInvitationAcceptanceRequest request
     ){
