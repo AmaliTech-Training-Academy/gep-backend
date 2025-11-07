@@ -149,7 +149,7 @@ public class AuthServiceImpl implements AuthService {
             throw new AuthorizationDeniedException("You are not allow to login as admin");
         }
         setAuthCookies(response, user);
-        return new AuthResponse(user.getId(), user.getEmail(), user.getRole());
+        return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
     }
 
     private AuthUser getAuthenticatedUser(UserLoginRequest loginRequest){
@@ -172,7 +172,7 @@ public class AuthServiceImpl implements AuthService {
         }
         User user = getActiveUserByEmail(request.email());
         setAuthCookies(response, user);
-        return new AuthResponse(user.getId(), user.getEmail(), user.getRole());
+        return new AuthResponse(user.getId(), user.getEmail(),user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
     }
 
     @Override
@@ -187,10 +187,11 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void refreshAccessToken(String refreshToken, HttpServletResponse response){
-        jwtUtil.validateToken(refreshToken); // Throws InvalidTokenException if invalid
-
         String email = jwtUtil.extractUsername(refreshToken);
         User user = getActiveUserByEmail(email);
+        jwtUtil.validateToken(refreshToken);
+
+
         setAuthCookies(response, user);
     }
 

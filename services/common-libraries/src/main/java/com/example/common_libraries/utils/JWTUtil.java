@@ -106,6 +106,9 @@ public class JWTUtil {
         } catch (JwtException exception ) {
             log.error("Invalid JWT token: {}", exception.getMessage());
             throw new InvalidJWTTokenException("Invalid JWT token");
+        } catch (Exception e){
+            log.error("Error validating JWT token: {}", e.getMessage());
+            throw new InvalidJWTTokenException("Error validating JWT token");
         }
     }
 

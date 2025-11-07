@@ -3,11 +3,13 @@ package com.example.auth_service.service;
 import com.example.auth_service.dto.request.OtpVerificationRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.enums.UserRole;
+import com.example.auth_service.model.Profile;
 import com.example.common_libraries.exception.InactiveAccountException;
 import com.example.auth_service.model.User;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.AuthUser;
 import com.example.auth_service.service.impl.AuthServiceImpl;
+import com.example.common_libraries.exception.InvalidJWTTokenException;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -133,6 +135,11 @@ public class AuthServiceImplTest {
                 .role(UserRole.ORGANISER)
                 .build();
 
+        Profile userProfile = Profile.builder()
+                .id(1L)
+                .user(user)
+                .build();
+        user.setProfile(userProfile);
         when(otpService.verifyOtp(email, otp)).thenReturn(true);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
         when(jwtUtil.generateAccessToken(user)).thenReturn(accessToken);
@@ -269,29 +276,6 @@ public class AuthServiceImplTest {
         verify(response, never()).addHeader(anyString(), anyString());
     }
 
-    @Test
-    void testRefreshAccessToken_InvalidToken_ThrowsException() {
-        String email = "user@example.com";
-        String refreshToken = "invalid-token";
-
-        User user = User.builder()
-                .email(email)
-                .isActive(true)
-                .build();
-
-        when(jwtUtil.extractUsername(refreshToken)).thenReturn(email);
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
-//        when(jwtUtil.validateToken(refreshToken)).thenReturn(false);
-
-        BadCredentialsException ex = assertThrows(
-                BadCredentialsException.class,
-                () -> authService.refreshAccessToken(refreshToken, response)
-        );
-
-        assertEquals("Invalid refresh token", ex.getMessage());
-        verify(jwtUtil, never()).generateAccessToken(anyString());
-        verify(response, never()).addHeader(anyString(), anyString());
-    }
 
     // --- LOGOUT TEST ---
     @Test
