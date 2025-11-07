@@ -73,13 +73,22 @@ public class EmailService implements NotificationService {
             context.setVariable("inviteeName", event.inviteeName());
             context.setVariable("invitationTitle", event.eventTitle());
             context.setVariable("invitationLink", event.inviteLink());
+            context.setVariable("role", event.role());
 
-            String htmlContent = templateEngine.process("event-invitation", context);
+            String template_name = determineTemplateForRole(event.role());
+            String htmlContent = templateEngine.process(template_name, context);
             sendEmail(htmlContent, event.inviteeEmail(), "You have been invited");
 
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send event invitation email");
         }
+    }
+
+    private String determineTemplateForRole(String role){
+        return switch (role.toUpperCase()) {
+            case "ORGANISER", "CO_ORGANIZER" -> "event-invitation-organiser";
+            default -> "event-invitation-attendee";
+        };
     }
 
     @Override

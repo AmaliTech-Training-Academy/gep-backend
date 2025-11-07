@@ -4,6 +4,7 @@ public record EventInvitationEvent(
         String eventTitle,
         String inviteeName,
         String inviteeEmail,
-        String inviteLink
+        String inviteLink,
+        String role
 ) {
 }

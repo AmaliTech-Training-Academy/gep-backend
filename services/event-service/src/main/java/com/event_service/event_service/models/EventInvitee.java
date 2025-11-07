@@ -26,7 +26,7 @@ public class EventInvitee {
     @Column(name = "invitee_email", nullable = false)
     private String inviteeEmail;
 
-    @Column(name = "invitation_token", unique = true, nullable = false)
+    @Column(name = "invitation_token", unique = true)
     private String invitationToken;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -45,7 +45,7 @@ public class EventInvitee {
     @Column(name = "responded_at")
     LocalDateTime respondedAt;
 
-    @Column(name = "expires_at", nullable = false)
+    @Column(name = "expires_at")
     LocalDateTime expiresAt;
 
     @Column(name = "created_at", nullable = false)
