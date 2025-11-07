@@ -221,12 +221,25 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     }
 
     @Override
-    public Page<EventInvitationListResponse> getInvitationList(Pageable pageable) {
-        return null;
+    public Page<EventInvitationListResponse> getInvitationList(Pageable pageable, String search) {
+        if(search != null && !search.trim().isEmpty()) {
+            return eventInvitationRepository.findAllBySearchTerm(
+                    search.trim().toLowerCase(),
+                    pageable
+            ).map(eventInvitationMapper::toEventInvitationList);
+        }
+        return eventInvitationRepository.findAll(pageable).map(eventInvitationMapper::toEventInvitationList);
     }
 
     @Override
-    public Page<EventInvitationListResponse> getSavedInvitations(Pageable pageable) {
+    public Page<EventInvitationListResponse> getSavedInvitations(Pageable pageable, String search) {
+        if(search != null && !search.trim().isEmpty()) {
+            return eventInvitationRepository.findAllByStatusAndSearchTerm(
+                    InvitationStatus.SAVE,
+                    search.trim().toLowerCase(),
+                    pageable
+            ).map(eventInvitationMapper::toEventInvitationList);
+        }
         return eventInvitationRepository.findAllByStatus(InvitationStatus.SAVE, pageable)
                 .map(eventInvitationMapper::toEventInvitationList);
     }

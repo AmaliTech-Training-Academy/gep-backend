@@ -15,6 +15,6 @@ public interface EventInvitationService {
     EventInvitationDetailsResponse getEventInvitationDetail(Long invitationId);
     void acceptInvitation(EventInvitationAcceptanceRequest acceptanceRequest);
     void resendInvitation(Long invitationId);
-    Page<EventInvitationListResponse> getInvitationList(Pageable pageable);
-    Page<EventInvitationListResponse> getSavedInvitations(Pageable pageable);
+    Page<EventInvitationListResponse> getInvitationList(Pageable pageable, String search);
+    Page<EventInvitationListResponse> getSavedInvitations(Pageable pageable, String search);
 }

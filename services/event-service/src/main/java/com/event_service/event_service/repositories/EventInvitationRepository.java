@@ -19,4 +19,22 @@ public interface EventInvitationRepository extends JpaRepository<EventInvitation
             "WHERE ei.id = :invitationId")
     Optional<EventInvitation> findByIdWithInvitees(@Param("invitationId") Long invitationId);
 
+    @Query("SELECT e FROM EventInvitation e WHERE e.status = :status " +
+            "AND (LOWER(e.invitationTitle) LIKE %:searchTerm% " +
+            "OR LOWER(e.message) LIKE %:searchTerm% " +
+            "OR LOWER(e.inviterName) LIKE %:searchTerm%)")
+    Page<EventInvitation> findAllByStatusAndSearchTerm(
+            InvitationStatus status,
+            String searchTerm,
+            Pageable pageable
+    );
+
+    @Query("SELECT e FROM EventInvitation e WHERE " +
+            "LOWER(e.invitationTitle) LIKE %:searchTerm% " +
+            "OR LOWER(e.message) LIKE %:searchTerm% " +
+            "OR LOWER(e.inviterName) LIKE %:searchTerm%")
+    Page<EventInvitation> findAllBySearchTerm(
+            String searchTerm,
+            Pageable pageable
+    );
 }

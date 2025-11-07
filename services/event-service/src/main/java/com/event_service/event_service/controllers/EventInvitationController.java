@@ -41,14 +41,15 @@ public class EventInvitationController {
             @RequestParam(name = "size",
                     defaultValue = "10") int size,
             @RequestParam(name = "sort",
-                    defaultValue = "id,asc") String[] sort
+                    defaultValue = "id,asc") String[] sort,
+            @RequestParam(name = "search", required = false) String search
     ){
         String[] sortParts = sort[0].split(",");
         Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc") ?
                 Sort.Direction.DESC : Sort.Direction.ASC;
 
         Page<EventInvitationListResponse> invitations = eventInvitationService.getInvitationList(
-                PageRequest.of(page, size, Sort.by(direction, sortParts[0]))
+                PageRequest.of(page, size, Sort.by(direction, sortParts[0])), search
         );
         return ResponseEntity.ok(CustomApiResponse.success(invitations));
     }
@@ -78,15 +79,18 @@ public class EventInvitationController {
             @RequestParam(name = "size",
                     defaultValue = "10") int size,
             @RequestParam(name = "sort",
-                    defaultValue = "id,asc") String[] sort
+                    defaultValue = "id,asc") String[] sort,
+            @RequestParam(name = "search", required = false) String search
     ){
         String[] sortParts = sort[0].split(",");
         Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("desc") ?
                 Sort.Direction.DESC : Sort.Direction.ASC;
 
         Page<EventInvitationListResponse> invitations = eventInvitationService.getSavedInvitations(
-                PageRequest.of(page, size, Sort.by(direction, sortParts[0]))
+                PageRequest.of(page, size, Sort.by(direction, sortParts[0])),
+                search
         );
+
         return ResponseEntity.ok(CustomApiResponse.success(invitations));
     }
 
