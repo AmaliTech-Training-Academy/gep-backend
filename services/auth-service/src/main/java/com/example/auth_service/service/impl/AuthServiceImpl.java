@@ -4,6 +4,7 @@ import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.exception.BadRequestException;
 import com.example.common_libraries.exception.DuplicateResourceException;
 import com.example.common_libraries.exception.InactiveAccountException;
@@ -27,6 +28,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -224,6 +226,14 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logout(HttpServletResponse response){
         clearAuthCookies(response);
+    }
+
+    @Override
+    public AuthResponse loggedInUser() {
+        Authentication authentication =  SecurityContextHolder.getContext().getAuthentication();
+        AuthUser authUser = (AuthUser) authentication.getPrincipal();
+        User user = getActiveUserByEmail(authUser.getUsername());
+        return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
     }
 
 

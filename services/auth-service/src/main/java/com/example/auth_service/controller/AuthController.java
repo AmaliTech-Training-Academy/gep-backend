@@ -71,6 +71,12 @@ public class AuthController {
         return ResponseEntity.ok(CustomApiResponse.success("Password reset email sent"));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<CustomApiResponse<AuthResponse>> getAuthenticatedUser(){
+        AuthResponse authResponse = authService.loggedInUser();
+        return ResponseEntity.ok(CustomApiResponse.success("Authenticated user fetched successfully", authResponse));
+    }
+
     @PostMapping("/reset-password")
     public ResponseEntity<CustomApiResponse<?>> resetPassword(@Valid @RequestBody ResetPasswordRequest request){
         authService.resetPassword(request);
