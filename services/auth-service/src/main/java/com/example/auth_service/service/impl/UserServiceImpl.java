@@ -13,6 +13,7 @@ import com.example.auth_service.repository.ProfileRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.service.UserService;
 import com.example.auth_service.utils.UserSpecifications;
+import com.example.common_libraries.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Objects;
 
@@ -30,6 +32,7 @@ import java.util.Objects;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
+    private final S3Service s3Service;
 
     /**
      * Generates a summary report of user-related metrics including total users, total organizers,
@@ -129,14 +132,15 @@ public class UserServiceImpl implements UserService {
      * Updates the details and profile information of an existing user based on the provided request.
      * Fields in the user object are updated only if there are changes.
      *
-     * @param userId the ID of the user to update
-     * @param request an instance of {@code UserUpdateRequest} containing the new user details
+     * @param userId         the ID of the user to update
+     * @param request        an instance of {@code UserUpdateRequest} containing the new user details
+     * @param profilePicture
      * @return a {@code UserResponse} object representing the updated user data
      * @throws ResourceNotFoundException if the user with the given ID is not found
      */
     @Override
     @Transactional
-    public UserResponse updateUser(Long userId, UserUpdateRequest request) {
+    public UserResponse updateUser(Long userId, UserUpdateRequest request, MultipartFile profilePicture) {
         User userToUpdate = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         // User updates
@@ -150,12 +154,18 @@ public class UserServiceImpl implements UserService {
             userToUpdate.setActive(request.status());
         }
 
+
         // Profile updates
         if(!Objects.equals(request.phone(), userToUpdate.getProfile().getPhoneNumber())){
             userToUpdate.getProfile().setPhoneNumber(request.phone());
         }
         if(!Objects.equals(request.address(), userToUpdate.getProfile().getAddress())){
             userToUpdate.getProfile().setAddress(request.address());
+        }
+        if(profilePicture != null){
+            // upload to s3 bucket
+            String profilePictureUrl = s3Service.uploadImage(profilePicture);
+            userToUpdate.getProfile().setProfileImageUrl(profilePictureUrl);
         }
 
         // save user updates

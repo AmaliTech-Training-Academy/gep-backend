@@ -65,7 +65,7 @@ public class User implements JwtUserDetails{
     private Profile profile;
 
     @Override
-    public Collection<String> getRoles() {
-        return List.of(role.name());
+    public String getRoles() {
+        return role.name();
     }
 }

@@ -1,4 +1,4 @@
-package com.event_service.event_service.services;
+package com.example.common_libraries.service;
 
 import com.example.common_libraries.exception.FileUploadException;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +61,7 @@ public class S3ServiceImpl implements S3Service {
         List<String> imageList = new ArrayList<>();
         for (MultipartFile file : files) {
             try {
-            String url = uploadImage(file);
+                String url = uploadImage(file);
                 imageList.add(url);
             } catch (S3Exception e) {
                 throw new FileUploadException("File Upload Failed, please try again later");
@@ -73,3 +73,4 @@ public class S3ServiceImpl implements S3Service {
         return imageList;
     }
 }
+

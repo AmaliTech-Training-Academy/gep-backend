@@ -97,6 +97,7 @@ public class JWTUtil {
 
     public void validateToken(String token){
         try {
+            log.info("Validating JWT token: {}", token);
             var parser = Jwts.parser().verifyWith(getKey()).build();
             parser.parseSignedClaims(token);
             log.info("Valid token");
