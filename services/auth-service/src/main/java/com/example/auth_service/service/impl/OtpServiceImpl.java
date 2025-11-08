@@ -23,7 +23,7 @@ public class OtpServiceImpl implements OtpService {
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
     private static final long LOGIN_OTP_EXPIRATION_MINUTES = 5;
-    private static final long RESET_PASSWORD_OTP_EXPIRATION_MINUTES = 1;
+    private static final long RESET_PASSWORD_OTP_EXPIRATION_MINUTES = 5;
 
     @Value("${sqs.user-login-queue-url}")
     private String userLoginQueueUrl;

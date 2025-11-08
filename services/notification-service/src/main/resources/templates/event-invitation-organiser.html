@@ -47,7 +47,12 @@
                         </p>
 
                         <p style="margin: 0 0 15px 0; font-size: 15px; line-height: 1.7; color: #666;">
-                            You've been invited to <strong style="color: #333;">Co-Organize <span th:text="${invitationTitle}">Tech Innovation Summit 2025</span></strong>
+                            You've been invited to
+                            <strong style="color: #333;">
+                                <span th:if="${role == 'ORGANIZER'}">Organize</span>
+                                <span th:if="${role == 'CO_ORGANIZER'}">Co-Organize</span>
+                                <span th:text="${invitationTitle}">Tech Innovation Summit 2025</span>
+                            </strong>
                         </p>
 
                         <p style="margin: 0 0 30px 0; font-size: 15px; line-height: 1.7; color: #666;">

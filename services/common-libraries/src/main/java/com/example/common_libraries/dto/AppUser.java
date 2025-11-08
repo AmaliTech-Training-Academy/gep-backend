@@ -9,7 +9,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 @Builder
-public record AppUser(Long id, String role, String email) implements UserDetails {
+public record AppUser(Long id, String role, String email, String fullName) implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
