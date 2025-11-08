@@ -1,11 +1,14 @@
 package com.example.auth_service.service.impl;
 
+import com.example.auth_service.dto.projection.TopOrganizerProjection;
 import com.example.auth_service.dto.request.UserUpdateRequest;
 import com.example.auth_service.dto.response.UserManagementResponse;
 import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserStatistics;
 import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
+import com.example.auth_service.repository.UserEventStatsRepository;
+import com.example.common_libraries.dto.TopOrganizerResponse;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.example.auth_service.mapper.UserMapper;
 import com.example.auth_service.model.User;
@@ -24,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Objects;
 
 
@@ -33,6 +37,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
     private final S3Service s3Service;
+    private final UserEventStatsRepository userEventStatsRepository;
 
     /**
      * Generates a summary report of user-related metrics including total users, total organizers,
@@ -173,5 +178,22 @@ public class UserServiceImpl implements UserService {
         // save profile updates
         profileRepository.save(userToUpdate.getProfile());
         return UserMapper.toUserResponse(userToUpdate);
+    }
+
+    @Override
+    public List<TopOrganizerResponse> getTopOrganizers() {
+        List<TopOrganizerProjection> topOrganizerProjections =
+                userEventStatsRepository.findTopOrganizers(PageRequest.of(0, 2));
+
+        return topOrganizerProjections.stream()
+                .map(proj -> TopOrganizerResponse
+                        .builder()
+                        .email(proj.getEmail())
+                        .name(proj.getFullName())
+                        .eventCount(proj.getTotalEventsCreated())
+                        .growthPercentage(proj.getGrowthPercentage())
+                        .build()
+                )
+                .toList();
     }
 }
