@@ -19,11 +19,11 @@ public class WebClientConfig {
     public WebClient.Builder webClientBuilder() {
         // Configure HttpClient (timeouts, etc.)
         HttpClient httpClient = HttpClient.create()
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
-                .responseTimeout(Duration.ofSeconds(5))
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 20000)
+                .responseTimeout(Duration.ofSeconds(20))
                 .doOnConnected(conn ->
-                        conn.addHandlerLast(new ReadTimeoutHandler(5, TimeUnit.SECONDS))
-                                .addHandlerLast(new WriteTimeoutHandler(5, TimeUnit.SECONDS))
+                        conn.addHandlerLast(new ReadTimeoutHandler(20, TimeUnit.SECONDS))
+                                .addHandlerLast(new WriteTimeoutHandler(20, TimeUnit.SECONDS))
                 );
 
         return WebClient.builder()
