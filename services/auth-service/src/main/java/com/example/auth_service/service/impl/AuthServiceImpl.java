@@ -2,7 +2,7 @@ package com.example.auth_service.service.impl;
 
 import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.AuthResponse;
-import com.example.auth_service.dto.response.UserCreationResponse;
+import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
 import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.exception.BadRequestException;

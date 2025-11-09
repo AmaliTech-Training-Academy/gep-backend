@@ -6,15 +6,19 @@ import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.service.UserService;
+import com.example.common_libraries.dto.TopOrganizerResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.example.common_libraries.dto.CustomApiResponse;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -115,5 +119,11 @@ public class UserManagementController {
                 CustomApiResponse.success(userService.updateUser(userId, request, profilePicture));
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/top-organizers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<TopOrganizerResponse>> getTopOrganizers(){
+        return ResponseEntity.status(HttpStatus.OK).body(userService.getTopOrganizers());
     }
 }
