@@ -5,7 +5,7 @@ WORKDIR /app
 # Copy files from current context
 COPY ../ /app
 
-# Then build event-service
+# Then build event-service.
 RUN mvn clean package -DskipTests -pl event-service -am -B
 
 # Runtime stage
