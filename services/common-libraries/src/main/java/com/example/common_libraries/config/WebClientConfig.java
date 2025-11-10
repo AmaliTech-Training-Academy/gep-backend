@@ -3,7 +3,6 @@ package com.example.common_libraries.config;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -15,21 +14,25 @@ import java.util.concurrent.TimeUnit;
 
 @Configuration
 public class WebClientConfig {
-    @Value("${auth.service.url}")
-    private String authServiceBaseUrl;
 
     @Bean
-    public WebClient authServiceWebClient(WebClient.Builder builder) {
+    public WebClient.Builder webClientBuilder() {
+        // Configure HttpClient (timeouts, etc.)
         HttpClient httpClient = HttpClient.create()
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
-                .responseTimeout(Duration.ofSeconds(5))
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 20000)
+                .responseTimeout(Duration.ofSeconds(20))
                 .doOnConnected(conn ->
-                        conn.addHandlerLast(new ReadTimeoutHandler(5, TimeUnit.SECONDS))
-                                .addHandlerLast(new WriteTimeoutHandler(5, TimeUnit.SECONDS)));
+                        conn.addHandlerLast(new ReadTimeoutHandler(20, TimeUnit.SECONDS))
+                                .addHandlerLast(new WriteTimeoutHandler(20, TimeUnit.SECONDS))
+                );
 
-        return builder
-                .baseUrl(authServiceBaseUrl)
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .build();
+        return WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient));
+    }
+
+    @Bean
+    public WebClient webClient(WebClient.Builder builder) {
+        return builder.build();
     }
 }
+

@@ -1,4 +1,4 @@
-package com.example.auth_service.dto.response;
+package com.example.common_libraries.dto;
 
 public record UserCreationResponse(
         Long id,

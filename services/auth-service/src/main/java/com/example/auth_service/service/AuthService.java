@@ -2,7 +2,7 @@ package com.example.auth_service.service;
 
 import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.AuthResponse;
-import com.example.auth_service.dto.response.UserCreationResponse;
+import com.example.common_libraries.dto.UserCreationResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.transaction.annotation.Transactional;
 

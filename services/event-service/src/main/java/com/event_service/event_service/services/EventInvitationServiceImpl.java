@@ -1,6 +1,6 @@
 package com.event_service.event_service.services;
 
-import com.event_service.event_service.client.AuthServiceClient;
+import com.event_service.event_service.client.UserServiceClient;
 import com.event_service.event_service.dto.*;
 import com.event_service.event_service.mappers.EventInvitationMapper;
 import com.event_service.event_service.models.*;
@@ -12,6 +12,7 @@ import com.event_service.event_service.repositories.EventInviteeRepository;
 import com.event_service.event_service.repositories.EventOrganizerRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.utils.SecurityUtils;
+import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
 import com.example.common_libraries.exception.*;
@@ -46,7 +47,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     private final EventInviteeRepository eventInviteeRepository;
     private final EventOrganizerRepository eventOrganizerRepository;
     private final EventInvitationMapper eventInvitationMapper;
-    private final AuthServiceClient authServiceClient;
+    private final UserServiceClient userServiceClient;
 
 
     private static final long INVITATION_EXPIRATION_DAYS = 2;
@@ -177,7 +178,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
                 request.password(),
                 String.valueOf(eventInvitation.getRole())
         );
-        UserResponse createdUser = authServiceClient.createUser(registrationRequest);
+        UserCreationResponse createdUser = userServiceClient.createUser(registrationRequest);
 
         EventOrganizer eventOrganizer = EventOrganizer.builder()
                 .event(eventInvitation.getInvitation().getEvent())

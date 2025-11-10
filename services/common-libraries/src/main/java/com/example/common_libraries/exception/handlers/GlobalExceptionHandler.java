@@ -81,6 +81,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(CustomApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleForbiddenException(ForbiddenException ex){
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
     // Core Exceptions
     @ExceptionHandler(ExpiredJwtException.class)
     public ResponseEntity<CustomApiResponse<?>> handleExpiredJwtException(ExpiredJwtException ex){
