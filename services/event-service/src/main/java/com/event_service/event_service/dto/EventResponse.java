@@ -7,7 +7,7 @@ public record EventResponse(
         String title,
         String description,
         Instant startTime,
-        String meetingLocation,
+        String location,
         String flyerUrl,
         String timeZoneOffSet
 ) {
