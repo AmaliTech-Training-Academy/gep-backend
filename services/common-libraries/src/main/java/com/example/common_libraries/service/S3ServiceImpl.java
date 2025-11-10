@@ -2,6 +2,7 @@ package com.example.common_libraries.service;
 
 import com.example.common_libraries.exception.FileUploadException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class S3ServiceImpl implements S3Service {
@@ -46,11 +48,13 @@ public class S3ServiceImpl implements S3Service {
                     key
             );
         } catch (IOException e) {
+            log.error("IOException Error while uploading image: {}", e.getMessage());
             throw new FileUploadException("Error while uploading image, please try again");
         } catch (S3Exception e) {
+            log.error("S3Exception Error while uploading image: {}", e.getMessage());
             throw new FileUploadException("File Upload Failed, please try again later");
-
         } catch (Exception e) {
+            log.error("Error while uploading image: {}", e.getMessage());
             throw new FileUploadException("Something went wrong while uploading file");
         }
     }
@@ -64,9 +68,11 @@ public class S3ServiceImpl implements S3Service {
                 String url = uploadImage(file);
                 imageList.add(url);
             } catch (S3Exception e) {
+                log.error("S3Exception Error while uploading images: {}", e.getMessage());
                 throw new FileUploadException("File Upload Failed, please try again later");
 
             } catch (Exception e) {
+                log.error("Error while uploading images: {}", e.getMessage());
                 throw new FileUploadException("Something went wrong while uploading file");
             }
         }
