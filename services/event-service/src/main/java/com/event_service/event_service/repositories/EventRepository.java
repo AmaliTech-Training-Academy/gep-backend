@@ -1,11 +1,12 @@
 package com.event_service.event_service.repositories;
 
-import com.event_service.event_service.dto.EventManagementResponse;
 import com.event_service.event_service.dto.projection.EventManagementProjection;
 import com.event_service.event_service.dto.projection.EventStatProjection;
 import com.event_service.event_service.models.Event;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,8 +15,8 @@ import java.time.Instant;
 import java.util.List;
 
 @Repository
-public interface EventRepository extends JpaRepository<Event, Long> {
-
+public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
+    Page<Event> findAll(Pageable pageable);
     @Query("""
     SELECT
         COUNT(e) AS totalEvents,
