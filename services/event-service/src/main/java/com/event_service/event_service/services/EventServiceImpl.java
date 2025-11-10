@@ -2,6 +2,9 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
+import com.event_service.event_service.dto.ExploreEventResponse;
+import com.event_service.event_service.dto.PagedExploreEventResponse;
+import com.event_service.event_service.exceptions.ValidationException;
 import com.example.common_libraries.dto.queue_events.UserRegisteredEvent;
 import com.example.common_libraries.exception.ValidationException;
 import com.event_service.event_service.mappers.EventMapper;
@@ -14,14 +17,21 @@ import com.event_service.event_service.validations.EventValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
+import com.event_service.event_service.specifications.EventSpecification;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
+
+import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -94,6 +104,50 @@ public class EventServiceImpl implements EventService {
 
         return eventMapper.toResponse(event);
     }
+
+
+    @Override
+    public PagedExploreEventResponse listEvents(
+            int pageNumber,
+            int pageSize,
+            String hasTitle,
+            String[] sortBy,
+            String location,
+            LocalDate date,
+            Boolean paid,
+            String priceFilter,
+            Boolean past
+    ) {
+        Pageable pageable = PageRequest.of(
+                pageNumber,
+                pageSize,
+                Sort.by(Sort.Direction.DESC, sortBy)
+        );
+
+        Specification<Event> spec = Specification.unrestricted();
+            spec = spec.and(EventSpecification.hasTitle(hasTitle));
+            spec = spec.and(EventSpecification.byLocation(location));
+            spec = spec.and(EventSpecification.isOn(date));
+            spec = spec.and(EventSpecification.byPriceFilter(priceFilter));
+
+        if (past != null) {
+            spec = past
+                    ? spec.and(EventSpecification.isPast())
+                    : spec.and(EventSpecification.isUpcoming());
+        }
+        List<ExploreEventResponse> eventsToExplore = eventRepository.findAll(spec, pageable)
+                .stream()
+                .map(eventMapper::toExploreEventResponse)
+                .toList();
+
+        return new PagedExploreEventResponse(
+                pageable.getPageNumber() + 1,
+                pageable.getPageSize(),
+                eventsToExplore
+        );
+    }
+
+
 
     public void publishEventToEventStatQueue(Long organizerId) {
         // Implementation for publishing event to eventStat queue
