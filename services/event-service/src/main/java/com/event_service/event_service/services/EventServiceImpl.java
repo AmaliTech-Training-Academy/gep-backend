@@ -4,7 +4,6 @@ import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
 import com.event_service.event_service.dto.ExploreEventResponse;
 import com.event_service.event_service.dto.PagedExploreEventResponse;
-import com.event_service.event_service.exceptions.ValidationException;
 import com.example.common_libraries.dto.queue_events.UserRegisteredEvent;
 import com.example.common_libraries.exception.ValidationException;
 import com.event_service.event_service.mappers.EventMapper;
