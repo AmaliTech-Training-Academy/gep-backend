@@ -7,7 +7,9 @@ import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.service.UserService;
 import com.example.common_libraries.dto.TopOrganizerResponse;
-import jakarta.validation.Valid;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserManagementController {
     private final UserService userService;
+    private final Validator validator;
 
     /**
      * Handles the management of user data and retrieves a summary report containing
@@ -98,25 +101,36 @@ public class UserManagementController {
      * This method requires the requesting user to have either admin authority or ownership of the user resource.
      *
      * @param userId the ID of the user to be updated
-     * @param userUpdateRequest the new details for the user, including fields such as full name, email, phone, address, and status
+     * @param userUpdateRequestJson the new details for the user, including fields such as full name, email, phone, address, and status
      * @return a ResponseEntity containing a CustomApiResponse with the updated user's details
      */
-    @PutMapping(
-            path = "/{userId}",
-            consumes = { MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE }
-    )
+    @PutMapping(path = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ADMIN') or @resourceOwner.isOwner(#userId, principal)")
     public ResponseEntity<CustomApiResponse<UserResponse>> updateUser(
             @PathVariable Long userId,
-            @RequestPart(value = "userUpdateRequest", required = false) @Valid UserUpdateRequest userUpdateRequest,
-            @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture,
-            @RequestBody(required = false) @Valid UserUpdateRequest userUpdateRequestBody
+            @RequestPart(value = "userUpdateRequest", required = false) String userUpdateRequestJson,
+            @RequestPart(value = "profilePicture", required = false) MultipartFile profilePicture
     ) {
-        // handle both multipart and plain JSON
-        UserUpdateRequest request = userUpdateRequest != null ? userUpdateRequest : userUpdateRequestBody;
+        UserUpdateRequest userUpdateRequest = null;
+
+        // Parse JSON string to UserUpdateRequest object
+        if (userUpdateRequestJson != null) {
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+                userUpdateRequest = objectMapper.readValue(userUpdateRequestJson, UserUpdateRequest.class);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid request.");
+            }
+        }
+
+        // validate DTO
+        var violations = validator.validate(userUpdateRequest);
+        if(!violations.isEmpty()){
+            throw new ConstraintViolationException(violations);
+        }
 
         CustomApiResponse<UserResponse> response =
-                CustomApiResponse.success(userService.updateUser(userId, request, profilePicture));
+                CustomApiResponse.success(userService.updateUser(userId, userUpdateRequest, profilePicture));
 
         return ResponseEntity.ok(response);
     }

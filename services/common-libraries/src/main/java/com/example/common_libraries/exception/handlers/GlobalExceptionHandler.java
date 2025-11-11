@@ -3,6 +3,7 @@ package com.example.common_libraries.exception.handlers;
 import com.example.common_libraries.dto.CustomApiResponse;
 import com.example.common_libraries.exception.*;
 import io.jsonwebtoken.ExpiredJwtException;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,9 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.reactive.resource.NoResourceFoundException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -90,6 +94,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ExpiredJwtException.class)
     public ResponseEntity<CustomApiResponse<?>> handleExpiredJwtException(ExpiredJwtException ex){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleConstraintViolationException(ConstraintViolationException ex) {
+        Map<String, Object> body = new HashMap<>();
+
+        // Collect field -> message pairs
+        body.put("violations", ex.getConstraintViolations()
+                .stream()
+                .collect(Collectors.toMap(
+                        v -> v.getPropertyPath().toString(),
+                        v -> v.getMessage()
+                )));
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(CustomApiResponse.error("Validation failed", body));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
