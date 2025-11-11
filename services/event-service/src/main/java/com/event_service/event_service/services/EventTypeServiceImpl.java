@@ -43,7 +43,6 @@ public class EventTypeServiceImpl implements EventTypeService {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
     public List<EventTypeResponse> findAll() {
         return eventTypeRepository.findAll().stream()
                 .map(eventTypeMapper::toEventTypeResponse)
