@@ -8,11 +8,17 @@ import com.event_service.event_service.dto.UpcomingEventResponse;
 import com.event_service.event_service.dto.projection.EventManagementProjection;
 import com.event_service.event_service.dto.projection.EventStatProjection;
 import com.event_service.event_service.models.Event;
+import com.event_service.event_service.models.enums.EventStatus;
 import com.event_service.event_service.repositories.EventRepository;
+import com.event_service.event_service.utils.EventManagementSpecifications;
 import com.example.common_libraries.dto.TopOrganizerResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -50,9 +56,9 @@ public class EventOverviewServiceImpl implements EventOverviewService{
                         .attendeeCount(event.getEventRegistrations().size())
                         .build()).toList();
         // get event management
-        List<EventManagementProjection> eventManagementProjections = eventRepository.getEventManagement(PageRequest.of(0, 10));
+        Page<EventManagementProjection> eventManagementProjections = eventRepository.getEventManagement(PageRequest.of(0, 10));
 
-        List<EventManagementResponse> eventManagementResponses = eventManagementProjections.stream()
+        Page<EventManagementResponse> eventManagementResponses = eventManagementProjections
                 .map(emgt -> EventManagementResponse
                         .builder()
                         .id(emgt.getId())
@@ -63,7 +69,7 @@ public class EventOverviewServiceImpl implements EventOverviewService{
                         .attendeeCount(emgt.getAttendeeCount())
                         .status(emgt.getStatus())
                         .build()
-                ).toList();
+                );
 
         // get top organizers via rest call to user-service
         List<TopOrganizerResponse> topOrganizerResponses = userServiceClient.getTopOrganizers(accessToken);
@@ -75,5 +81,35 @@ public class EventOverviewServiceImpl implements EventOverviewService{
                 .upcomingEvents(upcomingEventResponses)
                 .eventManagement(eventManagementResponses)
                 .build();
+    }
+
+    @Override
+    public Page<EventManagementResponse> getManagementEvents(String keyword, int page, EventStatus status) {
+        page = Math.max(page, 0);
+        Sort sort = Sort.by(Sort.Direction.DESC, "startTime");
+        Pageable pageable = PageRequest.of(page, 10, sort);
+
+        Specification<Event> spec = (root, query, cb) -> cb.conjunction();
+
+        if(keyword != null && !keyword.trim().isEmpty()) {
+            spec = spec.and(EventManagementSpecifications.hasKeyword(keyword.trim()));
+        }
+        if(status != null) {
+            spec = spec.and(EventManagementSpecifications.hasStatus(status));
+        }
+        Page<Event> searchResults = eventRepository.findAll(spec, pageable);
+
+        return searchResults.map(
+                event -> EventManagementResponse
+                        .builder()
+                        .id(event.getId())
+                        .title(event.getTitle())
+                        .organizer("ORGANIZER")
+                        .startTime(event.getStartTime())
+                        .endTime(event.getEndTime())
+                        .attendeeCount((long) event.getEventRegistrations().size())
+                        .status(event.getStatus())
+                        .build()
+        );
     }
 }

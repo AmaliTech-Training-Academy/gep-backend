@@ -3,6 +3,7 @@ package com.event_service.event_service.repositories;
 import com.event_service.event_service.dto.projection.EventManagementProjection;
 import com.event_service.event_service.dto.projection.EventStatProjection;
 import com.event_service.event_service.models.Event;
+import com.event_service.event_service.models.enums.EventStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,7 +17,9 @@ import java.util.List;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
+
     Page<Event> findAll(Pageable pageable);
+
     @Query("""
     SELECT
         COUNT(e) AS totalEvents,
@@ -42,11 +45,17 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
                'ORGANIZER' AS organizer,
                e.startTime AS startTime,
                e.endTime AS endTime,
-               COUNT(er.id) AS attendeeCount
+               COUNT(er.id) AS attendeeCount,
+               CASE
+                   WHEN e.startTime < CURRENT_TIMESTAMP AND e.endTime > CURRENT_TIMESTAMP THEN com.event_service.event_service.models.enums.EventStatus.ACTIVE
+                   WHEN e.endTime < CURRENT_TIMESTAMP THEN com.event_service.event_service.models.enums.EventStatus.COMPLETED
+                   WHEN e.startTime > CURRENT_TIMESTAMP THEN  com.event_service.event_service.models.enums.EventStatus.DRAFT
+                   ELSE com.event_service.event_service.models.enums.EventStatus.PENDING
+               END AS status
         FROM Event e
         LEFT JOIN e.eventRegistrations er
         GROUP BY e.id, e.title, e.startTime, e.endTime
         ORDER BY COUNT(er.id) DESC
     """)
-    List<EventManagementProjection> getEventManagement(Pageable pageable);
+    Page<EventManagementProjection> getEventManagement(Pageable pageable);
 }
