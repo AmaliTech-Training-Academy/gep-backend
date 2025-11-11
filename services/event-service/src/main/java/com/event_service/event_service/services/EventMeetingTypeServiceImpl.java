@@ -21,7 +21,7 @@ public class EventMeetingTypeServiceImpl implements EventMeetingTypeService {
     private final  EventMeetingMapper eventMeetingMapper;
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void createEventMeetingType(EventMeetingTypeRequest eventMeetingTypeRequest) {
         EventMeetingType eventMeetingType = EventMeetingType.builder().name(eventMeetingTypeRequest.name()).build();
         eventMeetingTypeRepository.save(eventMeetingType);
@@ -43,7 +43,7 @@ public class EventMeetingTypeServiceImpl implements EventMeetingTypeService {
     }
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void updateEventMeetingType(Long id, EventMeetingTypeRequest eventMeetingTypeRequest) {
         EventMeetingType eventMeetingType = findEventMeetingTypeById(id);
         eventMeetingType.setName(eventMeetingTypeRequest.name());

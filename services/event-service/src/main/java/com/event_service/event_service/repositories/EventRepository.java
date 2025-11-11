@@ -1,6 +1,5 @@
 package com.event_service.event_service.repositories;
 
-import com.event_service.event_service.dto.EventManagementResponse;
 import com.event_service.event_service.dto.projection.EventManagementProjection;
 import com.event_service.event_service.dto.projection.EventStatProjection;
 import com.event_service.event_service.models.Event;
@@ -18,6 +17,8 @@ import java.util.List;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
+
+    Page<Event> findAll(Pageable pageable);
 
     @Query("""
     SELECT

@@ -2,6 +2,9 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
+import com.event_service.event_service.dto.ExploreEventResponse;
+import com.event_service.event_service.dto.PagedExploreEventResponse;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.dto.queue_events.UserRegisteredEvent;
 import com.example.common_libraries.exception.ValidationException;
 import com.event_service.event_service.mappers.EventMapper;
@@ -14,14 +17,23 @@ import com.event_service.event_service.validations.EventValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
+import com.event_service.event_service.specifications.EventSpecification;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
+
+import java.time.LocalDate;
 import java.util.List;
 
 @Slf4j
@@ -47,13 +59,14 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
-    @PreAuthorize("hasRole('ROLE_ORGANISER')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages) {
         eventValidator.validateRequiredGroup(eventRequest);
 
         if (!CollectionUtils.isEmpty(eventImages) && eventImages.size() > 5) {
             throw new ValidationException(List.of("You can upload a maximum of 5 images per event."));
         }
+        AppUser authenticatedUser = getCurrentUser();
         EventType eventType = eventTypeService.findById(eventRequest.event_type_id());
         EventMeetingType eventMeetingType = eventMeetingTypeService
                 .findEventMeetingTypeById(eventRequest.event_meeting_type_id());
@@ -65,6 +78,8 @@ public class EventServiceImpl implements EventService {
             eventValidator.validateInPersonSingleDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(inPersonAndDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
+            event.setCreatedBy(authenticatedUser.fullName());
+            event.setUserId(authenticatedUser.id());
         }
 
         if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
@@ -72,6 +87,8 @@ public class EventServiceImpl implements EventService {
             eventValidator.validateInPersonMultiDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(inPersonAndMultiDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
+            event.setCreatedBy(authenticatedUser.fullName());
+            event.setUserId(authenticatedUser.id());
         }
 
         if(eventType.getName().name().equals(EventTypeEnum.DAY_EVENT.name())
@@ -79,6 +96,8 @@ public class EventServiceImpl implements EventService {
             eventValidator.validateVirtualSingleDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(virtualAndDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
+            event.setCreatedBy(authenticatedUser.fullName());
+            event.setUserId(authenticatedUser.id());
         }
 
         if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
@@ -86,14 +105,58 @@ public class EventServiceImpl implements EventService {
             eventValidator.validateVirtualMultiDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(virtualAndMultiDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
+            event.setCreatedBy(authenticatedUser.fullName());
+            event.setUserId(authenticatedUser.id());
         }
 
-        // publish to eventStat queue to increment user's event count'
-        Long organizerId = 0L;
-        publishEventToEventStatQueue(organizerId);
+        publishEventToEventStatQueue(authenticatedUser.id());
 
         return eventMapper.toResponse(event);
     }
+
+
+    @Override
+    public PagedExploreEventResponse listEvents(
+            int pageNumber,
+            int pageSize,
+            String hasTitle,
+            String[] sortBy,
+            String location,
+            LocalDate date,
+            Boolean paid,
+            String priceFilter,
+            Boolean past
+    ) {
+        Pageable pageable = PageRequest.of(
+                pageNumber,
+                pageSize,
+                Sort.by(Sort.Direction.DESC, sortBy)
+        );
+
+        Specification<Event> spec = Specification.unrestricted();
+            spec = spec.and(EventSpecification.hasTitle(hasTitle));
+            spec = spec.and(EventSpecification.byLocation(location));
+            spec = spec.and(EventSpecification.isOn(date));
+            spec = spec.and(EventSpecification.byPriceFilter(priceFilter));
+
+        if (past != null) {
+            spec = past
+                    ? spec.and(EventSpecification.isPast())
+                    : spec.and(EventSpecification.isUpcoming());
+        }
+        List<ExploreEventResponse> eventsToExplore = eventRepository.findAll(spec, pageable)
+                .stream()
+                .map(eventMapper::toExploreEventResponse)
+                .toList();
+
+        return new PagedExploreEventResponse(
+                pageable.getPageNumber() + 1,
+                pageable.getPageSize(),
+                eventsToExplore
+        );
+    }
+
+
 
     public void publishEventToEventStatQueue(Long organizerId) {
         // Implementation for publishing event to eventStat queue
@@ -104,5 +167,10 @@ public class EventServiceImpl implements EventService {
         }catch (Exception e){
             log.error("Error sending message to event stat SQS queue: {}", e.getMessage());
         }
+    }
+
+    public AppUser getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (AppUser) authentication.getPrincipal();
     }
 }

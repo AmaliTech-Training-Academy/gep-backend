@@ -1,17 +1,30 @@
 package com.event_service.event_service.mappers;
 
-import com.event_service.event_service.dto.EventResponse;
+import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+
+
 
 @Mapper(componentModel = "spring")
 public interface EventMapper {
 
     @Mapping(target = "startTime", expression = "java(determineDisplayTime(event))")
-    @Mapping(target = "meetingLocation", expression = "java(determineMeetingLocation(event))")
+    @Mapping(target = "location", expression = "java(determineMeetingLocation(event))")
     @Mapping(target = "timeZoneOffSet", expression = "java(determineZoneId(event))")
     EventResponse toResponse(Event event);
+
+    @Mapping(target = "startTime", expression = "java(determineDisplayTime(event))")
+    @Mapping(target = "ticketPrice", expression = "java(extractTicketPrice(event))")
+    ExploreEventResponse toExploreEventResponse(Event event);
+
+
+    default java.math.BigDecimal extractTicketPrice(Event event) {
+        return (event.getEventOptions() != null)
+                ? event.getEventOptions().getTicketPrice()
+                : null;
+    }
 
     default java.time.Instant determineDisplayTime(Event event) {
         if (event.getEventType() == null || event.getEventType().getName() == null) {
