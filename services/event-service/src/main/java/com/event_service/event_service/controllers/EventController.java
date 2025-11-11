@@ -1,6 +1,7 @@
 package com.event_service.event_service.controllers;
 
 import com.event_service.event_service.dto.*;
+import com.event_service.event_service.models.enums.EventStatus;
 import com.event_service.event_service.services.EventDetailService;
 import com.event_service.event_service.services.EventOverviewService;
 import com.event_service.event_service.services.EventRegistrationService;
@@ -9,6 +10,7 @@ import com.example.common_libraries.dto.CustomApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -56,5 +58,16 @@ public class EventController {
             @CookieValue(name = "accessToken", required = false) String accessToken
     ){
         return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(eventOverviewService.getEventOverview(accessToken)));
+    }
+
+    @GetMapping("/event-management/search")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CustomApiResponse<Page<EventManagementResponse>>> searchEvents(
+            @RequestParam(name = "page",
+                    defaultValue = "0") int page,
+            @RequestParam(name = "status", required = false) EventStatus status,
+            @RequestParam(name = "keyword", required = false) String keyword
+    ){
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(eventOverviewService.getManagementEvents(keyword,page,status)));
     }
 }
