@@ -64,6 +64,12 @@ public class Event {
     @Column
     private String eventTimeZoneId;
 
+    @Column(nullable = false)
+    private String createdBy;
+
+    @Column(nullable = false)
+    private Long userId;
+
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<EventRegistration> eventRegistrations;

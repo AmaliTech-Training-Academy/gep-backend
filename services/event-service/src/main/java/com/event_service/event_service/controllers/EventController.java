@@ -6,11 +6,14 @@ import com.event_service.event_service.services.EventOverviewService;
 import com.event_service.event_service.services.EventRegistrationService;
 import com.event_service.event_service.services.EventService;
 import com.example.common_libraries.dto.CustomApiResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -29,14 +32,22 @@ public class EventController {
     private final EventService eventService;
     private final EventRegistrationService eventRegistrationService;
     private final EventOverviewService eventOverviewService;
+    private final ObjectMapper objectMapper;
 
-    @PostMapping
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<EventResponse> createEvent(
-            @Valid @RequestPart("event") EventRequest eventRequest,
+            @RequestPart("event") String eventRequestJSON,
             @RequestPart(value = "image") MultipartFile image,
             @RequestPart(value = "eventImages", required = false) List<MultipartFile> eventImages
-    ) {
-        return ResponseEntity.ok(eventService.createEvent(eventRequest,image,eventImages));
+    ) throws JsonProcessingException {
+        try {
+            EventRequest eventRequest = objectMapper.readValue(eventRequestJSON, EventRequest.class);
+            return ResponseEntity.ok(eventService.createEvent(eventRequest,image,eventImages));
+        }catch (Exception e){
+            log.error("Error parsing event request JSON {0}", e);
+            throw e;
+        }
     }
 
     @GetMapping("/{eventId}")
