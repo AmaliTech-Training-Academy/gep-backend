@@ -71,11 +71,19 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     @Override
     public EventRegistrationResponse registerEvent(Long eventId, EventRegistrationRequest registrationRequest) {
         Event event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
-        TicketType ticketType = ticketTypeRepository.findById(registrationRequest.ticketTypeId()).orElseThrow(()-> new ResourceNotFoundException("Ticket Type not found"));
+        TicketType ticketType = ticketTypeRepository.findByIdAndEvent(registrationRequest.ticketTypeId(),event).orElseThrow(()-> new ResourceNotFoundException("Ticket Type not found"));
         Long quantity = registrationRequest.numberOfTickets();
 
         if(ticketType.getQuantity() - ticketType.getSoldCount() < quantity){
             throw new ResourceNotFoundException("Ticket Type is out of stock");
+        }
+
+        // Ensure a user is not buying more than quantity per attendee
+        int maxPerAttendee = ticketType.getQuantityPerAttendee();
+
+        Integer quantityPurchased = eventRegistrationRepository.sumTicketsByEventIdAndEmail(event, registrationRequest.email());
+        if(quantity > maxPerAttendee|| quantityPurchased + quantity > maxPerAttendee){
+            throw new BadRequestException("Cannot buy more than "+ maxPerAttendee +" tickets for this ticket type");
         }
 
         EventRegistration registration = EventRegistration
