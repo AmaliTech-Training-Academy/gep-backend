@@ -59,7 +59,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     @Transactional
-    @PreAuthorize("hasRole('ROLE_ORGANISER')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages) {
         eventValidator.validateRequiredGroup(eventRequest);
 

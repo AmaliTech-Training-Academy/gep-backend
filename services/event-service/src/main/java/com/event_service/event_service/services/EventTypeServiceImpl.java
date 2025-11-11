@@ -21,7 +21,7 @@ public class EventTypeServiceImpl implements EventTypeService {
     private final EventTypeMapper eventTypeMapper;
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void save(EventTypeRequest eventTypeRequest) {
         EventType eventType = EventType.builder().name(eventTypeRequest.name()).build();
         eventTypeRepository.save(eventType);
@@ -35,7 +35,7 @@ public class EventTypeServiceImpl implements EventTypeService {
     }
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void update(Long id, EventTypeRequest eventTypeRequest) {
         EventType eventType = findById(id);
         eventType.setName(eventTypeRequest.name());
