@@ -39,6 +39,8 @@ public class TicketType {
 
     private Boolean isPaid;
 
+    private Integer quantityPerAttendee;
+
     @CreatedDate
     @Column(name = "created_at", nullable =false, updatable = false)
     private LocalDateTime createdAt;
@@ -46,4 +48,9 @@ public class TicketType {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    public void applyDefaults() {
+        if(quantityPerAttendee == null) quantityPerAttendee = 1;
+    }
 }
