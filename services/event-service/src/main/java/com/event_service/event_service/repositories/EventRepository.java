@@ -56,4 +56,8 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
         ORDER BY COUNT(er.id) DESC
     """)
     Page<EventManagementProjection> getEventManagement(Pageable pageable);
+
+    Page<Event> findAllByUserId(Long id, Pageable pageable);
+
+    Long countByUserId(Long id);
 }
