@@ -101,13 +101,13 @@ public class EventController {
     }
 
     @GetMapping("/my-events/overview")
-//    @PreAuthorize("hasRole('ORGANISER')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public ResponseEntity<CustomApiResponse<MyEventsOverviewResponse>> getMyEventsOverview() {
         return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEventsOverview()));
     }
 
     @GetMapping("/my-events")
-//    @PreAuthorize("hasRole('ORGANISER')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public ResponseEntity<CustomApiResponse<Page<MyEventsListResponse>>> getMyEvents(
             @RequestParam(name = "page",
                     defaultValue = "0") int page
