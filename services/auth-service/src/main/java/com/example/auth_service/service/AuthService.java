@@ -30,5 +30,4 @@ public interface AuthService {
 
     AuthResponse loggedInUser();
 
-    UserCreationResponse inviteUser(UserInvitationRequest invitationRequest);
 }

@@ -3,16 +3,13 @@ package com.example.auth_service.service.impl;
 import com.example.auth_service.dto.base.UserRegistrationBase;
 import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.AuthResponse;
+import com.example.auth_service.model.*;
+import com.example.auth_service.repository.UserInviteeRepository;
 import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
-import com.example.common_libraries.dto.AppUser;
-import com.example.common_libraries.dto.queue_events.UserInvitedEvent;
 import com.example.common_libraries.exception.BadRequestException;
 import com.example.common_libraries.exception.DuplicateResourceException;
 import com.example.common_libraries.exception.InactiveAccountException;
-import com.example.auth_service.model.Profile;
-import com.example.auth_service.model.User;
-import com.example.auth_service.model.UserEventStats;
 import com.example.auth_service.repository.ProfileRepository;
 import com.example.auth_service.repository.UserEventStatsRepository;
 import com.example.auth_service.repository.UserRepository;
@@ -70,7 +67,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest) {
             validateRequest(registrationRequest);
-            User savedUser = createAndSaveUser(registrationRequest);
+            User savedUser = createAndSaveUser(registrationRequest, UserRole.ORGANISER);
 
             createUserRelatedEntities(savedUser);
             sendRegistrationMessageToQueue(savedUser);
@@ -109,7 +106,7 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private void validateRequest(UserRegistrationBase registrationRequest){
+    protected void validateRequest(UserRegistrationBase registrationRequest){
         if(!registrationRequest.password().equals(registrationRequest.confirmPassword())){
             throw new BadRequestException("Passwords do not match");
         }
@@ -119,12 +116,12 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private User createAndSaveUser(UserRegistrationBase registrationRequest){
+    protected User createAndSaveUser(UserRegistrationBase registrationRequest, UserRole role){
         User user = User.builder()
                 .fullName(registrationRequest.fullName())
                 .email(registrationRequest.email().toLowerCase().trim())
                 .password(passwordEncoder.encode(registrationRequest.password()))
-                .role(registrationRequest.role())
+                .role(role)
                 .isActive(true)
                 .build();
         return userRepository.save(user);
@@ -141,15 +138,6 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private void sendUserInvitationMessageToQueue(UserRegistrationBase invitationRequest){
-        try{
-            UserInvitedEvent event = new UserInvitedEvent(invitationRequest.fullName(), invitationRequest.email(), invitationRequest.password(), invitationRequest.role().name());
-            String messageBody = objectMapper.writeValueAsString(event);
-            sqsClient.sendMessage(builder -> builder.queueUrl(userInvitationQueue).messageBody(messageBody));
-        }catch (Exception e){
-            log.error("Error user invitation sending message to SQS: {}", e.getMessage());
-        }
-    }
 
     @Override
     public void loginUser(UserLoginRequest loginRequest){
@@ -250,16 +238,6 @@ public class AuthServiceImpl implements AuthService {
         AuthUser authUser = (AuthUser) authentication.getPrincipal();
         User user = getActiveUserByEmail(authUser.getUsername());
         return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
-    }
-
-    @Override
-    @Transactional
-    public UserCreationResponse inviteUser(UserInvitationRequest invitationRequest) {
-        validateRequest(invitationRequest);
-        User savedUser = createAndSaveUser(invitationRequest);
-        createUserRelatedEntities(savedUser);
-        sendUserInvitationMessageToQueue(invitationRequest);
-        return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
     }
 
     private void setAuthCookies(HttpServletResponse response, User user){

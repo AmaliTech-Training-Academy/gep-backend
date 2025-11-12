@@ -78,12 +78,7 @@ public class AuthController {
         return ResponseEntity.ok(CustomApiResponse.success("Authenticated user fetched successfully", authResponse));
     }
 
-    @PostMapping("/invite-user")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CustomApiResponse<UserCreationResponse>> inviteUser(@Valid @RequestBody UserInvitationRequest invitationRequest){
-        UserCreationResponse creationResponse = authService.inviteUser(invitationRequest);
-        return ResponseEntity.ok(CustomApiResponse.success("User invited successfully", creationResponse));
-    }
+
 
     @PostMapping("/reset-password")
     public ResponseEntity<CustomApiResponse<?>> resetPassword(@Valid @RequestBody ResetPasswordRequest request){

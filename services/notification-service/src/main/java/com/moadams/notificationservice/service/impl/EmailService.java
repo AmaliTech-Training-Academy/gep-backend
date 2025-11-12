@@ -92,16 +92,15 @@ public class EmailService implements NotificationService {
     public void sendUserInvitationEmail(UserInvitedEvent event) {
         try{
             log.info("Sending user invitation email to {}", event.email());
-            String loginUrl = frontendBaseUrl + "/app/auth/login";
+            String invitationUrl = frontendBaseUrl + "/app/auth/invitation/accept?token=" + event.invitationToken();
             Context context = new Context();
-            context.setVariable("recipientName", event.fullName());
-            context.setVariable("email", event.email());
+            context.setVariable("fullName", event.fullName());
+            context.setVariable("message", event.message());
             context.setVariable("role", event.role());
-            context.setVariable("password", event.password());
-            context.setVariable("loginUrl", loginUrl);
+            context.setVariable("invitationUrl", invitationUrl);
 
             String htmlContent = templateEngine.process("user-invitation", context);
-            sendEmail(htmlContent, event.email(), "Welcome to Eventhub - Your Account Is Ready");
+            sendEmail(htmlContent, event.email(), "You have been invited");
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send invitation email");
         }

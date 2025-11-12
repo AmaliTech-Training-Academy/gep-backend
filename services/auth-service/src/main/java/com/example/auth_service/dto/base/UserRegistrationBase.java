@@ -7,5 +7,4 @@ public interface UserRegistrationBase {
     String email();
     String password();
     String confirmPassword();
-    UserRole role();
 }
