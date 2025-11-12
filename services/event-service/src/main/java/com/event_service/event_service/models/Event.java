@@ -75,6 +75,10 @@ public class Event {
     @JsonIgnore
     private List<EventRegistration> eventRegistrations;
 
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<TicketType> ticketTypes;
+
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<EventImages> eventImages = new HashSet<>();
