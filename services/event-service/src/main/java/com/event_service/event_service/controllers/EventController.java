@@ -47,7 +47,7 @@ public class EventController {
             EventRequest eventRequest = objectMapper.readValue(eventRequestJSON, EventRequest.class);
             return ResponseEntity.ok(eventService.createEvent(eventRequest,image,eventImages));
         }catch (Exception e){
-            log.error("Error parsing event request JSON {0}", e);
+            log.error("Error parsing event request JSON {}", e.getMessage());
             throw e;
         }
     }
