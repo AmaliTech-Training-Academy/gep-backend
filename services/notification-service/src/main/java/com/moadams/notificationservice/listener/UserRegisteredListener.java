@@ -1,6 +1,7 @@
 package com.moadams.notificationservice.listener;
 
 
+import com.example.common_libraries.dto.queue_events.UserInvitedEvent;
 import com.example.common_libraries.dto.queue_events.UserRegisteredEvent;
 import com.moadams.notificationservice.service.impl.EmailService;
 import io.awspring.cloud.sqs.annotation.SqsListener;
@@ -17,6 +18,11 @@ public class UserRegisteredListener {
     @SqsListener("${sqs.user-registration-queue}")
     public void listenUserRegistered(UserRegisteredEvent event){
         emailService.sendWelcomeEmail(event.email(), event.fullName());
+    }
+
+    @SqsListener("${sqs.user-invitation-queue}")
+    public void listenUserInvited(UserInvitedEvent event){
+        emailService.sendUserInvitationEmail(event);
     }
 
 }

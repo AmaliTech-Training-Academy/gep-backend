@@ -1,5 +1,7 @@
 package com.example.auth_service.dto.request;
 
+import com.example.auth_service.dto.base.UserRegistrationBase;
+import com.example.auth_service.enums.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -25,5 +27,9 @@ public record UserRegistrationRequest(
 
         @NotBlank(message = "Confirm Password is required")
         String confirmPassword
-) {
+) implements UserRegistrationBase {
+        @Override
+        public UserRole role(){
+                return UserRole.ORGANISER;
+        }
 }

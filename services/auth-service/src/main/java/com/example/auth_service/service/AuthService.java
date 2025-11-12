@@ -29,4 +29,6 @@ public interface AuthService {
     void logout(HttpServletResponse response);
 
     AuthResponse loggedInUser();
+
+    UserCreationResponse inviteUser(UserInvitationRequest invitationRequest);
 }
