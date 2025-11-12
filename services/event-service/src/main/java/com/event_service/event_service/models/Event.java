@@ -66,10 +66,10 @@ public class Event {
     private String eventTimeZoneId;
 
     @Column(nullable = false)
-    private String createdBy;
+    private String createdBy = "Roger Satsi";
 
     @Column(nullable = false)
-    private Long userId;
+    private Long userId = 1L;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
