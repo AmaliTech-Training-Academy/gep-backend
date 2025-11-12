@@ -9,6 +9,7 @@ import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.repository.UserEventStatsRepository;
 import com.example.common_libraries.dto.TopOrganizerResponse;
+import com.example.common_libraries.exception.DuplicateResourceException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.example.auth_service.mapper.UserMapper;
 import com.example.auth_service.model.User;
@@ -18,6 +19,7 @@ import com.example.auth_service.service.UserService;
 import com.example.auth_service.utils.UserSpecifications;
 import com.example.common_libraries.service.S3Service;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,8 +31,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -147,6 +151,10 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse updateUser(Long userId, UserUpdateRequest request, MultipartFile profilePicture) {
         User userToUpdate = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+        Optional<User> userWithEmail = userRepository.findByEmail(request.email());
+        if(userWithEmail.isPresent() && !userWithEmail.get().getId().equals(userId)){
+            throw new DuplicateResourceException("Email already in use");
+        }
 
         // User updates
         if(!Objects.equals(request.fullName(), userToUpdate.getFullName())){
@@ -168,6 +176,7 @@ public class UserServiceImpl implements UserService {
             userToUpdate.getProfile().setAddress(request.address());
         }
         if(profilePicture != null){
+            log.info("Profile picture is not null: {}", profilePicture.getOriginalFilename());
             // upload to s3 bucket
             String profilePictureUrl = s3Service.uploadImage(profilePicture);
             userToUpdate.getProfile().setProfileImageUrl(profilePictureUrl);

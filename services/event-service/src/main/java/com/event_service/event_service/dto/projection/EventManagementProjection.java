@@ -11,21 +11,5 @@ public interface EventManagementProjection {
     Instant getStartTime();
     Instant getEndTime();
     Long getAttendeeCount();
-
-    // Computed status based on start/end times
-    default EventStatus getStatus() {
-        Instant now = Instant.now();
-        Instant start = getStartTime();
-        Instant end = getEndTime();
-
-        if (start.isBefore(now) && end.isAfter(now)) {
-            return EventStatus.ACTIVE;
-        } else if (end.isBefore(now)) {
-            return EventStatus.COMPLETED;
-        } else if(start.isAfter(now)) {
-            return EventStatus.DRAFT;
-        } else {
-            return EventStatus.PENDING;
-        }
-    }
+    EventStatus getStatus();
 }

@@ -1,6 +1,7 @@
 package com.event_service.event_service.models;
 
 
+import com.event_service.event_service.models.enums.EventStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
@@ -64,6 +65,12 @@ public class Event {
     @Column
     private String eventTimeZoneId;
 
+    @Column(nullable = false)
+    private String createdBy;
+
+    @Column(nullable = false)
+    private Long userId;
+
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<EventRegistration> eventRegistrations;
@@ -97,5 +104,19 @@ public class Event {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    public EventStatus getStatus(){
+        Instant now = Instant.now();
+        Instant start = getStartTime();
+        Instant end = getEndTime();
 
+        if (start.isBefore(now) && end.isAfter(now)) {
+            return EventStatus.ACTIVE;
+        } else if (end.isBefore(now)) {
+            return EventStatus.COMPLETED;
+        } else if(start.isAfter(now)) {
+            return EventStatus.DRAFT;
+        } else {
+            return EventStatus.PENDING;
+        }
+    }
 }
