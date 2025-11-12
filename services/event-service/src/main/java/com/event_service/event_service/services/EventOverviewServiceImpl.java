@@ -104,7 +104,7 @@ public class EventOverviewServiceImpl implements EventOverviewService{
                         .builder()
                         .id(event.getId())
                         .title(event.getTitle())
-                        .organizer("ORGANIZER")
+                        .organizer(event.getCreatedBy())
                         .startTime(event.getStartTime())
                         .endTime(event.getEndTime())
                         .attendeeCount((long) event.getEventRegistrations().size())
