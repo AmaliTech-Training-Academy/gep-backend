@@ -7,6 +7,7 @@ import com.event_service.event_service.dto.MyEventsOverviewResponse;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.EventRegistration;
 import com.event_service.event_service.models.TicketType;
+import com.event_service.event_service.repositories.EventInvitationRepository;
 import com.event_service.event_service.repositories.EventRegistrationRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketRepository;
@@ -45,6 +46,9 @@ class MyEventServiceImplTest {
 
     @Mock
     private TicketRepository ticketRepository;
+
+    @Mock
+    private EventInvitationRepository eventInvitationRepository;
 
     @InjectMocks
     private MyEventServiceImpl myEventService;

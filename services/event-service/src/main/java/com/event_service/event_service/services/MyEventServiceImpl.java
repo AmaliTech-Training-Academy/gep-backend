@@ -1,11 +1,9 @@
 package com.event_service.event_service.services;
 
-import com.event_service.event_service.dto.MyEventDetailResponse;
-import com.event_service.event_service.dto.MyEventSummaryResponse;
-import com.event_service.event_service.dto.MyEventsListResponse;
-import com.event_service.event_service.dto.MyEventsOverviewResponse;
+import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.TicketType;
+import com.event_service.event_service.repositories.EventInvitationRepository;
 import com.event_service.event_service.repositories.EventRegistrationRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketRepository;
@@ -20,6 +18,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Optional;
+
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class MyEventServiceImpl implements MyEventService {
     private final EventRepository eventRepository;
     private final EventRegistrationRepository eventRegistrationRepository;
     private final TicketRepository ticketRepository;
+    private final EventInvitationRepository eventInvitationRepository;
 
     @Override
     public Page<MyEventsListResponse> getMyEvents(int page) {
@@ -92,10 +94,25 @@ public class MyEventServiceImpl implements MyEventService {
                 .startTime(event.getStartTime())
                 .build();
 
+        List<MyEventTicketTypeStats> ticketTypes = Optional.ofNullable(event.getTicketTypes()).orElse(List.of())
+                .stream()
+                .map(type -> MyEventTicketTypeStats
+                        .builder()
+                        .id(type.getId())
+                        .name(type.getType())
+                        .remainingTickets(type.getQuantity() - type.getSoldCount())
+                        .soldTickets(type.getSoldCount())
+                        .build()
+                ).toList();
+
+        Long totalInvitedGuests = eventInvitationRepository.countAllByEvent(event);
+
         return MyEventDetailResponse
                 .builder()
                 .eventStats(eventStat)
                 .eventSummary(eventSummary)
+                .ticketTypes(ticketTypes)
+                .totalInvitedGuests(totalInvitedGuests)
                 .build();
     }
 }
