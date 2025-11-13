@@ -25,7 +25,7 @@ public class EventInvitationController {
     private final EventInvitationService eventInvitationService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public ResponseEntity<CustomApiResponse<Object>> sendInvitation(
             @Valid @RequestBody EventInvitationRequest request
             ){
@@ -34,7 +34,7 @@ public class EventInvitationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public ResponseEntity<CustomApiResponse<Page<EventInvitationListResponse>>> getInvitations(
             @RequestParam(name = "page",
                     defaultValue = "0") int page,
@@ -56,7 +56,7 @@ public class EventInvitationController {
 
 
     @PutMapping("/{id}/resend")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public ResponseEntity<CustomApiResponse<Object>> resendInvitation(@PathVariable Long id){
         eventInvitationService.resendInvitation(id);
         return ResponseEntity.ok(CustomApiResponse.success("Event invitation resent successfully"));
@@ -71,7 +71,7 @@ public class EventInvitationController {
     }
 
     @GetMapping("/saved-invites")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public ResponseEntity<CustomApiResponse<Page<EventInvitationListResponse>>> getSavedInvitations(
             @RequestParam(name = "page",
                     defaultValue = "0") int page,
@@ -94,14 +94,14 @@ public class EventInvitationController {
     }
 
     @DeleteMapping("/invite/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public ResponseEntity<CustomApiResponse<Object>> deleteInvitation(@PathVariable Long id){
         eventInvitationService.deleteEventInvitation(id);
         return ResponseEntity.ok(CustomApiResponse.success("Event invitation deleted successfully"));
     }
 
     @GetMapping("/invite/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ORGANISER')")
     public ResponseEntity<CustomApiResponse<EventInvitationDetailsResponse>> getInvitationDetails(@PathVariable Long id){
         EventInvitationDetailsResponse details = eventInvitationService.getEventInvitationDetail(id);
         return ResponseEntity.ok(CustomApiResponse.success(details));

@@ -140,4 +140,10 @@ public class UserManagementController {
     public ResponseEntity<List<TopOrganizerResponse>> getTopOrganizers(){
         return ResponseEntity.status(HttpStatus.OK).body(userService.getTopOrganizers());
     }
+
+    @GetMapping("/exists")
+    public ResponseEntity<Boolean> checkUserExists(@RequestParam String email) {
+        boolean exists = userService.userExistsByEmail(email);
+        return ResponseEntity.ok(exists);
+    }
 }

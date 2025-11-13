@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/me").authenticated()
                         .requestMatchers("/api/v1/user-invitations/invite-user").authenticated()
                         .requestMatchers("/api/v1/user-invitations/**").permitAll()
+                        .requestMatchers("/api/v1/users/exists").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()

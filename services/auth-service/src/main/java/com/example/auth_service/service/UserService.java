@@ -20,4 +20,5 @@ public interface UserService {
     UserResponse updateUser(Long userId, UserUpdateRequest request, MultipartFile profilePicture);
 //    Page<UserManagementResponse> filterUsers(UserRole role, Boolean status, int page);
     List<TopOrganizerResponse> getTopOrganizers();
+    boolean userExistsByEmail(String email);
 }

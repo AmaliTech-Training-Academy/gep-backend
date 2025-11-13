@@ -205,4 +205,9 @@ public class UserServiceImpl implements UserService {
                 )
                 .toList();
     }
+
+    @Override
+    public boolean userExistsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
 }

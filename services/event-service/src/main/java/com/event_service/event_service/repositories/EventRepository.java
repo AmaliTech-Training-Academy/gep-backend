@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
@@ -58,4 +59,6 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
         ORDER BY COUNT(er.id) DESC
     """)
     Page<EventManagementProjection> getEventManagement(Pageable pageable);
+
+    Optional<Event> findByIdAndUserId(Long eventId, Long userId);
 }

@@ -20,21 +20,39 @@ public interface EventInvitationRepository extends JpaRepository<EventInvitation
     Optional<EventInvitation> findByIdWithInvitees(@Param("invitationId") Long invitationId);
 
     @Query("SELECT e FROM EventInvitation e WHERE e.status = :status " +
+            "AND e.inviterId = :inviterId " +
             "AND (LOWER(e.invitationTitle) LIKE %:searchTerm% " +
             "OR LOWER(e.message) LIKE %:searchTerm% " +
             "OR LOWER(e.inviterName) LIKE %:searchTerm%)")
-    Page<EventInvitation> findAllByStatusAndSearchTerm(
+    Page<EventInvitation> findAllByStatusAndSearchTermAndInviterId(
             InvitationStatus status,
             String searchTerm,
+            Long inviterId,
+            Pageable pageable
+    );
+
+    @Query("SELECT e FROM EventInvitation e WHERE e.status = :status " +
+            "AND e.inviterId = :inviterId")
+    Page<EventInvitation> findAllByStatusAndInviterId(
+            InvitationStatus status,
+            Long inviterId,
             Pageable pageable
     );
 
     @Query("SELECT e FROM EventInvitation e WHERE " +
-            "LOWER(e.invitationTitle) LIKE %:searchTerm% " +
-            "OR LOWER(e.message) LIKE %:searchTerm% " +
-            "OR LOWER(e.inviterName) LIKE %:searchTerm%")
-    Page<EventInvitation> findAllBySearchTerm(
-            String searchTerm,
+            "e.inviterId = :inviterId AND (" +
+            "LOWER(e.invitationTitle) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+            "OR LOWER(e.message) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+            "OR LOWER(e.inviterName) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<EventInvitation> findAllBySearchTermAndInviterId(
+            @Param("searchTerm") String searchTerm,
+            @Param("inviterId") Long inviterId,
+            Pageable pageable
+    );
+
+    @Query("SELECT e FROM EventInvitation e WHERE e.inviterId = :inviterId")
+    Page<EventInvitation> findAllByInviterId(
+            @Param("inviterId") Long inviterId,
             Pageable pageable
     );
 }
