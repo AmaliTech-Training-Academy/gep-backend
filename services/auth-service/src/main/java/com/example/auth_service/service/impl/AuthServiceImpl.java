@@ -1,16 +1,15 @@
 package com.example.auth_service.service.impl;
 
+import com.example.auth_service.dto.base.UserRegistrationBase;
 import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.AuthResponse;
+import com.example.auth_service.model.*;
+import com.example.auth_service.repository.UserInviteeRepository;
 import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
-import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.exception.BadRequestException;
 import com.example.common_libraries.exception.DuplicateResourceException;
 import com.example.common_libraries.exception.InactiveAccountException;
-import com.example.auth_service.model.Profile;
-import com.example.auth_service.model.User;
-import com.example.auth_service.model.UserEventStats;
 import com.example.auth_service.repository.ProfileRepository;
 import com.example.auth_service.repository.UserEventStatsRepository;
 import com.example.auth_service.repository.UserRepository;
@@ -56,6 +55,9 @@ public class AuthServiceImpl implements AuthService {
     @Value("${sqs.user-registration-queue-url}")
     private String userRegistrationQueueUrl;
 
+    @Value("${sqs.user-invitation-queue}")
+    private String userInvitationQueue;
+
     @Value("${application.security.jwt.expiration}")
     private long accessTokenExpiration;
 
@@ -65,7 +67,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest) {
             validateRequest(registrationRequest);
-            User savedUser = createAndSaveUser(registrationRequest);
+            User savedUser = createAndSaveUser(registrationRequest, UserRole.ORGANISER);
 
             createUserRelatedEntities(savedUser);
             sendRegistrationMessageToQueue(savedUser);
@@ -98,11 +100,13 @@ public class AuthServiceImpl implements AuthService {
         Profile userProfile = Profile.builder().user(user).build();
         profileRepository.save(userProfile);
 
-        UserEventStats userEventStats = UserEventStats.builder().user(user).build();
-        userEventStatsRepository.save(userEventStats);
+        if(!user.getRole().equals(UserRole.ADMIN)){
+            UserEventStats userEventStats = UserEventStats.builder().user(user).build();
+            userEventStatsRepository.save(userEventStats);
+        }
     }
 
-    private void validateRequest(UserRegistrationRequest registrationRequest){
+    protected void validateRequest(UserRegistrationBase registrationRequest){
         if(!registrationRequest.password().equals(registrationRequest.confirmPassword())){
             throw new BadRequestException("Passwords do not match");
         }
@@ -112,12 +116,12 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private User createAndSaveUser(UserRegistrationRequest registrationRequest){
+    protected User createAndSaveUser(UserRegistrationBase registrationRequest, UserRole role){
         User user = User.builder()
                 .fullName(registrationRequest.fullName())
                 .email(registrationRequest.email().toLowerCase().trim())
                 .password(passwordEncoder.encode(registrationRequest.password()))
-                .role(UserRole.ORGANISER)
+                .role(role)
                 .isActive(true)
                 .build();
         return userRepository.save(user);
@@ -235,7 +239,6 @@ public class AuthServiceImpl implements AuthService {
         User user = getActiveUserByEmail(authUser.getUsername());
         return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
     }
-
 
     private void setAuthCookies(HttpServletResponse response, User user){
         String accessToken = jwtUtil.generateAccessToken(user);

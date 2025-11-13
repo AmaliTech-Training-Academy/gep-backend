@@ -7,6 +7,7 @@ import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.service.UserService;
 import com.example.common_libraries.dto.TopOrganizerResponse;
+import com.example.common_libraries.dto.UserCreationResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
@@ -139,5 +140,11 @@ public class UserManagementController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<TopOrganizerResponse>> getTopOrganizers(){
         return ResponseEntity.status(HttpStatus.OK).body(userService.getTopOrganizers());
+    }
+
+    @GetMapping("/exists")
+    public ResponseEntity<UserCreationResponse> checkUserExists(@RequestParam String email) {
+        UserCreationResponse user = userService.getUserByEmail(email);
+        return ResponseEntity.ok(user);
     }
 }

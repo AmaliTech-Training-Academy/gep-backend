@@ -39,7 +39,7 @@ public class S3ServiceImpl implements S3Service {
                             .bucket(bucketName)
                             .key(key)
                             .contentType(file.getContentType())
-                            .acl(ObjectCannedACL.PUBLIC_READ)
+//                            .acl(ObjectCannedACL.PUBLIC_READ)
                             .build(),
                     RequestBody.fromBytes(file.getBytes())
             );

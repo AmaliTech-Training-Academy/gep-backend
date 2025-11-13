@@ -29,4 +29,5 @@ public interface AuthService {
     void logout(HttpServletResponse response);
 
     AuthResponse loggedInUser();
+
 }

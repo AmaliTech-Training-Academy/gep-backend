@@ -3,6 +3,7 @@ package com.moadams.notificationservice.service.impl;
 import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
 import com.example.common_libraries.dto.TicketResponse;
+import com.example.common_libraries.dto.queue_events.UserInvitedEvent;
 import com.moadams.notificationservice.service.NotificationService;
 import com.moadams.notificationservice.utils.ICSGenerator;
 import jakarta.mail.MessagingException;
@@ -37,6 +38,9 @@ public class EmailService implements NotificationService {
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
     private final ICSGenerator icsGenerator;
+
+    @Value("${app.frontend.base-url}")
+    private String frontendBaseUrl;
 
     @Override
     public void sendWelcomeEmail(String recipientEmail, String recipientName) {
@@ -81,6 +85,24 @@ public class EmailService implements NotificationService {
 
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send event invitation email");
+        }
+    }
+
+    @Override
+    public void sendUserInvitationEmail(UserInvitedEvent event) {
+        try{
+            log.info("Sending user invitation email to {}", event.email());
+            String invitationUrl = frontendBaseUrl + "/app/auth/invitation/accept?token=" + event.invitationToken();
+            Context context = new Context();
+            context.setVariable("fullName", event.fullName());
+            context.setVariable("message", event.message());
+            context.setVariable("role", event.role());
+            context.setVariable("invitationUrl", invitationUrl);
+
+            String htmlContent = templateEngine.process("user-invitation", context);
+            sendEmail(htmlContent, event.email(), "You have been invited");
+        }catch (MessagingException | UnsupportedEncodingException e){
+            log.error("Failed to send invitation email");
         }
     }
 

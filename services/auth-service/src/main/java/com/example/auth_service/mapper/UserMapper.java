@@ -7,6 +7,7 @@ import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.model.Profile;
 import com.example.auth_service.model.User;
 import com.example.auth_service.model.UserEventStats;
+import com.example.common_libraries.dto.UserCreationResponse;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -64,5 +65,9 @@ public class UserMapper {
                 .profileImageUrl(user.getProfile().getProfileImageUrl())
                 .status(user.isActive())
                 .build();
+    }
+
+    public static UserCreationResponse toUserCreationResponse(User user){
+        return new UserCreationResponse(user.getId(), user.getEmail());
     }
 }

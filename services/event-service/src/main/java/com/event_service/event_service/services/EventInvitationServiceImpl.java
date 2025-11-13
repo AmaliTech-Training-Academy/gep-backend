@@ -63,7 +63,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     public void sendEventInvitation(EventInvitationRequest request) {
 
         AppUser currentUser = securityUtils.getCurrentUser();
-        Event event = findEventOrThrow(request.event());
+        Event event = findEventOrThrow(request.event(), currentUser.id());
 
         EventInvitation invitation = createInvitation(request, event, currentUser);
         EventInvitation savedInvitation = eventInvitationRepository.save(invitation);
@@ -146,7 +146,8 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
     @Override
     public EventInvitationDetailsResponse getEventInvitationDetail(Long invitationId) {
-        EventInvitation invitation = eventInvitationRepository.findByIdWithInvitees(invitationId)
+        AppUser currentUser = securityUtils.getCurrentUser();
+        EventInvitation invitation = eventInvitationRepository.findByIdAndInviterIdWithInvitees(invitationId, currentUser.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
 
         return eventInvitationMapper.mapToDetailsResponse(invitation);
@@ -159,6 +160,27 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         validateInvitation(eventInvitation);
         createInviteeAccount(acceptanceRequest, eventInvitation);
         eventInvitation.setStatus(InviteStatus.ACCEPTED);
+        eventInviteeRepository.save(eventInvitation);
+    }
+
+    @Override
+    public void acceptInvitationForExistingUser(String token) {
+        EventInvitee eventInvitation = getInvitationByToken(token);
+        validateInvitation(eventInvitation);
+        UserCreationResponse createdUser = userServiceClient.checkUserExists(eventInvitation.getInviteeEmail());
+        if(createdUser == null){
+            throw new BadRequestException("User does not exist");
+        }
+        EventOrganizer eventOrganizer = EventOrganizer.builder()
+                .event(eventInvitation.getInvitation().getEvent())
+                .userId(createdUser.id())
+                .role(eventInvitation.getRole())
+                .invitedBy(eventInvitation.getInvitation().getInviterId())
+                .build();
+
+        eventOrganizerRepository.save(eventOrganizer);
+        eventInvitation.setStatus(InviteStatus.ACCEPTED);
+        eventInviteeRepository.save(eventInvitation);
     }
 
     private void validateInvitation(EventInvitee eventInvitation) {
@@ -223,34 +245,39 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
     @Override
     public Page<EventInvitationListResponse> getInvitationList(Pageable pageable, String search) {
+        AppUser currentUser = securityUtils.getCurrentUser();
         if(search != null && !search.trim().isEmpty()) {
-            return eventInvitationRepository.findAllBySearchTerm(
+            return eventInvitationRepository.findAllBySearchTermAndInviterId(
                     search.trim().toLowerCase(),
+                    currentUser.id(),
                     pageable
             ).map(eventInvitationMapper::toEventInvitationList);
         }
-        return eventInvitationRepository.findAll(pageable).map(eventInvitationMapper::toEventInvitationList);
+        return eventInvitationRepository.findAllByInviterId(currentUser.id(),pageable).map(eventInvitationMapper::toEventInvitationList);
     }
 
     @Override
     public Page<EventInvitationListResponse> getSavedInvitations(Pageable pageable, String search) {
+        AppUser currentUser = securityUtils.getCurrentUser();
         if(search != null && !search.trim().isEmpty()) {
-            return eventInvitationRepository.findAllByStatusAndSearchTerm(
+            return eventInvitationRepository.findAllByStatusAndSearchTermAndInviterId(
                     InvitationStatus.SAVE,
                     search.trim().toLowerCase(),
+                    currentUser.id(),
                     pageable
             ).map(eventInvitationMapper::toEventInvitationList);
         }
-        return eventInvitationRepository.findAllByStatus(InvitationStatus.SAVE, pageable)
+        return eventInvitationRepository.findAllByStatusAndInviterId(InvitationStatus.SAVE, currentUser.id(), pageable)
                 .map(eventInvitationMapper::toEventInvitationList);
     }
 
-    private Event findEventOrThrow(Long eventId) {
-        return eventRepository.findById(eventId)
-                .orElseThrow(() -> {
+    private Event findEventOrThrow(Long eventId, Long userId) {
+        return eventRepository.findByIdAndUserId(eventId, userId).orElseThrow(
+                () -> {
                     log.error("Event not found with ID: {}", eventId);
                     return new ResourceNotFoundException("Event not found");
-                });
+                }
+        );
     }
 
     private void validateInvitationDoesNotExist(Long eventId, String inviteeEmail) {
@@ -296,7 +323,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
             }else{
                 token = invitation.getInvitation().getEvent().getId().toString();
             }
-            String inviteLink = buildInvitationLink(token, invitation.getRole());
+            String inviteLink = buildInvitationLink(token, invitation.getRole(), invitation.getInviteeEmail());
             EventInvitationEvent event = createInvitationEvent(invitation, inviteLink);
             String messageBody = serializeEvent(event);
 
@@ -315,13 +342,18 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         }
     }
 
-    private String buildInvitationLink(String token, InviteeRole role) {
+    private String buildInvitationLink(String token, InviteeRole role, String email) {
         if(role == InviteeRole.ORGANISER || role == InviteeRole.CO_ORGANIZER) {
+            UserCreationResponse user = userServiceClient.checkUserExists(email);
+            if(user != null){
+                return String.format("%s/invitations/existing-user/accept?token=%s", frontendBaseUrl, token);
+            }
             return String.format("%s/invitations/accept?token=%s", frontendBaseUrl, token);
         } else {
             return String.format("%s/events/%s/details", frontendBaseUrl, token);
         }
     }
+
 
     private EventInvitationEvent createInvitationEvent(EventInvitee invitation, String inviteLink) {
         return new EventInvitationEvent(

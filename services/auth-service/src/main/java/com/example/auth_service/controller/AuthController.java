@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.example.common_libraries.dto.CustomApiResponse;
 
@@ -76,6 +77,8 @@ public class AuthController {
         AuthResponse authResponse = authService.loggedInUser();
         return ResponseEntity.ok(CustomApiResponse.success("Authenticated user fetched successfully", authResponse));
     }
+
+
 
     @PostMapping("/reset-password")
     public ResponseEntity<CustomApiResponse<?>> resetPassword(@Valid @RequestBody ResetPasswordRequest request){

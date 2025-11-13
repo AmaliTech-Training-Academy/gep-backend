@@ -90,4 +90,36 @@ public class UserServiceClient {
         }
 
     }
+
+    public UserCreationResponse checkUserExists(String email) {
+        try {
+            log.info("Checking if user exists with email: {}", email);
+
+            UserCreationResponse user = webClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/v1/users/exists")
+                            .queryParam("email", email)
+                            .build())
+                    .retrieve()
+                    .bodyToMono(UserCreationResponse.class)
+                    .block();
+
+            log.info("User exists check result for {}: {}", email, user != null);
+            return user;
+
+        } catch (WebClientResponseException.NotFound ex) {
+            log.info("User not found with email: {}", email);
+            return null;
+
+        } catch (WebClientResponseException ex) {
+            log.error("Service communication error (status {}):", ex.getStatusCode());
+            throw new ServiceCommunicationException(
+                    "Service communication error (status " + ex.getStatusCode() + "): " + ex.getResponseBodyAsString()
+            );
+
+        } catch (Exception ex) {
+            log.error("Unexpected error calling User Service", ex);
+            throw new ServiceCommunicationException("Unexpected error calling User Service: " + ex.getMessage());
+        }
+    }
 }

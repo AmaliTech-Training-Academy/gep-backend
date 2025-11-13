@@ -16,25 +16,46 @@ public interface EventInvitationRepository extends JpaRepository<EventInvitation
     @Query("SELECT ei FROM EventInvitation ei " +
             "LEFT JOIN FETCH ei.invitees " +
             "LEFT JOIN FETCH ei.event " +
-            "WHERE ei.id = :invitationId")
-    Optional<EventInvitation> findByIdWithInvitees(@Param("invitationId") Long invitationId);
+            "WHERE ei.id = :invitationId AND ei.inviterId = :inviterId")
+    Optional<EventInvitation> findByIdAndInviterIdWithInvitees(
+            @Param("invitationId") Long invitationId,
+            @Param("inviterId") Long inviterId
+    );
 
     @Query("SELECT e FROM EventInvitation e WHERE e.status = :status " +
+            "AND e.inviterId = :inviterId " +
             "AND (LOWER(e.invitationTitle) LIKE %:searchTerm% " +
             "OR LOWER(e.message) LIKE %:searchTerm% " +
             "OR LOWER(e.inviterName) LIKE %:searchTerm%)")
-    Page<EventInvitation> findAllByStatusAndSearchTerm(
+    Page<EventInvitation> findAllByStatusAndSearchTermAndInviterId(
             InvitationStatus status,
             String searchTerm,
+            Long inviterId,
+            Pageable pageable
+    );
+
+    @Query("SELECT e FROM EventInvitation e WHERE e.status = :status " +
+            "AND e.inviterId = :inviterId")
+    Page<EventInvitation> findAllByStatusAndInviterId(
+            InvitationStatus status,
+            Long inviterId,
             Pageable pageable
     );
 
     @Query("SELECT e FROM EventInvitation e WHERE " +
-            "LOWER(e.invitationTitle) LIKE %:searchTerm% " +
-            "OR LOWER(e.message) LIKE %:searchTerm% " +
-            "OR LOWER(e.inviterName) LIKE %:searchTerm%")
-    Page<EventInvitation> findAllBySearchTerm(
-            String searchTerm,
+            "e.inviterId = :inviterId AND (" +
+            "LOWER(e.invitationTitle) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+            "OR LOWER(e.message) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+            "OR LOWER(e.inviterName) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<EventInvitation> findAllBySearchTermAndInviterId(
+            @Param("searchTerm") String searchTerm,
+            @Param("inviterId") Long inviterId,
+            Pageable pageable
+    );
+
+    @Query("SELECT e FROM EventInvitation e WHERE e.inviterId = :inviterId")
+    Page<EventInvitation> findAllByInviterId(
+            @Param("inviterId") Long inviterId,
             Pageable pageable
     );
 }
