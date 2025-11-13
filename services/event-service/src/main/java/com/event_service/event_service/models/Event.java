@@ -136,21 +136,17 @@ public class Event {
     @PrePersist
     @PreUpdate
     public void ensureEndTime() {
-        if (startTime == null) {
-            return;
+        if (startTime == null && eventTime != null) {
+            startTime = eventTime;
         }
 
         if (endTime == null) {
-            // Case 1: new single-day event
             endTime = startTime.plus(1, ChronoUnit.DAYS);
         } else {
-            // Case 2: existing single-day event that may have updated startTime
             long duration = Duration.between(startTime, endTime).toDays();
             if (duration == 1) {
-                // Treat as single-day event → recalculate endTime
                 endTime = startTime.plus(1, ChronoUnit.DAYS);
             }
-            // Case 3: multi-day event → do nothing
         }
     }
 }
