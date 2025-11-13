@@ -7,8 +7,11 @@ import com.event_service.event_service.models.EventOptions;
 import com.event_service.event_service.models.EventType;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.utils.TimeZoneUtils;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.service.S3Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -53,6 +56,7 @@ public class VirtualAndMultiDayEventStrategy implements  EventStrategy {
                 eventRequest.event_end_time(),
                 endTimeZoneId
         );
+        AppUser authenticatedUser = getCurrentUser();
         Instant eventEndTimeInstant = endTimeZonedDateTime.toInstant();
         Event event = Event.builder()
                 .eventOptions(eventOptions)
@@ -65,9 +69,16 @@ public class VirtualAndMultiDayEventStrategy implements  EventStrategy {
                 .endTime(eventEndTimeInstant)
                 .endTimeZoneId(eventRequest.event_end_time_zone_id())
                 .flyerUrl(uploadedFlyer)
+                .createdBy(authenticatedUser.fullName())
+                .userId(authenticatedUser.id())
                 .zoomMeetingLink(eventRequest.zoomUrl())
                 .build();
         event.setEventOptions(eventOptions);
         return eventRepository.save(event);
+    }
+
+    public AppUser getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (AppUser) authentication.getPrincipal();
     }
 }
