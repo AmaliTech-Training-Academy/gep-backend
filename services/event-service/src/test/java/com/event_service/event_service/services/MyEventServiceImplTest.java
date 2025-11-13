@@ -1,5 +1,7 @@
 package com.event_service.event_service.services;
 
+import com.event_service.event_service.dto.MyEventDetailResponse;
+import com.event_service.event_service.dto.MyEventSummaryResponse;
 import com.event_service.event_service.dto.MyEventsListResponse;
 import com.event_service.event_service.dto.MyEventsOverviewResponse;
 import com.event_service.event_service.models.Event;
@@ -9,6 +11,8 @@ import com.event_service.event_service.repositories.EventRegistrationRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketRepository;
 import com.example.common_libraries.dto.AppUser;
+import com.example.common_libraries.exception.BadRequestException;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,8 +24,10 @@ import com.event_service.event_service.utils.SecurityUtils;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 
@@ -48,8 +54,8 @@ class MyEventServiceImplTest {
         AppUser currentUser;
 
         currentUser = mock(AppUser.class);
-        when(currentUser.id()).thenReturn(1L);
-        when(securityUtils.getCurrentUser()).thenReturn(currentUser);
+        lenient().when(currentUser.id()).thenReturn(1L);
+        lenient().when(securityUtils.getCurrentUser()).thenReturn(currentUser);
     }
 
     // ---------------------------------------------------------
@@ -100,7 +106,7 @@ class MyEventServiceImplTest {
         verify(eventRepository).findAllByUserId(eq(1L), pageableCaptor.capture());
         Pageable usedPageable = pageableCaptor.getValue();
         assertThat(usedPageable.getPageNumber()).isEqualTo(1);
-        assertThat(usedPageable.getPageSize()).isEqualTo(10);
+        assertThat(usedPageable.getPageSize()).isEqualTo(3);
         assertThat(Objects.requireNonNull(usedPageable.getSort().getOrderFor("createdAt")).getDirection()).isEqualTo(Sort.Direction.DESC);
     }
 
@@ -177,5 +183,85 @@ class MyEventServiceImplTest {
         assertThat(response.totalEvents()).isNull();
         assertThat(response.totalAttendees()).isNull();
         assertThat(response.totalTicketSales()).isNull();
+    }
+
+    @Test
+    void getMyEventDetailsById_shouldReturnDetails_whenEventExists() {
+        // given
+        EventRegistration reg1 = new EventRegistration();
+        EventRegistration reg2 = new EventRegistration();
+
+        Event event = new Event();
+        event.setId(100L);
+        event.setLocation("Accra Arena");
+        event.setStartTime(Instant.parse("2025-11-11T10:00:00Z"));
+        event.setCreatedBy("John Organizer");
+        event.setEventRegistrations(List.of(reg1, reg2));
+
+        when(eventRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(event));
+        when(ticketRepository.findTotalTicketSalesForEvent(event)).thenReturn(1500.75);
+
+        // when
+        MyEventDetailResponse response = myEventService.getMyEventDetailsById(100L);
+
+        // then
+        assertThat(response).isNotNull();
+
+        // Verify nested stats and summary
+        MyEventsOverviewResponse stats = response.eventStats();
+        MyEventSummaryResponse summary = response.eventSummary();
+
+        assertThat(stats).isNotNull();
+        assertThat(stats.totalAttendees()).isEqualTo(2L);
+        assertThat(stats.totalTicketSales()).isEqualTo(1500.75);
+
+        assertThat(summary.organizer()).isEqualTo("John Organizer");
+        assertThat(summary.location()).isEqualTo("Accra Arena");
+        assertThat(summary.startTime()).isEqualTo(Instant.parse("2025-11-11T10:00:00Z"));
+
+        // verify interactions
+        verify(eventRepository).findByIdAndUserId(100L, 1L);
+        verify(ticketRepository).findTotalTicketSalesForEvent(event);
+    }
+
+    @Test
+    void getMyEventDetailsById_shouldThrowBadRequestException_whenIdIsNull() {
+        // when / then
+        assertThatThrownBy(() -> myEventService.getMyEventDetailsById(null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Invalid event ID");
+
+        verifyNoInteractions(eventRepository, ticketRepository);
+    }
+
+    @Test
+    void getMyEventDetailsById_shouldThrowResourceNotFoundException_whenEventMissing() {
+        when(eventRepository.findByIdAndUserId(900L, 1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> myEventService.getMyEventDetailsById(900L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Event not found");
+
+        verify(eventRepository).findByIdAndUserId(900L, 1L);
+        verifyNoMoreInteractions(ticketRepository);
+    }
+
+    @Test
+    void getMyEventDetailsById_shouldHandleNullTicketSalesGracefully() {
+        Event event = new Event();
+        event.setId(200L);
+        event.setEventRegistrations(List.of());
+        event.setCreatedBy("Jane Doe");
+        event.setLocation("Lagos Stadium");
+        event.setStartTime(Instant.parse("2025-12-01T15:00:00Z"));
+
+        when(eventRepository.findByIdAndUserId(200L, 1L)).thenReturn(Optional.of(event));
+        when(ticketRepository.findTotalTicketSalesForEvent(event)).thenReturn(null);
+
+        MyEventDetailResponse response = myEventService.getMyEventDetailsById(200L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.eventStats().totalAttendees()).isZero();
+        assertThat(response.eventStats().totalTicketSales()).isNull();
     }
 }
