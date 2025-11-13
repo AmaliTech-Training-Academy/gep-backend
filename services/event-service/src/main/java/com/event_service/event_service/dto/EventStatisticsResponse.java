@@ -4,10 +4,10 @@ import lombok.Builder;
 
 @Builder
 public record EventStatisticsResponse(
-        long totalEvents,
-        long activeEvents,
-        long canceledEvents,
-        long completedEvents,
-        long draftEvents
+        Long totalEvents,
+        Long activeEvents,
+        Long canceledEvents,
+        Long completedEvents,
+        Long draftEvents
 ) {
 }

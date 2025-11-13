@@ -1,5 +1,6 @@
 package com.event_service.event_service.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -7,6 +8,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "ticket_type")
@@ -40,6 +42,10 @@ public class TicketType {
     private Boolean isPaid;
 
     private Integer quantityPerAttendee;
+
+    @OneToMany(mappedBy = "ticketType", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<Ticket> tickets;
 
     @CreatedDate
     @Column(name = "created_at", nullable =false, updatable = false)

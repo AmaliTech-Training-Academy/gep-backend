@@ -3,7 +3,6 @@ package com.event_service.event_service.repositories;
 import com.event_service.event_service.dto.projection.EventManagementProjection;
 import com.event_service.event_service.dto.projection.EventStatProjection;
 import com.event_service.event_service.models.Event;
-import com.event_service.event_service.models.enums.EventStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -38,11 +37,10 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     """)
     List<Event> findUpcomingEvents(@Param("instant") Instant instant, Pageable pageable);
 
-    //TODO replace hardcoded Organizer name with actual Organizer name
     @Query("""
         SELECT e.id AS id,
                e.title AS title,
-               'ORGANIZER' AS organizer,
+               e.createdBy AS organizer,
                e.startTime AS startTime,
                e.endTime AS endTime,
                COUNT(er.id) AS attendeeCount,
@@ -58,4 +56,8 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
         ORDER BY COUNT(er.id) DESC
     """)
     Page<EventManagementProjection> getEventManagement(Pageable pageable);
+
+    Page<Event> findAllByUserId(Long id, Pageable pageable);
+
+    Long countByUserId(Long id);
 }

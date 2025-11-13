@@ -14,4 +14,6 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
             "WHERE er.event = :event AND er.email = :email")
     Integer sumTicketsByEventIdAndEmail(@Param("event") Event event,
                                         @Param("email") String email);
+
+    Long countByEventUserId(Long id);
 }
