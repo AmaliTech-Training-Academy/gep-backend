@@ -5,7 +5,6 @@ import com.event_service.event_service.dto.EventResponse;
 import com.event_service.event_service.dto.ExploreEventResponse;
 import com.event_service.event_service.dto.PagedExploreEventResponse;
 import com.example.common_libraries.dto.AppUser;
-import com.example.common_libraries.dto.queue_events.UserRegisteredEvent;
 import com.example.common_libraries.exception.ValidationException;
 import com.event_service.event_service.mappers.EventMapper;
 import com.event_service.event_service.models.*;
@@ -67,6 +66,7 @@ public class EventServiceImpl implements EventService {
             throw new ValidationException(List.of("You can upload a maximum of 5 images per event."));
         }
         AppUser authenticatedUser = getCurrentUser();
+        log.info(authenticatedUser.id().toString());
         EventType eventType = eventTypeService.findById(eventRequest.event_type_id());
         EventMeetingType eventMeetingType = eventMeetingTypeService
                 .findEventMeetingTypeById(eventRequest.event_meeting_type_id());
@@ -78,8 +78,6 @@ public class EventServiceImpl implements EventService {
             eventValidator.validateInPersonSingleDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(inPersonAndDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
-            event.setCreatedBy(authenticatedUser.fullName());
-            event.setUserId(authenticatedUser.id());
         }
 
         if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
@@ -87,8 +85,6 @@ public class EventServiceImpl implements EventService {
             eventValidator.validateInPersonMultiDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(inPersonAndMultiDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
-            event.setCreatedBy(authenticatedUser.fullName());
-            event.setUserId(authenticatedUser.id());
         }
 
         if(eventType.getName().name().equals(EventTypeEnum.DAY_EVENT.name())
@@ -96,8 +92,6 @@ public class EventServiceImpl implements EventService {
             eventValidator.validateVirtualSingleDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(virtualAndDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
-            event.setCreatedBy(authenticatedUser.fullName());
-            event.setUserId(authenticatedUser.id());
         }
 
         if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
@@ -105,8 +99,6 @@ public class EventServiceImpl implements EventService {
             eventValidator.validateVirtualMultiDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(virtualAndMultiDayEventStrategy);
             event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
-            event.setCreatedBy(authenticatedUser.fullName());
-            event.setUserId(authenticatedUser.id());
         }
 
         publishEventToEventStatQueue(authenticatedUser.id());
