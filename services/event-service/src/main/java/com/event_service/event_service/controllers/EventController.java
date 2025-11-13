@@ -106,6 +106,14 @@ public class EventController {
         return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEventsOverview()));
     }
 
+    @GetMapping("/my-events/details/{eventId}")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    public ResponseEntity<CustomApiResponse<MyEventDetailResponse>> getMyEventDetails(
+            @PathVariable Long eventId
+    ){
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEventDetailsById(eventId)));
+    }
+
     @GetMapping("/my-events")
     @PreAuthorize("hasRole('ORGANISER')")
     public ResponseEntity<CustomApiResponse<Page<MyEventsListResponse>>> getMyEvents(

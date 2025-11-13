@@ -1,5 +1,7 @@
 package com.event_service.event_service.services;
 
+import com.event_service.event_service.dto.MyEventDetailResponse;
+import com.event_service.event_service.dto.MyEventSummaryResponse;
 import com.event_service.event_service.dto.MyEventsListResponse;
 import com.event_service.event_service.dto.MyEventsOverviewResponse;
 import com.event_service.event_service.models.Event;
@@ -9,6 +11,8 @@ import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketRepository;
 import com.event_service.event_service.utils.SecurityUtils;
 import com.example.common_libraries.dto.AppUser;
+import com.example.common_libraries.exception.BadRequestException;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -59,6 +63,39 @@ public class MyEventServiceImpl implements MyEventService {
                 .totalEvents(totalEvents)
                 .totalAttendees(totalAttendees)
                 .totalTicketSales(totalTicketSales)
+                .build();
+    }
+
+    @Override
+    public MyEventDetailResponse getMyEventDetailsById(Long eventId) {
+        if(eventId == null){
+            throw new BadRequestException("Invalid event ID");
+        }
+        AppUser currentUser = securityUtils.getCurrentUser();
+
+        Event event = eventRepository.findByIdAndUserId(eventId, currentUser.id())
+                .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+
+        Long totalAttendees = (long) event.getEventRegistrations().size();
+        Double totalTicketSales = ticketRepository.findTotalTicketSalesForEvent(event);
+
+        MyEventsOverviewResponse eventStat = MyEventsOverviewResponse
+                .builder()
+                .totalAttendees(totalAttendees)
+                .totalTicketSales(totalTicketSales)
+                .build();
+
+        MyEventSummaryResponse eventSummary = MyEventSummaryResponse
+                .builder()
+                .organizer(event.getCreatedBy())
+                .location(event.getLocation())
+                .startTime(event.getStartTime())
+                .build();
+
+        return MyEventDetailResponse
+                .builder()
+                .eventStats(eventStat)
+                .eventSummary(eventSummary)
                 .build();
     }
 }
