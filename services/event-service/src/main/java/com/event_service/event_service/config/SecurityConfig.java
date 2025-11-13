@@ -61,7 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/events/{eventId}").permitAll()
                         .requestMatchers("/api/v1/tickets/verify/**", "/api/v1/tickets/verifyVirtualTicket/**").permitAll()
                         .requestMatchers(
-                                "/api/v1/event-invitations/accept-invitation"
+                                "/api/v1/event-invitations/accept-invitation/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

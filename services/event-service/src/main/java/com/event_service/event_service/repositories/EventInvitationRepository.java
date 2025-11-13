@@ -16,8 +16,11 @@ public interface EventInvitationRepository extends JpaRepository<EventInvitation
     @Query("SELECT ei FROM EventInvitation ei " +
             "LEFT JOIN FETCH ei.invitees " +
             "LEFT JOIN FETCH ei.event " +
-            "WHERE ei.id = :invitationId")
-    Optional<EventInvitation> findByIdWithInvitees(@Param("invitationId") Long invitationId);
+            "WHERE ei.id = :invitationId AND ei.inviterId = :inviterId")
+    Optional<EventInvitation> findByIdAndInviterIdWithInvitees(
+            @Param("invitationId") Long invitationId,
+            @Param("inviterId") Long inviterId
+    );
 
     @Query("SELECT e FROM EventInvitation e WHERE e.status = :status " +
             "AND e.inviterId = :inviterId " +

@@ -91,25 +91,25 @@ public class UserServiceClient {
 
     }
 
-    public boolean checkUserExists(String email) {
+    public UserCreationResponse checkUserExists(String email) {
         try {
             log.info("Checking if user exists with email: {}", email);
 
-            Boolean exists = webClient.get()
+            UserCreationResponse user = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/api/v1/users/exists")
                             .queryParam("email", email)
                             .build())
                     .retrieve()
-                    .bodyToMono(Boolean.class)
+                    .bodyToMono(UserCreationResponse.class)
                     .block();
 
-            log.info("User exists check result for {}: {}", email, exists);
-            return exists != null && exists;
+            log.info("User exists check result for {}: {}", email, user != null);
+            return user;
 
         } catch (WebClientResponseException.NotFound ex) {
             log.info("User not found with email: {}", email);
-            return false;
+            return null;
 
         } catch (WebClientResponseException ex) {
             log.error("Service communication error (status {}):", ex.getStatusCode());

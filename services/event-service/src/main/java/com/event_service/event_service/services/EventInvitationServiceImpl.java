@@ -146,7 +146,8 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
     @Override
     public EventInvitationDetailsResponse getEventInvitationDetail(Long invitationId) {
-        EventInvitation invitation = eventInvitationRepository.findByIdWithInvitees(invitationId)
+        AppUser currentUser = securityUtils.getCurrentUser();
+        EventInvitation invitation = eventInvitationRepository.findByIdAndInviterIdWithInvitees(invitationId, currentUser.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
 
         return eventInvitationMapper.mapToDetailsResponse(invitation);
@@ -159,6 +160,24 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         validateInvitation(eventInvitation);
         createInviteeAccount(acceptanceRequest, eventInvitation);
         eventInvitation.setStatus(InviteStatus.ACCEPTED);
+    }
+
+    @Override
+    public void acceptInvitationForExistingUser(String token) {
+        EventInvitee eventInvitation = getInvitationByToken(token);
+        validateInvitation(eventInvitation);
+        UserCreationResponse createdUser = userServiceClient.checkUserExists(eventInvitation.getInviteeEmail());
+        if(createdUser == null){
+            throw new BadRequestException("User does not exist");
+        }
+        EventOrganizer eventOrganizer = EventOrganizer.builder()
+                .event(eventInvitation.getInvitation().getEvent())
+                .userId(createdUser.id())
+                .role(eventInvitation.getRole())
+                .invitedBy(eventInvitation.getInvitation().getInviterId())
+                .build();
+
+        eventOrganizerRepository.save(eventOrganizer);
     }
 
     private void validateInvitation(EventInvitee eventInvitation) {
@@ -322,7 +341,8 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
     private String buildInvitationLink(String token, InviteeRole role, String email) {
         if(role == InviteeRole.ORGANISER || role == InviteeRole.CO_ORGANIZER) {
-            if(userServiceClient.checkUserExists(email)){
+            UserCreationResponse user = userServiceClient.checkUserExists(email);
+            if(user != null){
                 return String.format("%s/invitations/existing-user/accept?token=%s", frontendBaseUrl, token);
             }
             return String.format("%s/invitations/accept?token=%s", frontendBaseUrl, token);

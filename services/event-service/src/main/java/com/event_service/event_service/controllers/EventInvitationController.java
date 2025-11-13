@@ -62,11 +62,18 @@ public class EventInvitationController {
         return ResponseEntity.ok(CustomApiResponse.success("Event invitation resent successfully"));
     }
 
-    @PostMapping("/accept-invitation")
+    @PostMapping("/accept-invitation/")
     public ResponseEntity<CustomApiResponse<Object>> acceptInvitation(
             @Valid @RequestBody EventInvitationAcceptanceRequest request
     ){
         eventInvitationService.acceptInvitation(request);
+        return ResponseEntity.ok(CustomApiResponse.success("Event invitation accepted successfully"));
+    }
+
+    @PostMapping("/accept-invitation/existing-user/{token}/")
+    public ResponseEntity<CustomApiResponse<Object>> acceptInvitationForExistingUser(
+            @PathVariable String token){
+        eventInvitationService.acceptInvitationForExistingUser(token);
         return ResponseEntity.ok(CustomApiResponse.success("Event invitation accepted successfully"));
     }
 

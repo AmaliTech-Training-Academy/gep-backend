@@ -7,6 +7,7 @@ import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.service.UserService;
 import com.example.common_libraries.dto.TopOrganizerResponse;
+import com.example.common_libraries.dto.UserCreationResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
@@ -142,8 +143,8 @@ public class UserManagementController {
     }
 
     @GetMapping("/exists")
-    public ResponseEntity<Boolean> checkUserExists(@RequestParam String email) {
-        boolean exists = userService.userExistsByEmail(email);
-        return ResponseEntity.ok(exists);
+    public ResponseEntity<UserCreationResponse> checkUserExists(@RequestParam String email) {
+        UserCreationResponse user = userService.getUserByEmail(email);
+        return ResponseEntity.ok(user);
     }
 }
