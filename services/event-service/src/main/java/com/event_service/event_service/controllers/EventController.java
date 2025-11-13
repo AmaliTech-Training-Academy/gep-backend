@@ -2,10 +2,7 @@ package com.event_service.event_service.controllers;
 
 import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.enums.EventStatus;
-import com.event_service.event_service.services.EventDetailService;
-import com.event_service.event_service.services.EventOverviewService;
-import com.event_service.event_service.services.EventRegistrationService;
-import com.event_service.event_service.services.EventService;
+import com.event_service.event_service.services.*;
 import com.example.common_libraries.dto.CustomApiResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +29,7 @@ public class EventController {
 
     private final EventDetailService eventDetailService;
     private final EventService eventService;
+    private final MyEventService myEventService;
     private final EventRegistrationService eventRegistrationService;
     private final EventOverviewService eventOverviewService;
     private final ObjectMapper objectMapper;
@@ -47,7 +45,7 @@ public class EventController {
             EventRequest eventRequest = objectMapper.readValue(eventRequestJSON, EventRequest.class);
             return ResponseEntity.ok(eventService.createEvent(eventRequest,image,eventImages));
         }catch (Exception e){
-            log.error("Error parsing event request JSON {0}", e);
+            log.error("Error parsing event request JSON {}", e.getMessage());
             throw e;
         }
     }
@@ -100,5 +98,20 @@ public class EventController {
             @RequestParam(name = "keyword", required = false) String keyword
     ){
         return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(eventOverviewService.getManagementEvents(keyword,page,status)));
+    }
+
+    @GetMapping("/my-events/overview")
+    @PreAuthorize("hasRole('ORGANISER')")
+    public ResponseEntity<CustomApiResponse<MyEventsOverviewResponse>> getMyEventsOverview() {
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEventsOverview()));
+    }
+
+    @GetMapping("/my-events")
+    @PreAuthorize("hasRole('ORGANISER')")
+    public ResponseEntity<CustomApiResponse<Page<MyEventsListResponse>>> getMyEvents(
+            @RequestParam(name = "page",
+                    defaultValue = "0") int page
+    ) {
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEvents(page)));
     }
 }

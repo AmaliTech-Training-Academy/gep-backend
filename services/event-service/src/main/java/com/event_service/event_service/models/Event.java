@@ -11,7 +11,9 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.sql.Types;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -66,14 +68,18 @@ public class Event {
     private String eventTimeZoneId;
 
     @Column(nullable = false)
-    private String createdBy;
+    private String createdBy = "Roger Satsi";
 
     @Column(nullable = false)
-    private Long userId;
+    private Long userId = 1L;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<EventRegistration> eventRegistrations;
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<TicketType> ticketTypes;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -104,19 +110,47 @@ public class Event {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    public EventStatus getStatus(){
+    public EventStatus getStatus() {
         Instant now = Instant.now();
         Instant start = getStartTime();
         Instant end = getEndTime();
 
-        if (start.isBefore(now) && end.isAfter(now)) {
-            return EventStatus.ACTIVE;
-        } else if (end.isBefore(now)) {
-            return EventStatus.COMPLETED;
-        } else if(start.isAfter(now)) {
-            return EventStatus.DRAFT;
-        } else {
+        if (start == null) {
             return EventStatus.PENDING;
+        }
+
+        if (end == null) {
+            end = start.plus(1, ChronoUnit.DAYS);
+        }
+
+        if (now.isBefore(start)) {
+            return EventStatus.DRAFT;
+        } else if (!now.isBefore(start) && !now.isAfter(end)) {
+            return EventStatus.ACTIVE;
+        } else if (now.isAfter(end)) {
+            return EventStatus.COMPLETED;
+        }
+        return EventStatus.PENDING;
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void ensureEndTime() {
+        if (startTime == null) {
+            return;
+        }
+
+        if (endTime == null) {
+            // Case 1: new single-day event
+            endTime = startTime.plus(1, ChronoUnit.DAYS);
+        } else {
+            // Case 2: existing single-day event that may have updated startTime
+            long duration = Duration.between(startTime, endTime).toDays();
+            if (duration == 1) {
+                // Treat as single-day event → recalculate endTime
+                endTime = startTime.plus(1, ChronoUnit.DAYS);
+            }
+            // Case 3: multi-day event → do nothing
         }
     }
 }

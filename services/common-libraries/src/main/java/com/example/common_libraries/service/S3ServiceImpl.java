@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
@@ -37,6 +38,8 @@ public class S3ServiceImpl implements S3Service {
                     PutObjectRequest.builder()
                             .bucket(bucketName)
                             .key(key)
+                            .contentType(file.getContentType())
+                            .acl(ObjectCannedACL.PUBLIC_READ)
                             .build(),
                     RequestBody.fromBytes(file.getBytes())
             );
