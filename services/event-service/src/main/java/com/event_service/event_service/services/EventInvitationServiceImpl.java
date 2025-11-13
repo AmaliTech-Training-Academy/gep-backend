@@ -160,6 +160,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         validateInvitation(eventInvitation);
         createInviteeAccount(acceptanceRequest, eventInvitation);
         eventInvitation.setStatus(InviteStatus.ACCEPTED);
+        eventInviteeRepository.save(eventInvitation);
     }
 
     @Override
@@ -178,6 +179,8 @@ public class EventInvitationServiceImpl implements EventInvitationService {
                 .build();
 
         eventOrganizerRepository.save(eventOrganizer);
+        eventInvitation.setStatus(InviteStatus.ACCEPTED);
+        eventInviteeRepository.save(eventInvitation);
     }
 
     private void validateInvitation(EventInvitee eventInvitation) {
