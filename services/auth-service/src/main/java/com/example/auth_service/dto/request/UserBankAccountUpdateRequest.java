@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record UserBankAccountUpdateRequest(
+        @Size(min = 2, max = 100, message = "Bank name must be between 2 and 100 characters")
         String bankName,
         @Pattern(
                 regexp = "^[0-9]{10,16}$",

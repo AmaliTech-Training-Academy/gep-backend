@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public record UserBankAccountCreationRequest(
         @NotBlank(message = "Bank Name is required")
+        @Size(min = 2, max = 100, message = "Bank name must be between 2 and 100 characters")
         String bankName,
         @NotBlank(message = "Account Number is required")
         @Pattern(

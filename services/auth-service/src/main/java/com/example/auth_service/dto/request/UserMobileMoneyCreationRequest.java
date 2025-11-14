@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 
 public record UserMobileMoneyCreationRequest(
         @NotBlank(message = "Network operator is required")
+        @Size(min = 2, max = 100, message = "Network operator must be between 2 and 100 characters")
         String networkOperator,
         @NotBlank(message = "Mobile money number is required")
         @Pattern(

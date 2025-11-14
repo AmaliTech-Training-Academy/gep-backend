@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record UserMobileMoneyUpdateRequest(
+        @Size(min = 2, max = 100, message = "Network operator must be between 2 and 100 characters")
         String networkOperator,
         @Pattern(
                 regexp = "^\\+?[0-9]{10,15}$",
