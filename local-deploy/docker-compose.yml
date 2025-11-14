@@ -1,0 +1,368 @@
+services:
+  # ============================================
+  # DATABASES
+  # ============================================
+  
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: gep-postgres-auth
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME:-authdb}
+      POSTGRES_USER: ${AUTH_DB_USER:-auth_user}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-auth_password_local}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+      - ./init-scripts/auth-db-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-auth_user} -d ${AUTH_DB_NAME:-authdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gep-network
+
+  postgres-event:
+    image: postgres:16-alpine
+    container_name: gep-postgres-event
+    environment:
+      POSTGRES_DB: ${EVENT_DB_NAME:-eventdb}
+      POSTGRES_USER: ${EVENT_DB_USER:-event_user}
+      POSTGRES_PASSWORD: ${EVENT_DB_PASSWORD:-event_password_local}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-event-data:/var/lib/postgresql/data
+      - ./init-scripts/event-db-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./init-scripts/event-db-seed-simple.sql:/docker-entrypoint-initdb.d/03-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${EVENT_DB_USER:-event_user} -d ${EVENT_DB_NAME:-eventdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gep-network
+
+  mongodb:
+    image: mongo:7
+    container_name: gep-mongodb
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-auditdb}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gep-network
+
+  # ============================================
+  # CACHE & MESSAGE BROKER
+  # ============================================
+
+  redis:
+    image: redis:7-alpine
+    container_name: gep-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gep-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: gep-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    networks:
+      - gep-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: gep-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - gep-network
+
+  # ============================================
+  # AWS SERVICES MOCK
+  # ============================================
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: gep-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: sqs,s3
+      DEBUG: 0
+      DATA_DIR: /var/lib/localstack/data
+      DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+    volumes:
+      - localstack-data:/var/lib/localstack
+      - ./init-scripts/localstack-init.sh:/etc/localstack/init/ready.d/init-aws.sh
+    networks:
+      - gep-network
+
+  # ============================================
+  # MICROSERVICES
+  # ============================================
+
+  # discovery-server:
+  #   build:
+  #     context: ../services
+  #     dockerfile: discovery-server/Dockerfile
+  #   container_name: gep-discovery-server
+  #   ports:
+  #     - "8761:8761"
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: ${ACTIVE_PROFILE:-local}
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
+  #   networks:
+  #     - gep-network
+  #   profiles:
+  #     - services
+
+  auth-service:
+    build:
+      context: ../services
+      dockerfile: auth-service/Dockerfile
+    container_name: gep-auth-service
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/authdb
+      SPRING_DATASOURCE_USERNAME: auth_user
+      SPRING_DATASOURCE_PASSWORD: auth_password_local
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/auditdb
+      APPLICATION_SECURITY_JWT_SECRET-KEY: bG9jYWxfZGV2X3NlY3JldF9rZXlfY2hhbmdlX2luX3Byb2R1Y3Rpb25fbWluXzI1Nl9iaXRz
+      JWT_SECRET: bG9jYWxfZGV2X3NlY3JldF9rZXlfY2hhbmdlX2luX3Byb2R1Y3Rpb25fbWluXzI1Nl9iaXRz
+      APPLICATION_SECURITY_JWT_EXPIRATION: 3600000
+      APPLICATION_SECURITY_JWT_REFRESH-TOKEN_EXPIRATION: 86400000
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_CACHE_TTL_MINUTES: 10
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_ACCESSKEY: test
+      AWS_SECRETKEY: test
+      AWS_ENDPOINT: http://localstack:4566
+      AWS_S3_BUCKET: event-planner-local
+      SQS_ENDPOINT: http://localstack:4566
+      AUTH_SERVICE_URL: http://auth-service:8081
+      AUTH_SERVICE_DB_URL: jdbc:postgresql://postgres-auth:5432/authdb
+      AUTH_SERVICE_DB_USER: auth_user
+      AUTH_SERVICE_DB_PASSWORD: auth_password_local
+      USER_LOGIN_QUEUE: http://localstack:4566/000000000000/user-login-queue
+      USER_REGISTRATION_QUEUE: http://localstack:4566/000000000000/user-registration-queue
+      PASSWORD_RESET_QUEUE: http://localstack:4566/000000000000/password-reset-queue
+      EVENT_STAT_QUEUE_URL: http://localstack:4566/000000000000/event-stat-queue
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    networks:
+      - gep-network
+    profiles:
+      - services
+
+  event-service:
+    build:
+      context: ../services
+      dockerfile: event-service/Dockerfile
+    container_name: gep-event-service
+    depends_on:
+      postgres-event:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-event:5432/eventdb
+      SPRING_DATASOURCE_USERNAME: event_user
+      SPRING_DATASOURCE_PASSWORD: event_password_local
+      EVENT_SERVICE_DB_SCHEMA: event_schema
+      APPLICATION_SECURITY_JWT_SECRET-KEY: bG9jYWxfZGV2X3NlY3JldF9rZXlfY2hhbmdlX2luX3Byb2R1Y3Rpb25fbWluXzI1Nl9iaXRz
+      JWT_SECRET: bG9jYWxfZGV2X3NlY3JldF9rZXlfY2hhbmdlX2luX3Byb2R1Y3Rpb25fbWluXzI1Nl9iaXRz
+      APPLICATION_SECURITY_JWT_EXPIRATION: 3600000
+      APPLICATION_SECURITY_JWT_REFRESH-TOKEN_EXPIRATION: 86400000
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_CACHE_TTL_MINUTES: 10
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_KEY: test
+      SQS_ENDPOINT: http://localstack:4566
+      AWS_ENDPOINT: http://localstack:4566
+      AWS_S3_BUCKET: event-planner-local
+      CORS_RESOURCE_ENDPOINT: http://localhost:3000
+      EVENT_INVITATION_QUEUE_URL: http://localstack:4566/000000000000/event-invitation-queue
+      TICKET_PURCHASED_EVENT_QUEUE_URL: http://localstack:4566/000000000000/ticket-purchased-event-queue
+      PAYMENT_PROCESSING_EVENT_QUEUE_URL: http://localstack:4566/000000000000/payment-processing-event-queue
+      PAYMENT_COMPLETED_EVENT_QUEUE_URL: http://localstack:4566/000000000000/payment-completed-event-queue
+      EVENT_STAT_QUEUE_URL: http://localstack:4566/000000000000/event-stat-queue
+      ALB_BASE_URL: http://localhost:8082
+      FRONTEND_BASE_URL: http://localhost:3000
+      AUTH_SERVICE_URL: http://auth-service:8081
+      USER_SERVICE_URL: http://auth-service:8081
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    networks:
+      - gep-network
+    profiles:
+      - services
+
+  notification-service:
+    build:
+      context: ../services
+      dockerfile: notification-service/Dockerfile
+    container_name: gep-notification-service
+    depends_on:
+      localstack:
+        condition: service_started
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY: test
+      AWS_SECRET_KEY: test
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_ENDPOINT: http://localstack:4566
+      AWS_S3_BUCKET: event-planner-local
+      SQS_ENDPOINT: http://localstack:4566
+      USER_REGISTRATION_QUEUE_NAME: user-registration-queue
+      USER_LOGIN_QUEUE_NAME: user-login-queue
+      PASSWORD_RESET_QUEUE_NAME: password-reset-queue
+      EVENT_INVITATION_QUEUE_NAME: event-invitation-queue
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: ""
+      SPRING_MAIL_PASSWORD: ""
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: false
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: true
+      SPRING_MAIL_PROPERTIES_MAIL_DEBUG: false
+      VIRTUAL_TICKET_VERIFICATION_URL: http://localhost:8082/api/v1/tickets/verifyVirtualTicket/join
+      TICKET_PURCHASED_EVENT_QUEUE_NAME: ticket-purchased-event-queue
+      PAYMENT_PROCESSING_EVENT_QUEUE_NAME: payment-processing-event-queue
+      PAYMENT_COMPLETED_EVENT_QUEUE_NAME: payment-completed-event-queue
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    networks:
+      - gep-network
+    profiles:
+      - services
+
+  # api-gateway:
+  #   build:
+  #     context: ../services
+  #     dockerfile: api-gateway/Dockerfile
+  #   container_name: gep-api-gateway
+  #   depends_on:
+  #     auth-service:
+  #       condition: service_healthy
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: ${ACTIVE_PROFILE:-local}
+  #     EUREKA_URL: ${EUREKA_URL:-http://discovery-server:8761/eureka}
+  #     JWT_SECRET: ${JWT_SECRET}
+  #     CORS_RESOURCE_ENDPOINT: ${CORS_RESOURCE_ENDPOINT:-http://localhost:3000}
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 90s
+  #   networks:
+  #     - gep-network
+  #   profiles:
+  #     - services
+
+networks:
+  gep-network:
+    driver: bridge
+
+volumes:
+  postgres-auth-data:
+  postgres-event-data:
+  mongodb-data:
+  redis-data:
+  kafka-data:
+  zookeeper-data:
+  zookeeper-logs:
+  localstack-data:
