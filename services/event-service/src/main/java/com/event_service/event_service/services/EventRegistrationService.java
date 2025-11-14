@@ -2,7 +2,7 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventRegistrationPageResponse;
 import com.event_service.event_service.dto.EventRegistrationRequest;
-import com.event_service.event_service.dto.EventRegistrationResponse;
+import com.example.common_libraries.dto.EventRegistrationResponse;
 import com.event_service.event_service.dto.EventRegistrationsListResponse;
 import org.springframework.data.domain.Page;
 

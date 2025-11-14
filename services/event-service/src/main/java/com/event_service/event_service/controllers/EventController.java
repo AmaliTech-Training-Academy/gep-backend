@@ -4,6 +4,7 @@ import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.enums.EventStatus;
 import com.event_service.event_service.services.*;
 import com.example.common_libraries.dto.CustomApiResponse;
+import com.example.common_libraries.dto.EventRegistrationResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;

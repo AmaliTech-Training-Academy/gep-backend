@@ -4,7 +4,7 @@ import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.specifications.EventRegistrationSpecification;
 import com.event_service.event_service.utils.SecurityUtils;
-import com.example.common_libraries.dto.AppUser;
+import com.example.common_libraries.dto.*;
 import com.example.common_libraries.exception.BadRequestException;
 import com.example.common_libraries.exception.InputOutputException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
@@ -19,9 +19,6 @@ import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketRepository;
 import com.event_service.event_service.repositories.TicketTypeRepository;
 import com.event_service.event_service.utils.QRCodeGenerator;
-import com.example.common_libraries.dto.PaymentRequest;
-import com.example.common_libraries.dto.TicketEventDetailResponse;
-import com.example.common_libraries.dto.TicketResponse;
 import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -77,6 +74,10 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             throw new ResourceNotFoundException("Ticket Type is out of stock");
         }
 
+        if(event.getEventMeetingType().getName() == EventMeetingTypeEnum.VIRTUAL && quantity > 1){
+            throw new BadRequestException("Cannot buy more than one ticket for virtual events");
+        }
+
         // Ensure a user is not buying more than quantity per attendee
         int maxPerAttendee = ticketType.getQuantityPerAttendee();
 
@@ -85,17 +86,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             throw new BadRequestException("Cannot buy more than "+ maxPerAttendee +" tickets for this ticket type");
         }
 
-        EventRegistration registration = EventRegistration
-                .builder()
-                .event(event)
-                .fullName(registrationRequest.fullName())
-                .email(registrationRequest.email())
-                .ticketType(ticketType)
-                .ticketQuantity(registrationRequest.numberOfTickets())
-                .status(EventRegistrationStatusEnum.PENDING)
-                .build();
-        // save registration
-        eventRegistrationRepository.save(registration);
+
 
         // if a ticket type is free, save registration and then send tickets via email
         if(Boolean.FALSE.equals(ticketType.getIsPaid())){
@@ -115,21 +106,40 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
                     );
 
             publishTicketsPurchaseEventToQueue(ticketPurchasedEvent);
-        }else{
-            // for paid events send a message to the payment service to process payment
-            if(registrationRequest.paymentRequest() == null){
-                throw new BadRequestException("Payment details is required for paid ticket types");
-            }
-            PaymentRequest paymentRequest = registrationRequest.paymentRequest();
 
+            EventRegistration registration = EventRegistration
+                    .builder()
+                    .event(event)
+                    .fullName(registrationRequest.fullName())
+                    .email(registrationRequest.email())
+                    .ticketType(ticketType)
+                    .ticketQuantity(registrationRequest.numberOfTickets())
+                    .status(EventRegistrationStatusEnum.CONFIRMED)
+                    .build();
+
+            eventRegistrationRepository.save(registration);
+        }else{
             // build process payment event
             ProcessPaymentEvent processPaymentEvent = ProcessPaymentEvent
                     .builder()
-                    .eventRegistrationId(registration.getId())
-                    .attendeeEmail(registration.getEmail())
-                    .attendeeName(registration.getFullName())
-                    .paymentRequest(paymentRequest)
+                    .amount(ticketType.getPrice() * quantity)
+                    .ticketTypeId(ticketType.getId())
+                    .numberOfTickets(quantity)
+                    .fullName(registrationRequest.fullName())
+                    .email(registrationRequest.email())
+                    .eventRegistrationResponse(EventRegistrationResponse
+                            .builder()
+                            .id(event.getId())
+                            .eventTitle(event.getTitle())
+                            .location(event.getLocation())
+                            .organizer(event.getCreatedBy())
+                            .startDate(event.getStartTime())
+                            .build()
+                    )
                     .build();
+
+            // TODO replace asyn communicationn with http call to
+            // receive paystack authorization URL
             publishProcessPaymentEventToQueue(processPaymentEvent);
 
             // Simulate successful payment for TEST purposes
@@ -232,34 +242,51 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     //@SqsListener("${sqs.payment-completed-event-queue-url}")
     public void paymentCompletedListener(ProcessPaymentEvent message){
         // Generate tickets and send to attendee via email
-        EventRegistration registration = eventRegistrationRepository.findById(message.eventRegistrationId()).orElse(null);
-        if(registration != null){
-            Long quantity;
-            Event event = registration.getEvent();
-            TicketType ticketType = registration.getTicketType();
-            TicketEventDetailResponse eventDetailResponse = EventDetailMapper.toTicketEventDetails(event);
-
-            if(event.getEventMeetingType().getName() == EventMeetingTypeEnum.VIRTUAL ){
-                quantity = 1L; // One ticket for virtual events
-            }else{
-                quantity = registration.getTicketQuantity();
-            }
-
-            List<TicketResponse> tickets = generateTicket(ticketType,event,quantity)
-                    .stream()
-                    .map(TicketPurchasedEventMapper::toTicketResponse).toList();
-
-            // Publish to queue for sending tickets to attendees
-            TicketPurchasedEvent ticketPurchasedEvent = TicketPurchasedEventMapper
-                    .toTicketPurchasedEvent(
-                            registration.getFullName(),
-                            registration.getEmail(),
-                            tickets,
-                            eventDetailResponse
-                    );
-
-            publishTicketsPurchaseEventToQueue(ticketPurchasedEvent);
+        Event event = eventRepository.findById(message.eventRegistrationResponse().id()).orElse(null);
+        if(event == null){
+            log.error("Event not found for payment completed event: {}", message.eventRegistrationResponse().id());
+            return;
         }
+        TicketType ticketType = ticketTypeRepository.findById(message.ticketTypeId()).orElse(null);
+        if(ticketType == null){
+            log.error("Ticket Type not found for payment completed event: {}", message.ticketTypeId());
+            return;
+        }
+        EventRegistration registration = EventRegistration
+                .builder()
+                .event(event)
+                .fullName(message.fullName())
+                .email(message.email())
+                .ticketType(ticketType)
+                .ticketQuantity(message.numberOfTickets())
+                .status(EventRegistrationStatusEnum.CONFIRMED)
+                .build();
+
+        eventRegistrationRepository.save(registration);
+
+        TicketEventDetailResponse eventDetailResponse = EventDetailMapper.toTicketEventDetails(event);
+        Long quantity;
+
+        if(event.getEventMeetingType().getName() == EventMeetingTypeEnum.VIRTUAL ){
+            quantity = 1L; // One ticket for virtual events
+        }else{
+            quantity = registration.getTicketQuantity();
+        }
+
+        List<TicketResponse> tickets = generateTicket(ticketType,event,quantity)
+                .stream()
+                .map(TicketPurchasedEventMapper::toTicketResponse).toList();
+
+        // Publish to queue for sending tickets to attendees
+        TicketPurchasedEvent ticketPurchasedEvent = TicketPurchasedEventMapper
+                .toTicketPurchasedEvent(
+                        registration.getFullName(),
+                        registration.getEmail(),
+                        tickets,
+                        eventDetailResponse
+                );
+
+        publishTicketsPurchaseEventToQueue(ticketPurchasedEvent);
     }
 
 
