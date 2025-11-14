@@ -2,11 +2,15 @@
 
 Get the Event Planner backend running in 5 minutes.
 
+📚 **Other Docs:** [PREREQUISITES.md](PREREQUISITES.md) | [README.md](README.md)
+
 ## Prerequisites
 
 - Docker Desktop running
 - Java 21 installed
 - Maven 3.9+ installed
+
+**Don't have these installed?** Follow [PREREQUISITES.md](PREREQUISITES.md) for step-by-step installation on macOS, Windows, or Ubuntu.
 
 ## Steps
 

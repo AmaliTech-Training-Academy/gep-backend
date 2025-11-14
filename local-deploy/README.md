@@ -2,6 +2,12 @@
 
 Complete Docker-based local deployment for the Event Planner microservices backend.
 
+## Documentation
+
+- **[PREREQUISITES.md](PREREQUISITES.md)** - Install Docker, Java, Maven (macOS/Windows/Ubuntu)
+- **[QUICKSTART.md](QUICKSTART.md)** - Get running in 5 minutes
+- **README.md** - This file (complete reference)
+
 ## Quick Start
 
 ```bash
@@ -47,6 +53,8 @@ curl http://localhost:8082/api/v1/events/explore
 - Docker Desktop (24.0+)
 - Java 21
 - Maven 3.9+
+
+**Need help installing?** See [PREREQUISITES.md](PREREQUISITES.md) for detailed installation guides for macOS, Windows, and Ubuntu.
 
 ## Setup
 
