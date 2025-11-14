@@ -63,6 +63,23 @@ public class EventController {
         return ResponseEntity.status(HttpStatus.OK).body(eventRegistrationService.registerEvent(eventId,eventRegistrationRequest));
     }
 
+    @GetMapping("/{eventId}/registrations/overview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ORGANISER')")
+    public ResponseEntity<CustomApiResponse<EventRegistrationPageResponse>> getEventRegistrationsOverview(@PathVariable("eventId") Long eventId) {
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(eventRegistrationService.getEventRegistrationPageOverview(eventId)));
+    }
+
+    @GetMapping("/{eventId}/registrations/search")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    public ResponseEntity<CustomApiResponse<Page<EventRegistrationsListResponse>>> getEventRegistrations(
+            @PathVariable("eventId") Long eventId,
+            @RequestParam(value = "page", defaultValue = "0", required = false) int page,
+            @RequestParam(value = "keyword", defaultValue = "", required = false) String keyword,
+            @RequestParam(value = "ticketType", defaultValue = "", required = false) String ticketType
+    ){
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(eventRegistrationService.getEventRegistrations(eventId,page, keyword,ticketType)));
+    }
+
     @GetMapping("/explore")
     public ResponseEntity<PagedExploreEventResponse> getExploreEvents(
             @RequestParam(value = "sortBy", defaultValue = "location", required = false) String[] sortBy,

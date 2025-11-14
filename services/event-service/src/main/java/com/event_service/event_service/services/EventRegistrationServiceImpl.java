@@ -1,16 +1,16 @@
 package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.*;
+import com.event_service.event_service.models.*;
+import com.event_service.event_service.specifications.EventRegistrationSpecification;
+import com.event_service.event_service.utils.SecurityUtils;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.exception.BadRequestException;
 import com.example.common_libraries.exception.InputOutputException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.mappers.EventDetailMapper;
 import com.event_service.event_service.mappers.EventMapper;
 import com.event_service.event_service.mappers.TicketPurchasedEventMapper;
-import com.event_service.event_service.models.Event;
-import com.event_service.event_service.models.EventRegistration;
-import com.event_service.event_service.models.Ticket;
-import com.event_service.event_service.models.TicketType;
 import com.event_service.event_service.models.enums.EventMeetingTypeEnum;
 import com.event_service.event_service.models.enums.EventRegistrationStatusEnum;
 import com.event_service.event_service.models.enums.TicketStatusEnum;
@@ -29,12 +29,18 @@ import com.google.zxing.WriterException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -48,6 +54,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
     private final EventMapper eventMapper;
+    private final SecurityUtils securityUtils;
 
     @Value("${sqs.ticket-purchased-event-queue-url}")
     private String ticketPurchasedEventQueueUrl;
@@ -59,14 +66,6 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     private String albUrl;
 
 
-    /**
-     * Registers an event for a user.
-     *
-     * @param eventId             The ID of the event to register.
-     * @param registrationRequest The registration request containing user details and ticket type.
-     * @return A success message indicating the registration was successful.
-     * @throws ResourceNotFoundException if the event or ticket type is not found, or if tickets are out of stock.
-     */
     @Transactional
     @Override
     public EventRegistrationResponse registerEvent(Long eventId, EventRegistrationRequest registrationRequest) {
@@ -151,6 +150,80 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
                 .location(location)
                 .organizer("Event Organizer")
                 .startDate(eventResponse.startTime())
+                .build();
+    }
+
+    @Override
+    public Page<EventRegistrationsListResponse> getEventRegistrations(Long eventId, int page, String keyword, String ticketType) {
+        AppUser currentUser = securityUtils.getCurrentUser();
+
+        Event event;
+        if(!currentUser.role().equals("ADMIN")){
+            event = eventRepository.findByIdAndUserId(eventId, currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }else{
+            event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }
+
+        page = Math.max(page, 0);
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        Pageable pageable = PageRequest.of(page, 10, sort);
+        Specification<EventRegistration> spec;
+
+        spec = Specification.allOf(
+                EventRegistrationSpecification.hasEvent(event.getId()),
+                EventRegistrationSpecification.hasKeyword(keyword.trim()),
+                EventRegistrationSpecification.hasTicketType(ticketType)
+        );
+
+
+        return eventRegistrationRepository.findAll(spec, pageable)
+                .map(registration -> EventRegistrationsListResponse
+                        .builder()
+                        .id(registration.getId())
+                        .name(registration.getFullName())
+                        .email(registration.getEmail())
+                        .numberOfTickets(registration.getTicketQuantity())
+                        .ticketType(registration.getTicketType().getType())
+                        .build());
+    }
+
+    @Override
+    public EventRegistrationPageResponse getEventRegistrationPageOverview(Long eventId) {
+        AppUser currentUser = securityUtils.getCurrentUser();
+
+        Event event;
+        if(!currentUser.role().equals("ADMIN")){
+            event = eventRepository.findByIdAndUserId(eventId, currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }else{
+            event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }
+        EventOptions eventOptions = Optional.ofNullable(event.getEventOptions()).orElse(EventOptions.builder().build());
+
+        List<TicketTypeResponse> ticketTypes = Optional
+                .ofNullable(event.getTicketTypes())
+                .orElse(List.of())
+                .stream()
+                .map(type ->
+                        TicketTypeResponse
+                                .builder()
+                                .id(type.getId())
+                                .type(type.getType())
+                                .description(type.getDescription())
+                                .price(type.getPrice())
+                                .isActive(type.getIsActive())
+                                .remainingTickets(type.getQuantity() - type.getSoldCount())
+                                .isPaid(type.getIsPaid())
+                                .build()
+                ).toList();
+        List<String> filters = ticketTypes.stream().map(TicketTypeResponse::type).toList();
+        Page<EventRegistrationsListResponse> registrationsListResponses = getEventRegistrations(eventId,0,"","");
+
+        return EventRegistrationPageResponse
+                .builder()
+                .eventRegistrations(registrationsListResponses)
+                .ticketTypes(ticketTypes)
+                .filters(filters)
+                .capacity(eventOptions.getCapacity())
                 .build();
     }
 
