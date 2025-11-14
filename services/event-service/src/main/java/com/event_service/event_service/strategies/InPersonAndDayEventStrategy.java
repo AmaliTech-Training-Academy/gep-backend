@@ -4,8 +4,11 @@ import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.utils.TimeZoneUtils;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.service.S3Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,6 +44,7 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
                 eventRequest.event_time(),
                 zoneId);
         Instant eventInstant = zonedDateTime.toInstant();
+        AppUser authenticatedUser = getCurrentUser();
         Event event = Event.builder().eventOptions(eventOptions)
                 .eventMeetingType(eventMeetingType).eventType(eventType)
                 .eventType(eventType)
@@ -50,6 +54,8 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
                 .eventTimeZoneId(eventRequest.event_time_zone_id())
                 .flyerUrl(uploadedFlyer)
                 .location(eventRequest.location())
+                .createdBy(authenticatedUser.fullName())
+                .userId(authenticatedUser.id())
                 .build();
         Event eventWithImages = attachEventImages(eventImages,event);
         eventWithImages.setEventOptions(eventOptions);
@@ -67,5 +73,10 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
             }
         }
         return event;
+    }
+
+    public AppUser getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (AppUser) authentication.getPrincipal();
     }
 }

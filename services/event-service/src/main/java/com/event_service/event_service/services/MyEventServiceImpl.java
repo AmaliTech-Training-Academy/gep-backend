@@ -1,20 +1,25 @@
 package com.event_service.event_service.services;
 
-import com.event_service.event_service.dto.MyEventsListResponse;
-import com.event_service.event_service.dto.MyEventsOverviewResponse;
+import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.TicketType;
+import com.event_service.event_service.repositories.EventInvitationRepository;
 import com.event_service.event_service.repositories.EventRegistrationRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketRepository;
 import com.event_service.event_service.utils.SecurityUtils;
 import com.example.common_libraries.dto.AppUser;
+import com.example.common_libraries.exception.BadRequestException;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
 
 
 @Service
@@ -24,6 +29,7 @@ public class MyEventServiceImpl implements MyEventService {
     private final EventRepository eventRepository;
     private final EventRegistrationRepository eventRegistrationRepository;
     private final TicketRepository ticketRepository;
+    private final EventInvitationRepository eventInvitationRepository;
 
     @Override
     public Page<MyEventsListResponse> getMyEvents(int page) {
@@ -59,6 +65,54 @@ public class MyEventServiceImpl implements MyEventService {
                 .totalEvents(totalEvents)
                 .totalAttendees(totalAttendees)
                 .totalTicketSales(totalTicketSales)
+                .build();
+    }
+
+    @Override
+    public MyEventDetailResponse getMyEventDetailsById(Long eventId) {
+        if(eventId == null){
+            throw new BadRequestException("Invalid event ID");
+        }
+        AppUser currentUser = securityUtils.getCurrentUser();
+
+        Event event = eventRepository.findByIdAndUserId(eventId, currentUser.id())
+                .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+
+        Long totalAttendees = (long) event.getEventRegistrations().size();
+        Double totalTicketSales = ticketRepository.findTotalTicketSalesForEvent(event);
+
+        MyEventsOverviewResponse eventStat = MyEventsOverviewResponse
+                .builder()
+                .totalAttendees(totalAttendees)
+                .totalTicketSales(totalTicketSales)
+                .build();
+
+        MyEventSummaryResponse eventSummary = MyEventSummaryResponse
+                .builder()
+                .organizer(event.getCreatedBy())
+                .location(event.getLocation())
+                .startTime(event.getStartTime())
+                .build();
+
+        List<MyEventTicketTypeStats> ticketTypes = Optional.ofNullable(event.getTicketTypes()).orElse(List.of())
+                .stream()
+                .map(type -> MyEventTicketTypeStats
+                        .builder()
+                        .id(type.getId())
+                        .name(type.getType())
+                        .remainingTickets(type.getQuantity() - type.getSoldCount())
+                        .soldTickets(type.getSoldCount())
+                        .build()
+                ).toList();
+
+        Long totalInvitedGuests = eventInvitationRepository.countAllByEvent(event);
+
+        return MyEventDetailResponse
+                .builder()
+                .eventStats(eventStat)
+                .eventSummary(eventSummary)
+                .ticketTypes(ticketTypes)
+                .totalInvitedGuests(totalInvitedGuests)
                 .build();
     }
 }

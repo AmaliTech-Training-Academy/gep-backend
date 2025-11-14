@@ -1,5 +1,6 @@
 package com.event_service.event_service.repositories;
 
+import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.Ticket;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,9 +14,20 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     Ticket findByTicketCode(String ticketCode);
 
-    @Query("SELECT COALESCE(SUM(tt.price), 0) " +
-            "FROM Ticket t " +
-            "JOIN t.ticketType tt " +
-            "JOIN tt.event e " +
-            "WHERE e.userId = :userId")
-    Double findTotalTicketSalesForUser(@Param("userId") Long userId);}
+    @Query("""
+        SELECT COALESCE(SUM(tt.price), 0)
+        FROM Ticket t
+        JOIN t.ticketType tt
+        JOIN tt.event e
+        WHERE e.userId = :userId
+    """)
+    Double findTotalTicketSalesForUser(@Param("userId") Long userId);
+
+    @Query("""
+        SELECT COALESCE(SUM(tt.price), 0)
+        FROM Ticket t
+        JOIN t.ticketType tt
+        WHERE tt.event = :event
+    """)
+    Double findTotalTicketSalesForEvent(@Param("event") Event event);
+}

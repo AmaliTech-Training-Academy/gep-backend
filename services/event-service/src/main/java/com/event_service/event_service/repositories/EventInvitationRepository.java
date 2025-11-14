@@ -1,5 +1,6 @@
 package com.event_service.event_service.repositories;
 
+import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.EventInvitation;
 import com.event_service.event_service.models.enums.InvitationStatus;
 import org.springframework.data.domain.Page;
@@ -58,4 +59,6 @@ public interface EventInvitationRepository extends JpaRepository<EventInvitation
             @Param("inviterId") Long inviterId,
             Pageable pageable
     );
+
+    Long countAllByEvent(Event event);
 }
