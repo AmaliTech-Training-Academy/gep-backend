@@ -4,6 +4,7 @@ import com.event_service.event_service.dto.*;
 import com.event_service.event_service.dto.EventInvitationAcceptanceRequest;
 import com.event_service.event_service.dto.EventInvitationListResponse;
 import com.event_service.event_service.dto.EventInvitationRequest;
+import com.event_service.event_service.models.enums.InviteeRole;
 import com.event_service.event_service.services.EventInvitationService;
 import com.example.common_libraries.dto.CustomApiResponse;
 import jakarta.validation.Valid;
@@ -11,11 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
@@ -112,6 +113,21 @@ public class EventInvitationController {
     public ResponseEntity<CustomApiResponse<EventInvitationDetailsResponse>> getInvitationDetails(@PathVariable Long id){
         EventInvitationDetailsResponse details = eventInvitationService.getEventInvitationDetail(id);
         return ResponseEntity.ok(CustomApiResponse.success(details));
+    }
+
+    @GetMapping("/{eventId}/invitees")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ORGANISER')")
+    public ResponseEntity<CustomApiResponse<Page<EventInviteeResponse>>> getEventInvitees(
+            @PathVariable("eventId") Long eventId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(defaultValue = "",required = false) String keyword,
+            @RequestParam(required = false)InviteeRole role
+            ){
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(
+                        CustomApiResponse
+                                .success(eventInvitationService.getInviteeList(eventId,page,keyword,role))
+                );
     }
 
 }

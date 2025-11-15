@@ -1,12 +1,19 @@
 package com.example.common_libraries.dto.queue_events;
 
-import com.example.common_libraries.dto.PaymentRequest;
+import com.example.common_libraries.dto.EventRegistrationResponse;
 import lombok.Builder;
 
 @Builder
 public record ProcessPaymentEvent(
-    Long eventRegistrationId,
-    String attendeeEmail,
-    String attendeeName,
-    PaymentRequest paymentRequest
+        Double amount,
+
+        Long ticketTypeId,
+
+        Long numberOfTickets,
+
+        String fullName,
+
+        String email,
+
+        EventRegistrationResponse eventRegistrationResponse
 ) { }
