@@ -2,6 +2,7 @@ package com.event_service.event_service.specifications;
 
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.EventInvitee;
+import com.event_service.event_service.models.enums.InviteeRole;
 import org.springframework.data.jpa.domain.Specification;
 
 
@@ -24,5 +25,10 @@ public class EventInviteeSpecification {
                     cb.like(cb.lower(root.get("inviteeEmail")), likePattern)
             );
         };
+    }
+
+    public static Specification<EventInvitee> hasRole(InviteeRole role){
+        if(role == null) return null;
+        return (root, query, cb) -> cb.equal(root.get("role"), role.toString());
     }
 }

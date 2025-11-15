@@ -276,7 +276,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     }
 
     @Override
-    public Page<EventInviteeResponse> getInviteeList(Long eventId, int page, String keyword) {
+    public Page<EventInviteeResponse> getInviteeList(Long eventId, int page, String keyword, InviteeRole role) {
         AppUser currentUser = securityUtils.getCurrentUser();
 
         Event event;
@@ -294,7 +294,8 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
         spec = Specification.allOf(
                 EventInviteeSpecification.belongsToEvent(event),
-                EventInviteeSpecification.hasKeyword(keyword.trim().toLowerCase())
+                EventInviteeSpecification.hasKeyword(keyword.trim().toLowerCase()),
+                EventInviteeSpecification.hasRole(role)
         );
 
         Page<EventInvitee> invitees = eventInviteeRepository.findAll(spec, pageable);
