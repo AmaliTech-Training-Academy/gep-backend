@@ -1,7 +1,6 @@
 package com.example.common_libraries.dto.queue_events;
 
 import com.example.common_libraries.dto.EventRegistrationResponse;
-import com.example.common_libraries.dto.PaymentRequest;
 import lombok.Builder;
 
 @Builder
