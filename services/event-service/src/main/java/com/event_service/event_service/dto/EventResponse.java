@@ -9,6 +9,7 @@ public record EventResponse(
         Instant startTime,
         String location,
         String flyerUrl,
-        String timeZoneOffSet
+        String timeZoneOffSet,
+        String createdBy
 ) {
 }

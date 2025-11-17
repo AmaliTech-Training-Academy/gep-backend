@@ -97,6 +97,10 @@ public class Event {
     @JoinColumn(name = "event_options_id")
     private EventOptions eventOptions;
 
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<EventInvitation> invitations = new HashSet<>();
+
     public void addImage(EventImages eventImage) {
         this.eventImages.add(eventImage);
         eventImage.setEvent(this);

@@ -17,7 +17,13 @@ public interface EventMapper {
 
     @Mapping(target = "startTime", expression = "java(determineDisplayTime(event))")
     @Mapping(target = "ticketPrice", expression = "java(extractTicketPrice(event))")
+    @Mapping(target = "attendeeCount", expression = "java(extractInvitationCount(event))")
     ExploreEventResponse toExploreEventResponse(Event event);
+
+    default Long extractInvitationCount(Event event) {
+        if (event.getInvitations() == null) return 0L;
+        return (long) event.getEventRegistrations().size();
+    }
 
 
     default java.math.BigDecimal extractTicketPrice(Event event) {
