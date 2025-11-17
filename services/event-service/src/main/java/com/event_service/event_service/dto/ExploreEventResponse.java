@@ -11,5 +11,5 @@ public record ExploreEventResponse(
         String location,
         String flyerUrl,
         BigDecimal ticketPrice,
-        Long invitationCount
+        Long attendeeCount
 ) {}
