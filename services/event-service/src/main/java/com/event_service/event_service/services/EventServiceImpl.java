@@ -119,8 +119,9 @@ public class EventServiceImpl implements EventService {
             String priceFilter,
             Boolean past
     ) {
+        int adjustedPageNumber = pageNumber > 0 ? pageNumber - 1 : pageNumber;
         Pageable pageable = PageRequest.of(
-                pageNumber,
+                adjustedPageNumber,
                 pageSize,
                 Sort.by(Sort.Direction.DESC, sortBy)
         );
