@@ -12,10 +12,8 @@ public record InvitationAcceptanceRequest(
                 regexp = "^[\\p{L}]+([ '-][\\p{L}]+)*$",
                 message = "Full name must start and end with a letter, and contain only letters, spaces, hyphens, or apostrophes"
         )
-        @NotBlank(message = "Fullname is required")
+        @NotBlank(message = "Full name is required")
         String fullName,
-        @NotBlank(message = "Email is required")
-        String email,
 
         @NotBlank(message = "Password is required")
         @Size(min = 8, message = "Password must be at least 8 characters long")
@@ -25,4 +23,8 @@ public record InvitationAcceptanceRequest(
         @NotBlank(message = "Confirm Password is required")
         String confirmPassword
 ) implements UserRegistrationBase {
+        @Override
+        public String email() {
+                return null;
+        }
 }

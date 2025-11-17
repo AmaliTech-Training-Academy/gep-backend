@@ -1,5 +1,6 @@
 package com.example.auth_service.service.impl;
 
+import com.example.auth_service.dto.base.UserRegistrationBase;
 import com.example.auth_service.dto.request.BulkUserInvitationRequest;
 import com.example.auth_service.dto.request.InvitationAcceptanceRequest;
 import com.example.auth_service.dto.request.UserInvitationRequest;
@@ -146,10 +147,35 @@ public class UserInvitationServiceImpl implements UserInvitationService {
            UserInvitee invitation = getValidUserInvitationByToken(request.invitationToken());
            invitation.setStatus(InviteStatus.ACCEPTED);
            userInviteeRepository.save(invitation);
-           authServiceImpl.validateRequest(request);
-           User savedUser = authServiceImpl.createAndSaveUser(request, invitation.getRole());
+           UserRegistrationBase registrationData = setupRegistrationData(request, invitation);
+           authServiceImpl.validateRequest(registrationData);
+           User savedUser = authServiceImpl.createAndSaveUser(registrationData, invitation.getRole());
            authServiceImpl.createUserRelatedEntities(savedUser);
             return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
+    }
+
+    private UserRegistrationBase setupRegistrationData(InvitationAcceptanceRequest request, UserInvitee invitee){
+        return new UserRegistrationBase() {
+            @Override
+            public String fullName() {
+                return request.fullName();
+            }
+
+            @Override
+            public String email() {
+                return invitee.getEmail();
+            }
+
+            @Override
+            public String password() {
+                return request.password();
+            }
+
+            @Override
+            public String confirmPassword() {
+                return request.confirmPassword();
+            }
+        };
     }
 
     private UserInvitee getValidUserInvitationByToken(String token){
