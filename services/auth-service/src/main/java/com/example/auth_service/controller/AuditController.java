@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/audit_logs")
+@RequestMapping("/api/v1/auth/audit_logs")
 public class AuditController {
 
     private final AuditService auditService;
