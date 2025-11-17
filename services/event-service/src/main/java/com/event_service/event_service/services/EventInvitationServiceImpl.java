@@ -11,6 +11,7 @@ import com.event_service.event_service.repositories.EventInvitationRepository;
 import com.event_service.event_service.repositories.EventInviteeRepository;
 import com.event_service.event_service.repositories.EventOrganizerRepository;
 import com.event_service.event_service.repositories.EventRepository;
+import com.event_service.event_service.specifications.EventInviteeSpecification;
 import com.event_service.event_service.utils.SecurityUtils;
 import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.common_libraries.dto.AppUser;
@@ -22,13 +23,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -269,6 +274,43 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         }
         return eventInvitationRepository.findAllByStatusAndInviterId(InvitationStatus.SAVE, currentUser.id(), pageable)
                 .map(eventInvitationMapper::toEventInvitationList);
+    }
+
+    @Override
+    public Page<EventInviteeResponse> getInviteeList(Long eventId, int page, String keyword, InviteeRole role, LocalDate date) {
+        AppUser currentUser = securityUtils.getCurrentUser();
+
+        Event event;
+        if(!currentUser.role().equals("ADMIN")){
+            event = eventRepository.findByIdAndUserId(eventId,currentUser.id()).orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+        }else{
+            event = eventRepository.findById(eventId).orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+        }
+
+        page = Math.max(page, 0);
+        Sort sort = Sort.by(Sort.Direction.ASC, "id");
+        Pageable pageable = PageRequest.of(page, 10, sort);
+
+        Specification<EventInvitee> spec;
+
+        spec = Specification.allOf(
+                EventInviteeSpecification.belongsToEvent(event),
+                EventInviteeSpecification.hasKeyword(keyword.trim().toLowerCase()),
+                EventInviteeSpecification.hasRole(role),
+                EventInviteeSpecification.hasDateCreated(date)
+        );
+
+        Page<EventInvitee> invitees = eventInviteeRepository.findAll(spec, pageable);
+
+        return invitees
+                .map(invitee -> EventInviteeResponse
+                        .builder()
+                        .id(invitee.getId())
+                        .inviteeName(invitee.getInviteeName())
+                        .inviteeEmail(invitee.getInviteeEmail())
+                        .role(invitee.getRole())
+                        .build()
+                );
     }
 
     private Event findEventOrThrow(Long eventId, Long userId) {

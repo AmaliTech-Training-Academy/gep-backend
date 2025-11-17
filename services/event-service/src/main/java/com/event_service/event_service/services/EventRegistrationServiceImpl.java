@@ -1,16 +1,16 @@
 package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.*;
+import com.event_service.event_service.models.*;
+import com.event_service.event_service.specifications.EventRegistrationSpecification;
+import com.event_service.event_service.utils.SecurityUtils;
+import com.example.common_libraries.dto.*;
 import com.example.common_libraries.exception.BadRequestException;
 import com.example.common_libraries.exception.InputOutputException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.mappers.EventDetailMapper;
 import com.event_service.event_service.mappers.EventMapper;
 import com.event_service.event_service.mappers.TicketPurchasedEventMapper;
-import com.event_service.event_service.models.Event;
-import com.event_service.event_service.models.EventRegistration;
-import com.event_service.event_service.models.Ticket;
-import com.event_service.event_service.models.TicketType;
 import com.event_service.event_service.models.enums.EventMeetingTypeEnum;
 import com.event_service.event_service.models.enums.EventRegistrationStatusEnum;
 import com.event_service.event_service.models.enums.TicketStatusEnum;
@@ -19,9 +19,6 @@ import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketRepository;
 import com.event_service.event_service.repositories.TicketTypeRepository;
 import com.event_service.event_service.utils.QRCodeGenerator;
-import com.example.common_libraries.dto.PaymentRequest;
-import com.example.common_libraries.dto.TicketEventDetailResponse;
-import com.example.common_libraries.dto.TicketResponse;
 import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,12 +26,18 @@ import com.google.zxing.WriterException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.sqs.SqsClient;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -48,6 +51,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
     private final EventMapper eventMapper;
+    private final SecurityUtils securityUtils;
 
     @Value("${sqs.ticket-purchased-event-queue-url}")
     private String ticketPurchasedEventQueueUrl;
@@ -59,14 +63,6 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     private String albUrl;
 
 
-    /**
-     * Registers an event for a user.
-     *
-     * @param eventId             The ID of the event to register.
-     * @param registrationRequest The registration request containing user details and ticket type.
-     * @return A success message indicating the registration was successful.
-     * @throws ResourceNotFoundException if the event or ticket type is not found, or if tickets are out of stock.
-     */
     @Transactional
     @Override
     public EventRegistrationResponse registerEvent(Long eventId, EventRegistrationRequest registrationRequest) {
@@ -78,6 +74,10 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             throw new ResourceNotFoundException("Ticket Type is out of stock");
         }
 
+        if(event.getEventMeetingType().getName() == EventMeetingTypeEnum.VIRTUAL && quantity > 1){
+            throw new BadRequestException("Cannot buy more than one ticket for virtual events");
+        }
+
         // Ensure a user is not buying more than quantity per attendee
         int maxPerAttendee = ticketType.getQuantityPerAttendee();
 
@@ -86,17 +86,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             throw new BadRequestException("Cannot buy more than "+ maxPerAttendee +" tickets for this ticket type");
         }
 
-        EventRegistration registration = EventRegistration
-                .builder()
-                .event(event)
-                .fullName(registrationRequest.fullName())
-                .email(registrationRequest.email())
-                .ticketType(ticketType)
-                .ticketQuantity(registrationRequest.numberOfTickets())
-                .status(EventRegistrationStatusEnum.PENDING)
-                .build();
-        // save registration
-        eventRegistrationRepository.save(registration);
+
 
         // if a ticket type is free, save registration and then send tickets via email
         if(Boolean.FALSE.equals(ticketType.getIsPaid())){
@@ -116,26 +106,52 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
                     );
 
             publishTicketsPurchaseEventToQueue(ticketPurchasedEvent);
-        }else{
-            // for paid events send a message to the payment service to process payment
-            if(registrationRequest.paymentRequest() == null){
-                throw new BadRequestException("Payment details is required for paid ticket types");
-            }
-            PaymentRequest paymentRequest = registrationRequest.paymentRequest();
 
+            EventRegistration registration = EventRegistration
+                    .builder()
+                    .event(event)
+                    .fullName(registrationRequest.fullName())
+                    .email(registrationRequest.email())
+                    .ticketType(ticketType)
+                    .ticketQuantity(registrationRequest.numberOfTickets())
+                    .status(EventRegistrationStatusEnum.CONFIRMED)
+                    .build();
+
+            eventRegistrationRepository.save(registration);
+        }else{
             // build process payment event
             ProcessPaymentEvent processPaymentEvent = ProcessPaymentEvent
                     .builder()
-                    .eventRegistrationId(registration.getId())
-                    .attendeeEmail(registration.getEmail())
-                    .attendeeName(registration.getFullName())
-                    .paymentRequest(paymentRequest)
+                    .amount(ticketType.getPrice() * quantity)
+                    .ticketTypeId(ticketType.getId())
+                    .numberOfTickets(quantity)
+                    .fullName(registrationRequest.fullName())
+                    .email(registrationRequest.email())
+                    .eventRegistrationResponse(EventRegistrationResponse
+                            .builder()
+                            .id(event.getId())
+                            .eventTitle(event.getTitle())
+                            .location(event.getLocation())
+                            .organizer(event.getCreatedBy())
+                            .startDate(event.getStartTime())
+                            .build()
+                    )
                     .build();
+
+            // TODO replace asyn communicationn with http call to
+            // receive paystack authorization URL
             publishProcessPaymentEventToQueue(processPaymentEvent);
 
             // Simulate successful payment for TEST purposes
             // TODO remove this when payment service is implemented
             paymentCompletedListener(processPaymentEvent);
+
+            // return authorization url gotten from payment service
+            return EventRegistrationResponse
+                    .builder()
+                    .id(event.getId())
+                    .authorizationUrl("https://www.paystack.com/example/authorization-url")
+                    .build();
         }
         EventResponse eventResponse = eventMapper.toResponse(event);
 
@@ -147,10 +163,85 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
         }
         return EventRegistrationResponse
                 .builder()
+                .id(event.getId())
                 .eventTitle(eventResponse.title())
                 .location(location)
                 .organizer("Event Organizer")
                 .startDate(eventResponse.startTime())
+                .build();
+    }
+
+    @Override
+    public Page<EventRegistrationsListResponse> getEventRegistrations(Long eventId, int page, String keyword, String ticketType) {
+        AppUser currentUser = securityUtils.getCurrentUser();
+
+        Event event;
+        if(!currentUser.role().equals("ADMIN")){
+            event = eventRepository.findByIdAndUserId(eventId, currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }else{
+            event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }
+
+        page = Math.max(page, 0);
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
+        Pageable pageable = PageRequest.of(page, 10, sort);
+        Specification<EventRegistration> spec;
+
+        spec = Specification.allOf(
+                EventRegistrationSpecification.hasEvent(event.getId()),
+                EventRegistrationSpecification.hasKeyword(keyword.trim()),
+                EventRegistrationSpecification.hasTicketType(ticketType)
+        );
+
+
+        return eventRegistrationRepository.findAll(spec, pageable)
+                .map(registration -> EventRegistrationsListResponse
+                        .builder()
+                        .id(registration.getId())
+                        .name(registration.getFullName())
+                        .email(registration.getEmail())
+                        .numberOfTickets(registration.getTicketQuantity())
+                        .ticketType(registration.getTicketType().getType())
+                        .build());
+    }
+
+    @Override
+    public EventRegistrationPageResponse getEventRegistrationPageOverview(Long eventId) {
+        AppUser currentUser = securityUtils.getCurrentUser();
+
+        Event event;
+        if(!currentUser.role().equals("ADMIN")){
+            event = eventRepository.findByIdAndUserId(eventId, currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }else{
+            event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }
+        EventOptions eventOptions = Optional.ofNullable(event.getEventOptions()).orElse(EventOptions.builder().build());
+
+        List<TicketTypeResponse> ticketTypes = Optional
+                .ofNullable(event.getTicketTypes())
+                .orElse(List.of())
+                .stream()
+                .map(type ->
+                        TicketTypeResponse
+                                .builder()
+                                .id(type.getId())
+                                .type(type.getType())
+                                .description(type.getDescription())
+                                .price(type.getPrice())
+                                .isActive(type.getIsActive())
+                                .remainingTickets(type.getQuantity() - type.getSoldCount())
+                                .isPaid(type.getIsPaid())
+                                .build()
+                ).toList();
+        List<String> filters = ticketTypes.stream().map(TicketTypeResponse::type).toList();
+        Page<EventRegistrationsListResponse> registrationsListResponses = getEventRegistrations(eventId,0,"","");
+
+        return EventRegistrationPageResponse
+                .builder()
+                .eventRegistrations(registrationsListResponses)
+                .ticketTypes(ticketTypes)
+                .filters(filters)
+                .capacity(eventOptions.getCapacity())
                 .build();
     }
 
@@ -159,34 +250,51 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     //@SqsListener("${sqs.payment-completed-event-queue-url}")
     public void paymentCompletedListener(ProcessPaymentEvent message){
         // Generate tickets and send to attendee via email
-        EventRegistration registration = eventRegistrationRepository.findById(message.eventRegistrationId()).orElse(null);
-        if(registration != null){
-            Long quantity;
-            Event event = registration.getEvent();
-            TicketType ticketType = registration.getTicketType();
-            TicketEventDetailResponse eventDetailResponse = EventDetailMapper.toTicketEventDetails(event);
-
-            if(event.getEventMeetingType().getName() == EventMeetingTypeEnum.VIRTUAL ){
-                quantity = 1L; // One ticket for virtual events
-            }else{
-                quantity = registration.getTicketQuantity();
-            }
-
-            List<TicketResponse> tickets = generateTicket(ticketType,event,quantity)
-                    .stream()
-                    .map(TicketPurchasedEventMapper::toTicketResponse).toList();
-
-            // Publish to queue for sending tickets to attendees
-            TicketPurchasedEvent ticketPurchasedEvent = TicketPurchasedEventMapper
-                    .toTicketPurchasedEvent(
-                            registration.getFullName(),
-                            registration.getEmail(),
-                            tickets,
-                            eventDetailResponse
-                    );
-
-            publishTicketsPurchaseEventToQueue(ticketPurchasedEvent);
+        Event event = eventRepository.findById(message.eventRegistrationResponse().id()).orElse(null);
+        if(event == null){
+            log.error("Event not found for payment completed event: {}", message.eventRegistrationResponse().id());
+            return;
         }
+        TicketType ticketType = ticketTypeRepository.findById(message.ticketTypeId()).orElse(null);
+        if(ticketType == null){
+            log.error("Ticket Type not found for payment completed event: {}", message.ticketTypeId());
+            return;
+        }
+        EventRegistration registration = EventRegistration
+                .builder()
+                .event(event)
+                .fullName(message.fullName())
+                .email(message.email())
+                .ticketType(ticketType)
+                .ticketQuantity(message.numberOfTickets())
+                .status(EventRegistrationStatusEnum.CONFIRMED)
+                .build();
+
+        eventRegistrationRepository.save(registration);
+
+        TicketEventDetailResponse eventDetailResponse = EventDetailMapper.toTicketEventDetails(event);
+        Long quantity;
+
+        if(event.getEventMeetingType().getName() == EventMeetingTypeEnum.VIRTUAL ){
+            quantity = 1L; // One ticket for virtual events
+        }else{
+            quantity = registration.getTicketQuantity();
+        }
+
+        List<TicketResponse> tickets = generateTicket(ticketType,event,quantity)
+                .stream()
+                .map(TicketPurchasedEventMapper::toTicketResponse).toList();
+
+        // Publish to queue for sending tickets to attendees
+        TicketPurchasedEvent ticketPurchasedEvent = TicketPurchasedEventMapper
+                .toTicketPurchasedEvent(
+                        registration.getFullName(),
+                        registration.getEmail(),
+                        tickets,
+                        eventDetailResponse
+                );
+
+        publishTicketsPurchaseEventToQueue(ticketPurchasedEvent);
     }
 
 

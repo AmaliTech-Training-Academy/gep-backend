@@ -4,6 +4,7 @@ import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.enums.EventStatus;
 import com.event_service.event_service.services.*;
 import com.example.common_libraries.dto.CustomApiResponse;
+import com.example.common_libraries.dto.EventRegistrationResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
@@ -61,6 +62,23 @@ public class EventController {
             @Valid @RequestBody EventRegistrationRequest eventRegistrationRequest){
         log.info("Registering for event with id: {}",eventId);
         return ResponseEntity.status(HttpStatus.OK).body(eventRegistrationService.registerEvent(eventId,eventRegistrationRequest));
+    }
+
+    @GetMapping("/{eventId}/registrations/overview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ORGANISER')")
+    public ResponseEntity<CustomApiResponse<EventRegistrationPageResponse>> getEventRegistrationsOverview(@PathVariable("eventId") Long eventId) {
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(eventRegistrationService.getEventRegistrationPageOverview(eventId)));
+    }
+
+    @GetMapping("/{eventId}/registrations/search")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    public ResponseEntity<CustomApiResponse<Page<EventRegistrationsListResponse>>> getEventRegistrations(
+            @PathVariable("eventId") Long eventId,
+            @RequestParam(value = "page", defaultValue = "0", required = false) int page,
+            @RequestParam(value = "keyword", defaultValue = "", required = false) String keyword,
+            @RequestParam(value = "ticketType", defaultValue = "", required = false) String ticketType
+    ){
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(eventRegistrationService.getEventRegistrations(eventId,page, keyword,ticketType)));
     }
 
     @GetMapping("/explore")

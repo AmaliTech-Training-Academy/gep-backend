@@ -13,6 +13,9 @@ public record EventDetailResponse(
         Instant startTime,
         String flyerUrl,
         Long capacity,
+        String location,
+        Long totalAttendees,
+        Boolean isPaid,
         List<String> eventImagesUrl,
         List<TicketTypeResponse> ticketTypes
         //Todo Add venue sections

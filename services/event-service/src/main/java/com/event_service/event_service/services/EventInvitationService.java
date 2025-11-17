@@ -1,11 +1,11 @@
 package com.event_service.event_service.services;
 
-import com.event_service.event_service.dto.EventInvitationAcceptanceRequest;
-import com.event_service.event_service.dto.EventInvitationDetailsResponse;
-import com.event_service.event_service.dto.EventInvitationListResponse;
-import com.event_service.event_service.dto.EventInvitationRequest;
+import com.event_service.event_service.dto.*;
+import com.event_service.event_service.models.enums.InviteeRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDate;
 
 
 public interface EventInvitationService {
@@ -18,4 +18,5 @@ public interface EventInvitationService {
     void resendInvitation(Long invitationId);
     Page<EventInvitationListResponse> getInvitationList(Pageable pageable, String search);
     Page<EventInvitationListResponse> getSavedInvitations(Pageable pageable, String search);
+    Page<EventInviteeResponse> getInviteeList(Long eventId, int page, String keyword, InviteeRole role, LocalDate date);
 }
