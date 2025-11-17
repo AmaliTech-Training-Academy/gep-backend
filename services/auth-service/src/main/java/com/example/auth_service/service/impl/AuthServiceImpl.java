@@ -283,4 +283,10 @@ public class AuthServiceImpl implements AuthService {
         response.addHeader("Set-Cookie", refreshTokenCookie.toString());
     }
 
+    protected User getAuthenticatedUser(){
+        Authentication authentication =  SecurityContextHolder.getContext().getAuthentication();
+        AuthUser authUser = (AuthUser) authentication.getPrincipal();
+        return userRepository.findByEmail(authUser.getUsername())
+                .orElseThrow(() -> new BadCredentialsException("User not found"));
+    }
 }

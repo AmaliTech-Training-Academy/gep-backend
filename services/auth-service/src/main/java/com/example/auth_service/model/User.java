@@ -64,6 +64,12 @@ public class User implements JwtUserDetails{
             mappedBy = "user")
     private Profile profile;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserBankAccount userBankAccount;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserMobileMoney userMobileMoney;
+
     @Override
     public String getRoles() {
         return role.name();

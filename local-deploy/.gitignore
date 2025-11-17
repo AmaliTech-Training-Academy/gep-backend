@@ -1,0 +1,13 @@
+# Environment files
+.env
+
+# Docker volumes
+data/
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
