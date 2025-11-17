@@ -1,6 +1,7 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.request.PlatformSecuritySettingRequest;
+import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.PlatformNotificationSettingDto;
 import com.example.auth_service.dto.response.PlatformSecuritySettingResponse;
 import com.example.auth_service.service.PlatformSettingService;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -46,6 +49,14 @@ public class PlatformSettingController {
     public ResponseEntity<CustomApiResponse<Object>> updateNotificationSetting(@Valid @RequestBody PlatformNotificationSettingDto request){
         platformSettingService.updatePlatformNotificationSetting(request);
         return ResponseEntity.ok(CustomApiResponse.success("Setting updated successfully"));
+    }
+
+    @GetMapping("/team-members")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CustomApiResponse<List<AuthResponse>>> getTeamMembers(){
+        List<AuthResponse> teamMembers = platformSettingService.getTeamMembers();
+        CustomApiResponse<List<AuthResponse>> apiResponse = new CustomApiResponse<>("Team members retrieved successfully", teamMembers);
+        return ResponseEntity.ok(apiResponse);
     }
 
 }
