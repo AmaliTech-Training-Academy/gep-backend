@@ -89,12 +89,11 @@ public class EventController {
             @RequestParam(value = "location", required = false) String location,
             @RequestParam(value = "hasTitle", required = false) String hasTitle,
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(value = "paid", required = false) Boolean paid,
             @RequestParam(value = "priceFilter", required = false) String priceFilter,
             @RequestParam(value = "past", required = false) Boolean past
     ) {
         return ResponseEntity.ok(
-                eventService.listEvents(pageNumber, pageSize,hasTitle, sortBy, location, date, paid, priceFilter, past)
+                eventService.listEvents(pageNumber, pageSize,hasTitle, sortBy, location, date, priceFilter, past)
         );
     }
 
