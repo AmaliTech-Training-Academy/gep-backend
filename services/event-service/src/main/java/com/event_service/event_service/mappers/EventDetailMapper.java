@@ -3,6 +3,7 @@ package com.event_service.event_service.mappers;
 import com.event_service.event_service.dto.EventDetailResponse;
 import com.event_service.event_service.dto.TicketTypeResponse;
 import com.event_service.event_service.models.Event;
+import com.event_service.event_service.models.TicketType;
 import com.example.common_libraries.dto.TicketEventDetailResponse;
 
 import java.util.List;
@@ -20,7 +21,10 @@ public class EventDetailMapper {
                 .description(event.getDescription())
                 .flyerUrl(event.getFlyerUrl())
                 .capacity(capacity)
+                .location(event.getLocation())
+                .isPaid(event.getTicketTypes().stream().anyMatch(TicketType::getIsPaid))
                 .eventImagesUrl(eventImagesUrl)
+                .totalAttendees((long) event.getEventRegistrations().size())
                 .ticketTypes(ticketTypeResponses)
                 .startTime(event.getStartTime())
                 .build();

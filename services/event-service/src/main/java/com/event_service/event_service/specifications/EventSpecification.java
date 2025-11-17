@@ -14,6 +14,9 @@ import java.time.ZoneId;
 
 public class EventSpecification {
 
+    private EventSpecification() {
+        throw new IllegalStateException("Utility class");
+    }
 
     public static Specification<Event> hasTitle(String title) {
         return (root, query, cb) -> {

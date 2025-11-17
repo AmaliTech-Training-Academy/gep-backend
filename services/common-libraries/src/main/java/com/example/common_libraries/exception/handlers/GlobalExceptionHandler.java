@@ -17,9 +17,11 @@ import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.reactive.resource.NoResourceFoundException;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -92,6 +94,14 @@ public class GlobalExceptionHandler {
     }
 
     // Core Exceptions
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex){
+        if(ex.getRequiredType() == LocalDate.class){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(CustomApiResponse.error("Invalid date format. Use yyyy-MM-dd"));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(CustomApiResponse.error("Invalid parameter type"));
+    }
+
     @ExceptionHandler(ExpiredJwtException.class)
     public ResponseEntity<CustomApiResponse<?>> handleExpiredJwtException(ExpiredJwtException ex){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));

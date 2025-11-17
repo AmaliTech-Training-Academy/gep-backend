@@ -105,7 +105,10 @@ public class MyEventServiceImpl implements MyEventService {
                         .build()
                 ).toList();
 
-        Long totalInvitedGuests = eventInvitationRepository.countAllByEvent(event);
+        Long totalInvitedGuests = eventInvitationRepository.findAllByEvent(event)
+                .stream()
+                .mapToLong(invitation -> invitation.getInvitees().size())
+                .sum();
 
         return MyEventDetailResponse
                 .builder()
