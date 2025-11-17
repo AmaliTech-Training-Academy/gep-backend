@@ -1,6 +1,7 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.request.PlatformSecuritySettingRequest;
+import com.example.auth_service.dto.response.PlatformNotificationSettingDto;
 import com.example.auth_service.dto.response.PlatformSecuritySettingResponse;
 import com.example.auth_service.service.PlatformSettingService;
 import com.example.common_libraries.dto.CustomApiResponse;
@@ -32,6 +33,19 @@ public class PlatformSettingController {
         return ResponseEntity.ok(CustomApiResponse.success("Setting updated successfully"));
     }
 
+    @GetMapping("/notifications")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CustomApiResponse<PlatformNotificationSettingDto>> getNotificationSetting(){
+        PlatformNotificationSettingDto response = platformSettingService.getPlatformNotificationSettings();
+        CustomApiResponse<PlatformNotificationSettingDto> apiResponse = new CustomApiResponse<>("Platform notification settings retrieved successfully", response);
+        return ResponseEntity.ok(apiResponse);
+    }
 
+    @PutMapping("/notifications")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CustomApiResponse<Object>> updateNotificationSetting(@Valid @RequestBody PlatformNotificationSettingDto request){
+        platformSettingService.updatePlatformNotificationSetting(request);
+        return ResponseEntity.ok(CustomApiResponse.success("Setting updated successfully"));
+    }
 
 }

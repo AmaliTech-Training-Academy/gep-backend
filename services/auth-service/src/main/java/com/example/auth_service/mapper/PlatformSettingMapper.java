@@ -1,6 +1,8 @@
 package com.example.auth_service.mapper;
 
+import com.example.auth_service.dto.response.PlatformNotificationSettingDto;
 import com.example.auth_service.dto.response.PlatformSecuritySettingResponse;
+import com.example.auth_service.model.PlatformNotificationSetting;
 import com.example.auth_service.model.PlatformSecuritySetting;
 
 public class PlatformSettingMapper {
@@ -11,6 +13,14 @@ public class PlatformSettingMapper {
                 securitySetting.getContactEmail(),
                 securitySetting.getPlatformDescription(),
                 securitySetting.getMaintenanceMode()
+        );
+    }
+
+    public static PlatformNotificationSettingDto toNotificationSettingDto(PlatformNotificationSetting notificationSetting){
+        return new PlatformNotificationSettingDto(
+                notificationSetting.getEventCreation(),
+                notificationSetting.getPaymentFailures(),
+                notificationSetting.getPlatformErrors()
         );
     }
 }
