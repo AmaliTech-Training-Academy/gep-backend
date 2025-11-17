@@ -3,7 +3,13 @@ package com.event_service.event_service.specifications;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.EventInvitee;
 import com.event_service.event_service.models.enums.InviteeRole;
+import com.example.common_libraries.exception.BadRequestException;
 import org.springframework.data.jpa.domain.Specification;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 
 
 public class EventInviteeSpecification {
@@ -31,4 +37,20 @@ public class EventInviteeSpecification {
         if(role == null) return null;
         return (root, query, cb) -> cb.equal(root.get("role"), role.toString());
     }
+
+    public static Specification<EventInvitee> hasDateCreated(LocalDate dateCreated) {
+        if (dateCreated == null) return null;
+
+
+        LocalDateTime startOfDay = dateCreated.atStartOfDay();
+        LocalDateTime endOfDay = dateCreated.atTime(LocalTime.MAX);
+
+        return (root, query, cb) -> cb.between(
+                root.get("createdAt"),
+                startOfDay,
+                endOfDay
+        );
+    }
+
+
 }

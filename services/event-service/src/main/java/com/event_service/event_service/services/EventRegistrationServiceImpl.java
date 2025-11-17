@@ -145,6 +145,13 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             // Simulate successful payment for TEST purposes
             // TODO remove this when payment service is implemented
             paymentCompletedListener(processPaymentEvent);
+
+            // return authorization url gotten from payment service
+            return EventRegistrationResponse
+                    .builder()
+                    .id(event.getId())
+                    .authorizationUrl("https://www.paystack.com/example/authorization-url")
+                    .build();
         }
         EventResponse eventResponse = eventMapper.toResponse(event);
 
@@ -156,6 +163,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
         }
         return EventRegistrationResponse
                 .builder()
+                .id(event.getId())
                 .eventTitle(eventResponse.title())
                 .location(location)
                 .organizer("Event Organizer")

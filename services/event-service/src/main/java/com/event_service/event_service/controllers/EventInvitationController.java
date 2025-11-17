@@ -12,10 +12,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 
 @RequiredArgsConstructor
@@ -121,12 +124,13 @@ public class EventInvitationController {
             @PathVariable("eventId") Long eventId,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(defaultValue = "",required = false) String keyword,
-            @RequestParam(required = false)InviteeRole role
+            @RequestParam(required = false)InviteeRole role,
+            @RequestParam(required = false) LocalDate date
             ){
         return ResponseEntity.status(HttpStatus.OK)
                 .body(
                         CustomApiResponse
-                                .success(eventInvitationService.getInviteeList(eventId,page,keyword,role))
+                                .success(eventInvitationService.getInviteeList(eventId,page,keyword,role,date))
                 );
     }
 

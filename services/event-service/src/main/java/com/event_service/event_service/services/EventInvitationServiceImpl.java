@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -276,7 +277,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     }
 
     @Override
-    public Page<EventInviteeResponse> getInviteeList(Long eventId, int page, String keyword, InviteeRole role) {
+    public Page<EventInviteeResponse> getInviteeList(Long eventId, int page, String keyword, InviteeRole role, LocalDate date) {
         AppUser currentUser = securityUtils.getCurrentUser();
 
         Event event;
@@ -295,7 +296,8 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         spec = Specification.allOf(
                 EventInviteeSpecification.belongsToEvent(event),
                 EventInviteeSpecification.hasKeyword(keyword.trim().toLowerCase()),
-                EventInviteeSpecification.hasRole(role)
+                EventInviteeSpecification.hasRole(role),
+                EventInviteeSpecification.hasDateCreated(date)
         );
 
         Page<EventInvitee> invitees = eventInviteeRepository.findAll(spec, pageable);

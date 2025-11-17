@@ -10,6 +10,7 @@ public record EventRegistrationResponse(
         String eventTitle,
         String location,
         String organizer,
-        Instant startDate
+        Instant startDate,
+        String authorizationUrl
 ) {
 }

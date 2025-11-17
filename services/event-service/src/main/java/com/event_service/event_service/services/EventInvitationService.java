@@ -5,6 +5,8 @@ import com.event_service.event_service.models.enums.InviteeRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
+
 
 public interface EventInvitationService {
     void sendEventInvitation(EventInvitationRequest request);
@@ -16,5 +18,5 @@ public interface EventInvitationService {
     void resendInvitation(Long invitationId);
     Page<EventInvitationListResponse> getInvitationList(Pageable pageable, String search);
     Page<EventInvitationListResponse> getSavedInvitations(Pageable pageable, String search);
-    Page<EventInviteeResponse> getInviteeList(Long eventId, int page, String keyword, InviteeRole role);
+    Page<EventInviteeResponse> getInviteeList(Long eventId, int page, String keyword, InviteeRole role, LocalDate date);
 }
