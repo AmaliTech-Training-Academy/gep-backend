@@ -1,8 +1,8 @@
 package com.event_service.event_service.services;
 
-
 import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.exception.ValidationException;
 import com.event_service.event_service.mappers.EventMapper;
 import com.event_service.event_service.models.*;
@@ -15,8 +15,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,9 +46,6 @@ class EventServiceImplTest {
     private EventRequest eventRequest;
     private MockMultipartFile flyer;
     private List<MultipartFile> eventImages;
-
-    private EventType eventType;
-    private EventMeetingType eventMeetingType;
     private Event event;
     private EventResponse response;
 
@@ -51,20 +53,54 @@ class EventServiceImplTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        flyer = new MockMultipartFile("flyer", "flyer.jpg", "image/jpeg", "fake".getBytes());
-        eventImages = List.of(new MockMultipartFile("img", "img1.jpg", "image/jpeg", "fake".getBytes()));
+        // Mock authenticated user - fixes NullPointerException in getCurrentUser()
+        AppUser currentUser = new AppUser(
+                999L,
+        "ORGANIZER",
+        "testuser@gep.com",
+        "Kwame Nkrumah"
+        );
 
+
+        var authentication = new UsernamePasswordAuthenticationToken(
+                currentUser,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        SecurityContextHolder.setContext(new SecurityContextImpl(authentication));
+
+        // Test files
+        flyer = new MockMultipartFile("flyer", "flyer.jpg", "image/jpeg", "fake-flyer".getBytes());
+        eventImages = List.of(
+                new MockMultipartFile("images", "img1.jpg", "image/jpeg", "fake-img1".getBytes()),
+                new MockMultipartFile("images", "img2.jpg", "image/jpeg", "fake-img2".getBytes())
+        );
+
+        // Common mocks
         eventRequest = mock(EventRequest.class);
-        event = Event.builder().id(1L).title("My Event").build();
-        response = new EventResponse(1L, "My Event", "desc", null, "Accra", "url", "+0");
+        event = Event.builder()
+                .id(1L)
+                .title("My Amazing Event")
+                .build();
+
+        // Correct EventResponse with 8 parameters (matches your actual record)
+        response = new EventResponse(
+                1L,
+                "My Amazing Event",
+                "Join us for an unforgettable experience in Accra!",
+                Instant.now(),
+                "Accra International Conference Centre",
+                "https://storage.gep.com/flyers/event-1.jpg",
+                "+00:00",
+                "Kwame Nkrumah"
+        );
     }
 
     @Test
     void createEvent_inPersonSingleDay_success() {
-        eventType = new EventType();
+        var eventType = new EventType();
         eventType.setName(EventTypeEnum.DAY_EVENT);
-
-        eventMeetingType = new EventMeetingType();
+        var eventMeetingType = new EventMeetingType();
         eventMeetingType.setName(EventMeetingTypeEnum.IN_PERSON);
 
         when(eventTypeService.findById(any())).thenReturn(eventType);
@@ -82,9 +118,9 @@ class EventServiceImplTest {
 
     @Test
     void createEvent_inPersonMultiDay_success() {
-        eventType = new EventType();
+        var eventType = new EventType();
         eventType.setName(EventTypeEnum.MULTI_DAY_EVENT);
-        eventMeetingType = new EventMeetingType();
+        var eventMeetingType = new EventMeetingType();
         eventMeetingType.setName(EventMeetingTypeEnum.IN_PERSON);
 
         when(eventTypeService.findById(any())).thenReturn(eventType);
@@ -102,9 +138,9 @@ class EventServiceImplTest {
 
     @Test
     void createEvent_virtualSingleDay_success() {
-        eventType = new EventType();
+        var eventType = new EventType();
         eventType.setName(EventTypeEnum.DAY_EVENT);
-        eventMeetingType = new EventMeetingType();
+        var eventMeetingType = new EventMeetingType();
         eventMeetingType.setName(EventMeetingTypeEnum.VIRTUAL);
 
         when(eventTypeService.findById(any())).thenReturn(eventType);
@@ -114,6 +150,7 @@ class EventServiceImplTest {
 
         EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages);
 
+        verify(eventValidator).validateRequiredGroup(eventRequest);
         verify(eventValidator).validateVirtualSingleDayGroup(eventRequest);
         verify(virtualAndDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType);
         assertThat(result).isEqualTo(response);
@@ -121,9 +158,9 @@ class EventServiceImplTest {
 
     @Test
     void createEvent_virtualMultiDay_success() {
-        eventType = new EventType();
+        var eventType = new EventType();
         eventType.setName(EventTypeEnum.MULTI_DAY_EVENT);
-        eventMeetingType = new EventMeetingType();
+        var eventMeetingType = new EventMeetingType();
         eventMeetingType.setName(EventMeetingTypeEnum.VIRTUAL);
 
         when(eventTypeService.findById(any())).thenReturn(eventType);
@@ -133,6 +170,7 @@ class EventServiceImplTest {
 
         EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages);
 
+        verify(eventValidator).validateRequiredGroup(eventRequest);
         verify(eventValidator).validateVirtualMultiDayGroup(eventRequest);
         verify(virtualAndMultiDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType);
         assertThat(result).isEqualTo(response);
@@ -140,11 +178,9 @@ class EventServiceImplTest {
 
     @Test
     void createEvent_tooManyImages_throwsValidationException() {
-        List<MultipartFile> tooMany = List.of(
-                flyer, flyer, flyer, flyer, flyer, flyer
-        );
+        List<MultipartFile> tooManyImages = List.of(flyer, flyer, flyer, flyer, flyer, flyer, flyer);
 
         assertThrows(ValidationException.class, () ->
-                eventService.createEvent(eventRequest, flyer, tooMany));
+                eventService.createEvent(eventRequest, flyer, tooManyImages));
     }
 }
