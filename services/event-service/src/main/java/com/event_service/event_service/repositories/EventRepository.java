@@ -1,6 +1,7 @@
 package com.event_service.event_service.repositories;
 
 import com.event_service.event_service.dto.projection.EventManagementProjection;
+import com.event_service.event_service.dto.projection.EventMonthlyStatsProjection;
 import com.event_service.event_service.dto.projection.EventStatProjection;
 import com.event_service.event_service.models.Event;
 import org.springframework.data.domain.Page;
@@ -63,4 +64,22 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     Long countByUserId(Long id);
 
     Optional<Event> findByIdAndUserId(Long eventId, Long userId);
+
+    @Query(value = """
+        SELECT
+            EXTRACT(YEAR FROM e.created_at) AS year,
+            EXTRACT(MONTH FROM e.created_at) AS month,
+            COUNT(*) AS totalEventsCreated
+        FROM event_schema.events e
+        WHERE EXTRACT(YEAR FROM e.created_at) IN (:currentYear, :previousYear)
+        GROUP BY year, month
+        ORDER BY year, month
+    """, nativeQuery = true)
+    List<EventMonthlyStatsProjection> getMonthlyEventStats(
+            @Param("currentYear") Integer currentYear,
+            @Param("previousYear") Integer previousYear
+    );
+
+
+
 }

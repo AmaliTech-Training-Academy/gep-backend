@@ -1,5 +1,6 @@
 package com.event_service.event_service.repositories;
 
+import com.event_service.event_service.dto.projection.RegistrationMonthlyStatsProjection;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.EventRegistration;
 import com.event_service.event_service.specifications.EventRegistrationSpecification;
@@ -23,4 +24,20 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
                                         @Param("email") String email);
 
     Long countByEventUserId(Long id);
+
+    @Query(value = """
+        SELECT
+            EXTRACT(YEAR FROM r.created_at) AS year,
+            EXTRACT(MONTH FROM r.created_at) AS month,
+            COUNT(*) AS totalRegistrations
+        FROM event_schema.event_registration r
+        WHERE EXTRACT(YEAR FROM r.created_at) IN (:currentYear, :previousYear)
+        GROUP BY year, month
+        ORDER BY year, month
+    """, nativeQuery = true)
+    List<RegistrationMonthlyStatsProjection> getMonthlyRegistrationStats(
+            @Param("currentYear") Integer currentYear,
+            @Param("previousYear") Integer previousYear
+    );
+
 }
