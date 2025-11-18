@@ -179,7 +179,6 @@ public class GlobalExceptionHandler {
     // General Exceptions
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CustomApiResponse<?>> handleGenericException(Exception ex){
-        log.error("Unexpected error occurred: {}", ex.getMessage());
         return ResponseEntity.internalServerError().body(CustomApiResponse.error("Unexpected error occured"));
     }
 }
