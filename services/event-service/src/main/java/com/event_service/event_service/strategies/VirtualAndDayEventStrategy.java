@@ -4,8 +4,11 @@ import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.utils.TimeZoneUtils;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.service.S3Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -41,6 +44,7 @@ public class VirtualAndDayEventStrategy implements EventStrategy {
                 eventRequest.event_time(),
                 zoneId
         );
+        AppUser authenticatedUser = getCurrentUser();
         Instant eventInstant = zonedDateTime.toInstant();
                 String uploadedFlyer = s3Service.uploadImage(image);
                 Event event = Event.builder().eventOptions(eventOptions)
@@ -51,10 +55,18 @@ public class VirtualAndDayEventStrategy implements EventStrategy {
                         .eventTime(eventInstant)
                         .eventTimeZoneId(eventRequest.event_time_zone_id())
                         .flyerUrl(uploadedFlyer)
+                        .createdBy(authenticatedUser.fullName())
+                        .userId(authenticatedUser.id())
                         .zoomMeetingLink(eventRequest.zoomUrl())
                         .build();
                 event.setEventOptions(eventOptions);
                 return eventRepository.save(event);
+    }
+
+
+    public AppUser getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return (AppUser) authentication.getPrincipal();
     }
 
 }
