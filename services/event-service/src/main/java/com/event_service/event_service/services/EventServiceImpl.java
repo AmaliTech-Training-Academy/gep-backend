@@ -16,6 +16,7 @@ import com.event_service.event_service.validations.EventValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -109,6 +110,10 @@ public class EventServiceImpl implements EventService {
 
 
     @Override
+    @Cacheable(
+            value = "events",
+            key = "{#pageNumber, #pageSize, #hasTitle, #sortBy, #location, #date, #priceFilter, #past}"
+    )
     public PagedExploreEventResponse listEvents(
             int pageNumber,
             int pageSize,
@@ -119,9 +124,8 @@ public class EventServiceImpl implements EventService {
             String priceFilter,
             Boolean past
     ) {
-        int adjustedPageNumber = pageNumber > 0 ? pageNumber - 1 : pageNumber;
         Pageable pageable = PageRequest.of(
-                adjustedPageNumber,
+                pageNumber,
                 pageSize,
                 Sort.by(Sort.Direction.DESC, sortBy)
         );
