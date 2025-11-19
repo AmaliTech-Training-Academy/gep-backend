@@ -53,7 +53,6 @@ class EventServiceImplTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
 
-        // Mock authenticated user - fixes NullPointerException in getCurrentUser()
         AppUser currentUser = new AppUser(
                 999L,
         "ORGANIZER",
@@ -69,21 +68,19 @@ class EventServiceImplTest {
         );
         SecurityContextHolder.setContext(new SecurityContextImpl(authentication));
 
-        // Test files
+
         flyer = new MockMultipartFile("flyer", "flyer.jpg", "image/jpeg", "fake-flyer".getBytes());
         eventImages = List.of(
                 new MockMultipartFile("images", "img1.jpg", "image/jpeg", "fake-img1".getBytes()),
                 new MockMultipartFile("images", "img2.jpg", "image/jpeg", "fake-img2".getBytes())
         );
 
-        // Common mocks
         eventRequest = mock(EventRequest.class);
         event = Event.builder()
                 .id(1L)
                 .title("My Amazing Event")
                 .build();
 
-        // Correct EventResponse with 8 parameters (matches your actual record)
         response = new EventResponse(
                 1L,
                 "My Amazing Event",
