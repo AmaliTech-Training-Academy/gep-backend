@@ -1,8 +1,7 @@
 package com.event_service.event_service.client;
 
 import com.event_service.event_service.dto.InviteeRegistrationRequest;
-import com.example.common_libraries.dto.TopOrganizerResponse;
-import com.example.common_libraries.dto.UserCreationResponse;
+import com.example.common_libraries.dto.*;
 import com.example.common_libraries.exception.DuplicateResourceException;
 import com.example.common_libraries.exception.ForbiddenException;
 import com.example.common_libraries.exception.ServiceCommunicationException;
@@ -11,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -113,6 +113,68 @@ public class UserServiceClient {
 
         } catch (WebClientResponseException ex) {
             log.error("Service communication error (status {}):", ex.getStatusCode());
+            throw new ServiceCommunicationException(
+                    "Service communication error (status " + ex.getStatusCode() + "): " + ex.getResponseBodyAsString()
+            );
+
+        } catch (Exception ex) {
+            log.error("Unexpected error calling User Service", ex);
+            throw new ServiceCommunicationException("Unexpected error calling User Service: " + ex.getMessage());
+        }
+    }
+
+    public PlatformNotificationSettingDto getNotificationSetting(String accessToken) {
+        log.info("Calling Auth Service to get platform notification settings.");
+        try {
+            ParameterizedTypeReference<CustomApiResponse<PlatformNotificationSettingDto>> responseType =
+                    new ParameterizedTypeReference<CustomApiResponse<PlatformNotificationSettingDto>>() {};
+
+            CustomApiResponse<PlatformNotificationSettingDto> apiResponse = webClient.get()
+                    .uri("/api/v1/auth/platform-settings/notifications")
+                    .cookie("accessToken", accessToken)
+                    .retrieve()
+                    .bodyToMono(responseType)
+                    .block();
+
+            if (apiResponse != null && apiResponse.data() != null) {
+                log.info("Platform notification settings retrieved successfully.");
+                return apiResponse.data();
+            } else {
+                log.error("Auth Service returned an invalid CustomApiResponse for notification settings.");
+                throw new ServiceCommunicationException("Auth Service returned an invalid response for notification settings.");
+            }
+
+        } catch (WebClientResponseException ex) {
+            log.error("Service communication error calling Auth Service (status {}):", ex.getStatusCode());
+            throw new ServiceCommunicationException(
+                    "Service communication error (status " + ex.getStatusCode() + ") retrieving notification settings: " + ex.getResponseBodyAsString()
+            );
+
+        } catch (Exception ex) {
+            log.error("Unexpected error calling Auth Service for notification settings", ex);
+            throw new ServiceCommunicationException("Unexpected error calling Auth Service: " + ex.getMessage());
+        }
+    }
+
+    public List<UserInfoResponse> getActiveAdmins(String accessToken) {
+        try {
+
+            return webClient.get()
+                    .uri("/api/v1/users/active-admins")
+                    .cookie("accessToken", accessToken)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<List<UserInfoResponse>>() {})
+                    .block();
+
+        } catch (WebClientResponseException.Unauthorized ex) {
+
+            throw new UnauthorizedException("Unauthorized: " + ex.getResponseBodyAsString());
+
+        } catch (WebClientResponseException.Forbidden ex) {
+
+            throw new ForbiddenException("Forbidden: " + ex.getResponseBodyAsString());
+
+        } catch (WebClientResponseException ex) {
             throw new ServiceCommunicationException(
                     "Service communication error (status " + ex.getStatusCode() + "): " + ex.getResponseBodyAsString()
             );

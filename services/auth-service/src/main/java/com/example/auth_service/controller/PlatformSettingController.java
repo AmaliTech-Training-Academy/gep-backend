@@ -2,10 +2,10 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.request.PlatformSecuritySettingRequest;
 import com.example.auth_service.dto.response.AuthResponse;
-import com.example.auth_service.dto.response.PlatformNotificationSettingDto;
 import com.example.auth_service.dto.response.PlatformSecuritySettingResponse;
 import com.example.auth_service.service.PlatformSettingService;
 import com.example.common_libraries.dto.CustomApiResponse;
+import com.example.common_libraries.dto.PlatformNotificationSettingDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -37,7 +37,6 @@ public class PlatformSettingController {
     }
 
     @GetMapping("/notifications")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CustomApiResponse<PlatformNotificationSettingDto>> getNotificationSetting(){
         PlatformNotificationSettingDto response = platformSettingService.getPlatformNotificationSettings();
         CustomApiResponse<PlatformNotificationSettingDto> apiResponse = new CustomApiResponse<>("Platform notification settings retrieved successfully", response);

@@ -2,7 +2,6 @@ package com.example.auth_service.service.impl;
 
 import com.example.auth_service.dto.request.PlatformSecuritySettingRequest;
 import com.example.auth_service.dto.response.AuthResponse;
-import com.example.auth_service.dto.response.PlatformNotificationSettingDto;
 import com.example.auth_service.dto.response.PlatformSecuritySettingResponse;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.mapper.PlatformSettingMapper;
@@ -13,6 +12,7 @@ import com.example.auth_service.repository.PlatformNotificationSettingRepository
 import com.example.auth_service.repository.PlatformSecuritySettingRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.service.PlatformSettingService;
+import com.example.common_libraries.dto.PlatformNotificationSettingDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

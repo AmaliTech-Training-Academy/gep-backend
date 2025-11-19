@@ -2,14 +2,13 @@ package com.example.auth_service.service.impl;
 
 import com.example.auth_service.dto.projection.TopOrganizerProjection;
 import com.example.auth_service.dto.request.UserUpdateRequest;
-import com.example.auth_service.dto.response.UserManagementResponse;
-import com.example.auth_service.dto.response.UserResponse;
-import com.example.auth_service.dto.response.UserStatistics;
-import com.example.auth_service.dto.response.UserSummaryReport;
+import com.example.auth_service.dto.response.*;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.repository.UserEventStatsRepository;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.dto.TopOrganizerResponse;
 import com.example.common_libraries.dto.UserCreationResponse;
+import com.example.common_libraries.dto.UserInfoResponse;
 import com.example.common_libraries.exception.DuplicateResourceException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.example.auth_service.mapper.UserMapper;
@@ -104,6 +103,18 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public Page<UserManagementResponse> userSearch(String keyword,UserRole role, Boolean status, int page) {
+        Page<User> searchResults = filterUserList(page,keyword, role,status);
+        return searchResults.map(UserMapper::toUserManagementResponse);
+    }
+
+    @Override
+    public Page<UserListResponse> getAdminUsers(String keyword, Boolean status, int page) {
+        UserRole role = UserRole.ADMIN;
+        Page<User> searchResults = filterUserList(page,keyword, role,status);
+        return searchResults.map(UserMapper::toUserListResponse);
+    }
+
+    private Page<User> filterUserList(int page, String keyword, UserRole role, Boolean status) {
         page = Math.max(page, 0);
         Sort sort = Sort.by("fullName");
         Pageable pageable = PageRequest.of(page, 10,sort);
@@ -120,10 +131,9 @@ public class UserServiceImpl implements UserService {
         if(status != null) {
             spec = spec.and(UserSpecifications.isActive(status));
         }
-        Page<User> searchResults = userRepository.findAll(spec, pageable);
-
-        return searchResults.map(UserMapper::toUserManagementResponse);
+        return userRepository.findAll(spec, pageable);
     }
+
 
     /**
      * Retrieves a user by their unique ID.
@@ -204,6 +214,14 @@ public class UserServiceImpl implements UserService {
                         .growthPercentage(proj.getGrowthPercentage())
                         .build()
                 )
+                .toList();
+    }
+
+    @Override
+    public List<UserInfoResponse> getActiveAdmins() {
+        List<User> activeAdmins = userRepository.findByRoleAndIsActiveTrue(UserRole.ADMIN);
+        return activeAdmins.stream()
+                .map(UserMapper::toAppUser)
                 .toList();
     }
 

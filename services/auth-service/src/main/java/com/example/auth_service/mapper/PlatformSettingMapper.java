@@ -1,11 +1,11 @@
 package com.example.auth_service.mapper;
 
 import com.example.auth_service.dto.response.AuthResponse;
-import com.example.auth_service.dto.response.PlatformNotificationSettingDto;
 import com.example.auth_service.dto.response.PlatformSecuritySettingResponse;
 import com.example.auth_service.model.PlatformNotificationSetting;
 import com.example.auth_service.model.PlatformSecuritySetting;
 import com.example.auth_service.model.User;
+import com.example.common_libraries.dto.PlatformNotificationSettingDto;
 
 public class PlatformSettingMapper {
     public static PlatformSecuritySettingResponse toSecuritySettingResponse(PlatformSecuritySetting securitySetting){

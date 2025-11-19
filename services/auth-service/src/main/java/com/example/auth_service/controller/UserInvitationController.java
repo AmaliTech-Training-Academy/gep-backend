@@ -2,6 +2,7 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.request.BulkUserInvitationRequest;
 import com.example.auth_service.dto.request.InvitationAcceptanceRequest;
+import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.InviteeDetailsResponse;
 import com.example.auth_service.service.UserInvitationService;
 import com.example.common_libraries.dto.CustomApiResponse;
@@ -27,8 +28,8 @@ public class UserInvitationController {
     }
 
     @PostMapping("/accept-invitation")
-    public ResponseEntity<CustomApiResponse<UserCreationResponse>> acceptInvitation(@Valid  @RequestBody InvitationAcceptanceRequest request){
-        UserCreationResponse response = userInvitationService.acceptInvitation(request);
+    public ResponseEntity<CustomApiResponse<AuthResponse>> acceptInvitation(@Valid  @RequestBody InvitationAcceptanceRequest request){
+        AuthResponse response = userInvitationService.acceptInvitation(request);
         return ResponseEntity.ok(CustomApiResponse.success("Invitation accepted successfully", response));
     }
 

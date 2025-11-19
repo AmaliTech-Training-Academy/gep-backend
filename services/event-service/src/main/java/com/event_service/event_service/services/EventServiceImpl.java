@@ -1,10 +1,14 @@
 package com.event_service.event_service.services;
 
+import com.event_service.event_service.client.UserServiceClient;
 import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
 import com.event_service.event_service.dto.ExploreEventResponse;
 import com.event_service.event_service.dto.PagedExploreEventResponse;
 import com.example.common_libraries.dto.AppUser;
+import com.example.common_libraries.dto.PlatformNotificationSettingDto;
+import com.example.common_libraries.dto.UserInfoResponse;
+import com.example.common_libraries.dto.queue_events.EventCreationNotificationMessage;
 import com.example.common_libraries.exception.ValidationException;
 import com.event_service.event_service.mappers.EventMapper;
 import com.event_service.event_service.models.*;
@@ -14,6 +18,8 @@ import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.strategies.*;
 import com.event_service.event_service.validations.EventValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -54,9 +60,14 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
+    private final UserServiceClient userServiceClient;
+    private final HttpServletRequest request;
 
     @Value("${sqs.event-stat-queue-url}")
     private String eventStatQueueUrl;
+
+    @Value("${sqs.event-creation-queue-url}")
+    private String eventCreationQueueUrl;
 
     @Override
     @Transactional
@@ -104,6 +115,7 @@ public class EventServiceImpl implements EventService {
         }
 
         publishEventToEventStatQueue(authenticatedUser.id());
+        publishEventCreationNotificationToQueue(event);
 
         return eventMapper.toResponse(event);
     }
@@ -155,7 +167,32 @@ public class EventServiceImpl implements EventService {
         );
     }
 
+    private void publishEventCreationNotificationToQueue(Event event){
+        String accessToken = getCookieValue("accessToken");
+        PlatformNotificationSettingDto platformNotification = userServiceClient.getNotificationSetting(accessToken);
 
+        if(platformNotification.eventCreation()){
+            List<UserInfoResponse> adminUsers = userServiceClient.getActiveAdmins(accessToken);
+            for(UserInfoResponse admin : adminUsers){
+                try{
+                    String messageBody = objectMapper.writeValueAsString(
+                            new EventCreationNotificationMessage(
+                                    admin.email(),
+                                    event.getCreatedBy(),
+                                    event.getTitle()
+                            )
+                    );
+                    sqsClient.sendMessage(builder -> builder
+                            .queueUrl(eventCreationQueueUrl)
+                            .messageBody(messageBody)
+                    );
+                    log.info("Event creation notification sent to SQS queue for admin id: {}", admin.id());
+                }catch (Exception e){
+                    log.error("Error sending event creation notification to SQS queue for admin id: {}: {}", admin.id(), e.getMessage());
+                }
+            }
+        }
+    }
 
     public void publishEventToEventStatQueue(Long organizerId) {
         // Implementation for publishing event to eventStat queue
@@ -171,5 +208,17 @@ public class EventServiceImpl implements EventService {
     public AppUser getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return (AppUser) authentication.getPrincipal();
+    }
+
+    private String getCookieValue(String cookieName) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookieName.equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 }

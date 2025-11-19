@@ -2,8 +2,8 @@ package com.example.auth_service.service;
 
 import com.example.auth_service.dto.request.PlatformSecuritySettingRequest;
 import com.example.auth_service.dto.response.AuthResponse;
-import com.example.auth_service.dto.response.PlatformNotificationSettingDto;
 import com.example.auth_service.dto.response.PlatformSecuritySettingResponse;
+import com.example.common_libraries.dto.PlatformNotificationSettingDto;
 
 import java.util.List;
 
