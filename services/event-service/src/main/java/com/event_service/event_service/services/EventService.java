@@ -17,7 +17,6 @@ public interface EventService {
             String[] sortBy,
             String location,
             LocalDate date,
-            Boolean paid,
             String priceFilter,
             Boolean past
     );

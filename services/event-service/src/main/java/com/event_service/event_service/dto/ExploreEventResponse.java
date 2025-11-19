@@ -10,5 +10,6 @@ public record ExploreEventResponse(
         Instant startTime,
         String location,
         String flyerUrl,
-        BigDecimal ticketPrice
+        BigDecimal ticketPrice,
+        Long attendeeCount
 ) {}

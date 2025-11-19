@@ -22,6 +22,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -127,12 +128,12 @@ public class EventServiceImpl implements EventService {
             String[] sortBy,
             String location,
             LocalDate date,
-            Boolean paid,
             String priceFilter,
             Boolean past
     ) {
+        int adjustedPageNumber = pageNumber > 0 ? pageNumber - 1 : pageNumber;
         Pageable pageable = PageRequest.of(
-                pageNumber,
+                adjustedPageNumber,
                 pageSize,
                 Sort.by(Sort.Direction.DESC, sortBy)
         );
@@ -148,14 +149,16 @@ public class EventServiceImpl implements EventService {
                     ? spec.and(EventSpecification.isPast())
                     : spec.and(EventSpecification.isUpcoming());
         }
-        List<ExploreEventResponse> eventsToExplore = eventRepository.findAll(spec, pageable)
+        Page<Event> eventPage = eventRepository.findAll(spec, pageable);
+        List<ExploreEventResponse> eventsToExplore = eventPage
                 .stream()
                 .map(eventMapper::toExploreEventResponse)
                 .toList();
 
         return new PagedExploreEventResponse(
-                pageable.getPageNumber() + 1,
+                pageable.getPageNumber(),
                 pageable.getPageSize(),
+                eventPage.getTotalPages(),
                 eventsToExplore
         );
     }
