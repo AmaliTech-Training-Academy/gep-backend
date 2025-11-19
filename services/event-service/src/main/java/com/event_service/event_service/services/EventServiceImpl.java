@@ -5,6 +5,9 @@ import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
 import com.event_service.event_service.dto.ExploreEventResponse;
 import com.event_service.event_service.dto.PagedExploreEventResponse;
+import com.event_service.event_service.repositories.TicketRepository;
+import com.event_service.event_service.repositories.TicketTypeRepository;
+import com.event_service.event_service.validations.FileValidator;
 import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.dto.PlatformNotificationSettingDto;
 import com.example.common_libraries.dto.UserInfoResponse;
@@ -60,6 +63,8 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
+    private final FileValidator fileValidator;
+    private final TicketTypeRepository ticketTypeRepository;
     private final UserServiceClient userServiceClient;
     private final HttpServletRequest request;
 
@@ -74,6 +79,8 @@ public class EventServiceImpl implements EventService {
     @PreAuthorize("hasRole('ORGANISER')")
     public EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages) {
         eventValidator.validateRequiredGroup(eventRequest);
+        fileValidator.validate(image);
+        fileValidator.validate(eventImages);
 
         if (!CollectionUtils.isEmpty(eventImages) && eventImages.size() > 5) {
             throw new ValidationException(List.of("You can upload a maximum of 5 images per event."));
