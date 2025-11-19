@@ -80,7 +80,10 @@ public class EventServiceImpl implements EventService {
     public EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages) {
         eventValidator.validateRequiredGroup(eventRequest);
         fileValidator.validate(image);
-        fileValidator.validate(eventImages);
+
+        if(!CollectionUtils.isEmpty(eventImages)){
+            fileValidator.validate(eventImages);
+        }
 
         if (!CollectionUtils.isEmpty(eventImages) && eventImages.size() > 5) {
             throw new ValidationException(List.of("You can upload a maximum of 5 images per event."));
@@ -92,6 +95,22 @@ public class EventServiceImpl implements EventService {
                 .findEventMeetingTypeById(eventRequest.event_meeting_type_id());
 
         Event event = null;
+
+        if (eventRequest.eventOptionsRequest().ticketPrice().equals(0.00)) {
+
+            TicketType freeTicket = TicketType.builder()
+                    .event(event)
+                    .description("Standard")
+                    .type("Standard")
+                    .price(0.00)
+                    .isPaid(false)
+                    .isActive(true)
+                    .quantity(eventRequest.eventOptionsRequest().capacity())
+                    .soldCount(0L)
+                    .quantityPerAttendee(1)
+                    .build();
+            ticketTypeRepository.save(freeTicket);
+        }
 
         if(eventType.getName().name().equals(EventTypeEnum.DAY_EVENT.name())
                 && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.IN_PERSON.name())) {
