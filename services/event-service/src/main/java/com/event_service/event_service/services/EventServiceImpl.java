@@ -96,22 +96,6 @@ public class EventServiceImpl implements EventService {
 
         Event event = null;
 
-        if (eventRequest.eventOptionsRequest().ticketPrice().equals(0.00)) {
-
-            TicketType freeTicket = TicketType.builder()
-                    .event(event)
-                    .description("Standard")
-                    .type("Standard")
-                    .price(0.00)
-                    .isPaid(false)
-                    .isActive(true)
-                    .quantity(eventRequest.eventOptionsRequest().capacity())
-                    .soldCount(0L)
-                    .quantityPerAttendee(1)
-                    .build();
-            ticketTypeRepository.save(freeTicket);
-        }
-
         if(eventType.getName().name().equals(EventTypeEnum.DAY_EVENT.name())
                 && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.IN_PERSON.name())) {
             eventValidator.validateInPersonSingleDayGroup(eventRequest);
