@@ -4,7 +4,9 @@ import com.example.auth_service.dto.base.UserRegistrationBase;
 import com.example.auth_service.dto.request.BulkUserInvitationRequest;
 import com.example.auth_service.dto.request.InvitationAcceptanceRequest;
 import com.example.auth_service.dto.request.UserInvitationRequest;
+import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.dto.response.InviteeDetailsResponse;
+import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.model.User;
 import com.example.auth_service.model.UserInvitation;
 import com.example.auth_service.model.UserInvitee;
@@ -57,6 +59,9 @@ public class UserInvitationServiceImpl implements UserInvitationService {
         UserInvitation userInvitation = createUserInvitation(invitationRequest);
         userInvitationRepository.save(userInvitation);
         for(UserInvitationRequest invitee : invitationRequest.invitees()){
+            if(!(invitee.role() == UserRole.ADMIN || invitee.role() == UserRole.ORGANISER)){
+                throw new IllegalArgumentException("Invalid role for invitation. Only ADMIN and ORGANISER roles are allowed.");
+            }
             validateUserEmailAndInvitationDoesNotExist(invitee.email());
             UserInvitee userInvitee = createUserInvitee(invitee, userInvitation, invitationRequest.status());
             userInviteeRepository.save(userInvitee);
@@ -143,7 +148,7 @@ public class UserInvitationServiceImpl implements UserInvitationService {
 
     @Override
     @Transactional
-    public UserCreationResponse acceptInvitation(InvitationAcceptanceRequest request) {
+    public AuthResponse acceptInvitation(InvitationAcceptanceRequest request) {
            UserInvitee invitation = getValidUserInvitationByToken(request.invitationToken());
            invitation.setStatus(InviteStatus.ACCEPTED);
            userInviteeRepository.save(invitation);
@@ -151,7 +156,7 @@ public class UserInvitationServiceImpl implements UserInvitationService {
            authServiceImpl.validateRequest(registrationData);
            User savedUser = authServiceImpl.createAndSaveUser(registrationData, invitation.getRole());
            authServiceImpl.createUserRelatedEntities(savedUser);
-            return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
+            return new AuthResponse(savedUser.getId(),savedUser.getEmail(), savedUser.getFullName(), savedUser.getProfile().getProfileImageUrl(), savedUser.getRole());
     }
 
     private UserRegistrationBase setupRegistrationData(InvitationAcceptanceRequest request, UserInvitee invitee){

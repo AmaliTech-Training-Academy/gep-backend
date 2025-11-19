@@ -1,9 +1,6 @@
 package com.example.auth_service.mapper;
 
-import com.example.auth_service.dto.response.UserManagementResponse;
-import com.example.auth_service.dto.response.UserResponse;
-import com.example.auth_service.dto.response.UserStatistics;
-import com.example.auth_service.dto.response.UserSummaryReport;
+import com.example.auth_service.dto.response.*;
 import com.example.auth_service.model.Profile;
 import com.example.auth_service.model.User;
 import com.example.auth_service.model.UserEventStats;
@@ -79,6 +76,19 @@ public class UserMapper {
                 user.getFullName(),
                 user.getEmail(),
                 user.getRole().name()
+        );
+    }
+
+    public static UserListResponse toUserListResponse(User user){
+        return new UserListResponse(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.isActive(),
+                Optional.ofNullable(user.getProfile())
+                        .map(Profile::getProfileImageUrl)
+                        .orElse(null)
         );
     }
 }

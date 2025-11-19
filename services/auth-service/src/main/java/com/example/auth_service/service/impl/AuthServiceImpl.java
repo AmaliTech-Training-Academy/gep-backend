@@ -99,6 +99,8 @@ public class AuthServiceImpl implements AuthService {
     protected void createUserRelatedEntities(User user) {
         Profile userProfile = Profile.builder().user(user).build();
         profileRepository.save(userProfile);
+        user.setProfile(userProfile);
+        userRepository.save(user);
 
         if(!user.getRole().equals(UserRole.ADMIN)){
             UserEventStats userEventStats = UserEventStats.builder().user(user).build();

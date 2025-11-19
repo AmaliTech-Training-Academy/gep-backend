@@ -1,6 +1,7 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.request.UserUpdateRequest;
+import com.example.auth_service.dto.response.UserListResponse;
 import com.example.auth_service.dto.response.UserManagementResponse;
 import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserSummaryReport;
@@ -77,6 +78,17 @@ public class UserManagementController {
             @RequestParam(defaultValue = "0") int page
     ){
         CustomApiResponse<Page<UserManagementResponse>> response = CustomApiResponse.success(userService.userSearch(keyword,role,status, page));
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/admin-list")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CustomApiResponse<Page<UserListResponse>>> getAdminUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Boolean status,
+            @RequestParam(defaultValue = "0") int page
+    ){
+        CustomApiResponse<Page<UserListResponse>> response = CustomApiResponse.success(userService.getAdminUsers(keyword,status, page));
         return ResponseEntity.ok(response);
     }
 

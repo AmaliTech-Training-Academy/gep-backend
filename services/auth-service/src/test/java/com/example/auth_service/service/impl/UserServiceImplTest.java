@@ -70,7 +70,7 @@ class UserServiceImplTest {
                 .fullName("John Doe")
                 .email("john.doe@example.com")
                 .password("encodedPassword")
-                .role(UserRole.ATTENDEE)
+                .role(UserRole.ORGANISER)
                 .isActive(true)
                 .profile(testProfile)
                 .userEventStats(testUserEventStats)
