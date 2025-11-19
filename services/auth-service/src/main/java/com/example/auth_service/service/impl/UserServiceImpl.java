@@ -8,8 +8,10 @@ import com.example.auth_service.dto.response.UserStatistics;
 import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.repository.UserEventStatsRepository;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.dto.TopOrganizerResponse;
 import com.example.common_libraries.dto.UserCreationResponse;
+import com.example.common_libraries.dto.UserInfoResponse;
 import com.example.common_libraries.exception.DuplicateResourceException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.example.auth_service.mapper.UserMapper;
@@ -204,6 +206,14 @@ public class UserServiceImpl implements UserService {
                         .growthPercentage(proj.getGrowthPercentage())
                         .build()
                 )
+                .toList();
+    }
+
+    @Override
+    public List<UserInfoResponse> getActiveAdmins() {
+        List<User> activeAdmins = userRepository.findByRoleAndIsActiveTrue(UserRole.ADMIN);
+        return activeAdmins.stream()
+                .map(UserMapper::toAppUser)
                 .toList();
     }
 

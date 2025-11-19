@@ -7,7 +7,9 @@ import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.model.Profile;
 import com.example.auth_service.model.User;
 import com.example.auth_service.model.UserEventStats;
+import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.dto.UserCreationResponse;
+import com.example.common_libraries.dto.UserInfoResponse;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -69,5 +71,14 @@ public class UserMapper {
 
     public static UserCreationResponse toUserCreationResponse(User user){
         return new UserCreationResponse(user.getId(), user.getEmail());
+    }
+
+    public static UserInfoResponse toAppUser(User user){
+        return new UserInfoResponse(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getRole().name()
+        );
     }
 }

@@ -6,8 +6,7 @@ import com.example.auth_service.dto.response.UserResponse;
 import com.example.auth_service.dto.response.UserSummaryReport;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.service.UserService;
-import com.example.common_libraries.dto.TopOrganizerResponse;
-import com.example.common_libraries.dto.UserCreationResponse;
+import com.example.common_libraries.dto.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
@@ -18,7 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import com.example.common_libraries.dto.CustomApiResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -146,5 +144,10 @@ public class UserManagementController {
     public ResponseEntity<UserCreationResponse> checkUserExists(@RequestParam String email) {
         UserCreationResponse user = userService.getUserByEmail(email);
         return ResponseEntity.ok(user);
+    }
+
+    @GetMapping("/active-admins")
+    public ResponseEntity<List<UserInfoResponse>> getActiveAdmins(){
+        return ResponseEntity.status(HttpStatus.OK).body(userService.getActiveAdmins());
     }
 }

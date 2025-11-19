@@ -1,5 +1,6 @@
 package com.moadams.notificationservice.service.impl;
 
+import com.example.common_libraries.dto.queue_events.EventCreationNotificationMessage;
 import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
 import com.example.common_libraries.dto.TicketResponse;
@@ -85,6 +86,22 @@ public class EmailService implements NotificationService {
 
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send event invitation email");
+        }
+    }
+
+    @Override
+    public void sendEventCreationNotificationMail(EventCreationNotificationMessage event) {
+        try{
+            Context context = new Context();
+            context.setVariable("eventName", event.eventTitle());
+            context.setVariable("createdBy", event.createdBy());
+
+
+            String htmlContent = templateEngine.process("event-created", context);
+            sendEmail(htmlContent, event.adminEmail(), "New Event Created");
+
+        }catch (MessagingException | UnsupportedEncodingException e){
+            log.error("Failed to send event creation email");
         }
     }
 

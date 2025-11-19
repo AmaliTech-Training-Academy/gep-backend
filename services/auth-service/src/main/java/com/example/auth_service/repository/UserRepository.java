@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,4 +29,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     UserStatistics getUserStatistics();
 
     List<User> findAllByRole(UserRole userRole);
+
+    @Query("SELECT u FROM User u WHERE u.role = :role AND u.isActive = true")
+    List<User> findByRoleAndIsActiveTrue(@Param("role") UserRole role);
 }
