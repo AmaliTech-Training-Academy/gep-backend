@@ -11,10 +11,8 @@ public record UserUpdateRequest(
         @Email(message = "Invalid email format")
         String email,
 
-        @NotBlank(message = "Phone is required")
         String phone,
 
-        @NotBlank(message = "Address is required")
         String address,
         boolean status
 ) {
