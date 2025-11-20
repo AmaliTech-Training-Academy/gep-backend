@@ -31,38 +31,47 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
                              MultipartFile image,
                              List<MultipartFile> eventImages,
                              EventType eventType,
-                             EventMeetingType eventMeetingType
-    ){
+                             EventMeetingType eventMeetingType) {
+
         EventOptions eventOptions = EventOptions.builder()
                 .ticketPrice(eventRequest.eventOptionsRequest().ticketPrice())
                 .capacity(eventRequest.eventOptionsRequest().capacity())
                 .requiresApproval(eventRequest.eventOptionsRequest().requiresApproval())
                 .build();
+
         String uploadedFlyer = s3Service.uploadImage(image);
+
         ZoneId zoneId = timeZoneUtils.createZoneId(eventRequest.event_time_zone_id());
-        ZonedDateTime zonedDateTime = timeZoneUtils.createZonedTimeDate( eventRequest.event_date(),
+        ZonedDateTime zonedDateTime = timeZoneUtils.createZonedTimeDate(
+                eventRequest.event_date(),
                 eventRequest.event_time(),
-                zoneId);
+                zoneId
+        );
         Instant eventInstant = zonedDateTime.toInstant();
+
         AppUser authenticatedUser = getCurrentUser();
-        Event event = Event.builder().eventOptions(eventOptions)
-                .eventMeetingType(eventMeetingType).eventType(eventType)
-                .eventType(eventType)
+
+        Event event = Event.builder()
                 .title(eventRequest.title())
                 .description(eventRequest.description())
                 .eventTime(eventInstant)
                 .eventTimeZoneId(eventRequest.event_time_zone_id())
-                .flyerUrl(uploadedFlyer)
                 .location(eventRequest.location())
+                .flyerUrl(uploadedFlyer)
+                .eventType(eventType)
+                .eventMeetingType(eventMeetingType)
+                .eventOptions(eventOptions)
                 .createdBy(authenticatedUser.fullName())
                 .userId(authenticatedUser.id())
                 .build();
-        Event eventWithImages = attachEventImages(eventImages,event);
-        eventWithImages.setEventOptions(eventOptions);
+
+        attachEventImages(eventImages, event);
+
         return eventRepository.save(event);
     }
 
-    public Event attachEventImages(List<MultipartFile> eventImages, Event event){
+
+    public void attachEventImages(List<MultipartFile> eventImages, Event event){
         if(!CollectionUtils.isEmpty(eventImages)) {
             List<String> uploadedImages = s3Service.uploadImages(eventImages);
             for(String uploadEventImage : uploadedImages) {
@@ -72,7 +81,6 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
                 event.addImage(eventImage);
             }
         }
-        return event;
     }
 
     public AppUser getCurrentUser() {
