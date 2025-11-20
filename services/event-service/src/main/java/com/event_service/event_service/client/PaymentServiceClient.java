@@ -16,10 +16,8 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 public class PaymentServiceClient {
     private final WebClient webClient;
 
-    @Value("${payment.service.url}")
-    private String paymentServiceUrl;
 
-    public PaymentServiceClient(WebClient.Builder builder) {
+    public PaymentServiceClient(WebClient.Builder builder,@Value("${payment.service.url}") String paymentServiceUrl) {
         this.webClient = builder.baseUrl(paymentServiceUrl).build();
     }
 
