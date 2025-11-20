@@ -3,7 +3,6 @@ package com.example.payment_service.controller;
 
 import com.example.common_libraries.dto.PaystackResponse;
 import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
-import com.example.payment_service.dto.TransactionRequest;
 import com.example.payment_service.models.Transaction;
 import com.example.payment_service.services.TransactionService;
 import lombok.RequiredArgsConstructor;
