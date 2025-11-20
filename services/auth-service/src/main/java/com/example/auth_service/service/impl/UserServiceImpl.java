@@ -6,6 +6,7 @@ import com.example.auth_service.dto.response.*;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.repository.UserEventStatsRepository;
 import com.example.auth_service.utils.AuthUserUtil;
+import com.example.common_libraries.dto.HostsResponse;
 import com.example.common_libraries.dto.TopOrganizerResponse;
 import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.common_libraries.dto.UserInfoResponse;
@@ -203,5 +204,20 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByEmail(email)
                 .map(UserMapper::toUserCreationResponse)
                 .orElse(null);
+    }
+
+    @Override
+    public List<HostsResponse> getEventHosts(List<Long> hostIds) {
+        List<User> eventHosts = userRepository.findAllById(hostIds);
+        return eventHosts.stream()
+                .map(user ->
+                    HostsResponse
+                            .builder()
+                            .id(user.getId())
+                            .fullName(user.getFullName())
+                            .email(user.getEmail())
+                            .role(user.getRole().name())
+                            .build()
+                ).toList();
     }
 }

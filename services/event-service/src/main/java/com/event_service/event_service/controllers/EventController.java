@@ -126,9 +126,10 @@ public class EventController {
     @GetMapping("/my-events/details/{eventId}")
     @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
     public ResponseEntity<CustomApiResponse<MyEventDetailResponse>> getMyEventDetails(
+            @CookieValue(name = "accessToken", required = false) String accessToken,
             @PathVariable Long eventId
     ){
-        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEventDetailsById(eventId)));
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEventDetailsById(eventId, accessToken)));
     }
 
     @GetMapping("/my-events")
