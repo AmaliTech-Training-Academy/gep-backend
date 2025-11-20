@@ -22,6 +22,8 @@ import org.thymeleaf.context.Context;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 
@@ -149,13 +151,17 @@ public class EmailService implements NotificationService {
     @Override
     public void sendTicketPurchasedEmail(TicketPurchasedEvent ticketPurchasedEvent) {
         try{
+            Instant startTime = ticketPurchasedEvent.eventDetails().startTime();
+            Instant endTime = ticketPurchasedEvent.eventDetails().endTime();
+            Long durationInHours = Duration.between(startTime, endTime).toHours();
+
             Context context = new Context();
             context.setVariable("attendeeName", ticketPurchasedEvent.attendeeName());
             context.setVariable("attendeeEmail", ticketPurchasedEvent.attendeeEmail());
             context.setVariable("tickets", ticketPurchasedEvent.tickets());
             context.setVariable("eventDetails", ticketPurchasedEvent.eventDetails());
-            context.setVariable("organizer", "Organizer Name");
-            context.setVariable("duration", "N/A");
+            context.setVariable("organizer", ticketPurchasedEvent.eventDetails().organizerName());
+            context.setVariable("duration", durationInHours+" Hours");
 
             if(ticketPurchasedEvent.eventDetails().eventMeetingType().equals("VIRTUAL")){
                 String verificationLink = String.format(

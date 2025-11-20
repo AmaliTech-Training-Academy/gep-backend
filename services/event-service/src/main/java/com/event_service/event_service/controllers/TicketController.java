@@ -21,11 +21,7 @@ public class TicketController {
 
     @GetMapping("/verifyVirtualTicket/join")
     public ResponseEntity<Void> verifyVirtualTickets(@RequestParam String ticketCode){
-        if(ticketService.isTicketCodeValid(ticketCode)){
-            URI redirectUri = URI.create(ticketService.getMeetingUrl(ticketCode));
-            return ResponseEntity.status(HttpStatus.FOUND).location(redirectUri).build();
-        }else{
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+        URI redirectUri = URI.create(ticketService.validateAndGetMeetingUrl(ticketCode));
+        return ResponseEntity.status(HttpStatus.FOUND).location(redirectUri).build();
     }
 }
