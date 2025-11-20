@@ -85,7 +85,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ServiceCommunicationException.class)
     public ResponseEntity<CustomApiResponse<?>> handleServiceCommunicationException(ServiceCommunicationException ex){
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(CustomApiResponse.error(ex.getMessage()));
+        log.error("interservice communication failed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(CustomApiResponse.error("Interservice communication failed"));
     }
 
     @ExceptionHandler(ForbiddenException.class)
