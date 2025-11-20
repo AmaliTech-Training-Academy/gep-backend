@@ -1,7 +1,8 @@
 package com.example.payment_service.controller;
 
 
-import com.example.payment_service.dto.PaystackResponse;
+import com.example.common_libraries.dto.PaystackResponse;
+import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.payment_service.dto.TransactionRequest;
 import com.example.payment_service.models.Transaction;
 import com.example.payment_service.services.TransactionService;
@@ -13,15 +14,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/payment")
+@RequestMapping("/api/v1/payment")
 @RequiredArgsConstructor
-public class TestEnpoint {
+public class TestEndpoint {
 
     private final TransactionService transactionService;
 
     @PostMapping
-    public ResponseEntity<PaystackResponse> payment(@RequestBody TransactionRequest transactionRequest) {
-        Transaction transaction = transactionService.createTransaction(transactionRequest);
+    public ResponseEntity<PaystackResponse> payment(@RequestBody ProcessPaymentEvent paymentRequest) {
+        Transaction transaction = transactionService.createTransaction(paymentRequest);
         PaystackResponse paystackResponse = new PaystackResponse(transaction.getAuthorizationUrl(), transaction.getReference());
         return ResponseEntity.ok(paystackResponse);
     }
