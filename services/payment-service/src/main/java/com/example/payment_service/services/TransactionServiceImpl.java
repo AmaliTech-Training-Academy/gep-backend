@@ -1,15 +1,19 @@
 package com.example.payment_service.services;
 
-import com.example.payment_service.ResourceNotFound;
+import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.payment_service.dto.PaystackRequest;
 import com.example.payment_service.dto.PaystackTransaction;
 import com.example.payment_service.dto.TransactionRequest;
+import com.example.payment_service.models.PaymentRequestObject;
 import com.example.payment_service.models.Transaction;
 import com.example.payment_service.models.TransactionStatus;
+import com.example.payment_service.repos.PaymentRequestObjectRepository;
 import com.example.payment_service.repos.TransactionRepository;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -21,14 +25,17 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final ExternalAPIService externalAPIService;
+    private final PaymentRequestObjectRepository paymentRequestObjectRepository;
 
     @Override
-    public Transaction createTransaction(TransactionRequest transactionRequest) {
-        BigDecimal amountInSmallestUnit = transactionRequest.price().multiply(new BigDecimal("100"));
+    @Transactional
+    public Transaction createTransaction(ProcessPaymentEvent paymentRequest) {
+        BigDecimal totalTicketPrice = BigDecimal.valueOf(paymentRequest.amount()*paymentRequest.numberOfTickets());
+        BigDecimal amountInSmallestUnit = totalTicketPrice.multiply(new BigDecimal("100"));
         Integer amountToSend = amountInSmallestUnit.setScale(0, RoundingMode.HALF_UP).intValue();
 
         PaystackRequest paystackRequest = new PaystackRequest(
-                transactionRequest.email(),
+                paymentRequest.email(),
                 amountToSend
         );
 
@@ -42,11 +49,29 @@ public class TransactionServiceImpl implements TransactionService {
                 .accessToken(paystackTransaction.data().accessCode())
                 .reference(paystackTransaction.data().reference())
                 .authorizationUrl(paystackTransaction.data().authorizationUrl())
-                .email(transactionRequest.email())
+                .email(paymentRequest.email())
                 .status(TransactionStatus.PENDING)
                 .build();
 
-        return transactionRepository.save(transaction);
+        Transaction savedTransaction = transactionRepository.save(transaction);
+        PaymentRequestObject paymentRequestObject = PaymentRequestObject
+                .builder()
+                .transaction(savedTransaction)
+                .email(paymentRequest.email())
+                .fullName(paymentRequest.fullName())
+                .amount(paymentRequest.amount())
+                .numberOfTickets(paymentRequest.numberOfTickets())
+                .ticketTypeId(paymentRequest.ticketTypeId())
+                .eventId(paymentRequest.eventRegistrationResponse().id())
+                .eventTitle(paymentRequest.eventRegistrationResponse().eventTitle())
+                .location(paymentRequest.eventRegistrationResponse().location())
+                .organizer(paymentRequest.eventRegistrationResponse().organizer())
+                .startDate(paymentRequest.eventRegistrationResponse().startDate())
+                .build();
+
+        paymentRequestObjectRepository.save(paymentRequestObject);
+
+        return savedTransaction;
     }
 
     @Override
@@ -65,7 +90,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public Transaction findByReference(String reference) {
         return transactionRepository.findByReference(reference)
-                .orElseThrow(() -> new ResourceNotFound("Transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
     }
 
     private PaystackTransaction createPaystackTransaction(PaystackRequest paystackRequest) {
@@ -74,6 +99,6 @@ public class TransactionServiceImpl implements TransactionService {
 
     private Transaction getTransaction(Long id) {
         return transactionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFound("Transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
     }
 }
