@@ -71,6 +71,8 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
     }
 
 
+    public Event attachEventImages(List<MultipartFile> eventImages, Event event){
+
     public void attachEventImages(List<MultipartFile> eventImages, Event event){
         if(!CollectionUtils.isEmpty(eventImages)) {
             List<String> uploadedImages = s3Service.uploadImages(eventImages);
