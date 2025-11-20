@@ -1,5 +1,6 @@
 package com.event_service.event_service.services;
 
+import com.event_service.event_service.client.PaymentServiceClient;
 import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.specifications.EventRegistrationSpecification;
@@ -23,6 +24,7 @@ import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.WriterException;
+import io.awspring.cloud.sqs.annotation.SqsListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +54,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     private final ObjectMapper objectMapper;
     private final EventMapper eventMapper;
     private final SecurityUtils securityUtils;
+    private final PaymentServiceClient paymentServiceClient;
 
     @Value("${sqs.ticket-purchased-event-queue-url}")
     private String ticketPurchasedEventQueueUrl;
@@ -138,21 +141,17 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
                     )
                     .build();
 
-            // TODO replace asyn communicationn with http call to
-            // receive paystack authorization URL
-            publishProcessPaymentEventToQueue(processPaymentEvent);
-
-            // Simulate successful payment for TEST purposes
-            // TODO remove this when payment service is implemented
-            paymentCompletedListener(processPaymentEvent);
+            // receive payStack authorization URL
+            PaystackResponse initializePayment = paymentServiceClient.initializeTransaction(processPaymentEvent);
 
             // return authorization url gotten from payment service
             return EventRegistrationResponse
                     .builder()
                     .id(event.getId())
-                    .authorizationUrl("https://www.paystack.com/example/authorization-url")
+                    .authorizationUrl(initializePayment.authorizationUrl())
                     .build();
         }
+
         EventResponse eventResponse = eventMapper.toResponse(event);
 
         String location;
@@ -246,8 +245,8 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     }
 
 
-    // SQS Listener to handle payment success messages
-    //@SqsListener("${sqs.payment-completed-event-queue-url}")
+    // SQS Listener to handle payment success messages from payment service
+    @SqsListener("${sqs.payment-completed-event-queue-url}")
     public void paymentCompletedListener(ProcessPaymentEvent message){
         // Generate tickets and send to attendee via email
         Event event = eventRepository.findById(message.eventRegistrationResponse().id()).orElse(null);

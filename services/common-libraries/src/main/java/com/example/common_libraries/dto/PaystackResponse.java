@@ -1,4 +1,4 @@
-package com.example.payment_service.dto;
+package com.example.common_libraries.dto;
 
 public record PaystackResponse(
         String authorizationUrl,
