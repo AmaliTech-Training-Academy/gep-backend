@@ -6,8 +6,10 @@ import java.time.Instant;
 
 @Builder
 public record MyEventSummaryResponse(
+        String title,
         String organizer,
         Instant startTime,
-        String location
+        String location,
+        String eventStatus
 ) {
 }

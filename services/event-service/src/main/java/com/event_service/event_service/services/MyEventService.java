@@ -8,5 +8,5 @@ import org.springframework.data.domain.Page;
 public interface MyEventService {
     Page<MyEventsListResponse> getMyEvents(int page);
     MyEventsOverviewResponse getMyEventsOverview();
-    MyEventDetailResponse getMyEventDetailsById(Long id);
+    MyEventDetailResponse getMyEventDetailsById(Long id, String accessToken);
 }

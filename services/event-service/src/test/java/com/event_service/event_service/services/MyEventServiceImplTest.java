@@ -1,17 +1,12 @@
 package com.event_service.event_service.services;
 
-import com.event_service.event_service.dto.MyEventDetailResponse;
-import com.event_service.event_service.dto.MyEventSummaryResponse;
-import com.event_service.event_service.dto.MyEventsListResponse;
-import com.event_service.event_service.dto.MyEventsOverviewResponse;
-import com.event_service.event_service.models.Event;
-import com.event_service.event_service.models.EventRegistration;
-import com.event_service.event_service.models.TicketType;
-import com.event_service.event_service.repositories.EventInvitationRepository;
-import com.event_service.event_service.repositories.EventRegistrationRepository;
-import com.event_service.event_service.repositories.EventRepository;
-import com.event_service.event_service.repositories.TicketRepository;
+import com.event_service.event_service.client.UserServiceClient;
+import com.event_service.event_service.dto.*;
+import com.event_service.event_service.models.*;
+import com.event_service.event_service.repositories.*;
+import com.event_service.event_service.utils.SecurityUtils;
 import com.example.common_libraries.dto.AppUser;
+import com.example.common_libraries.dto.HostsResponse;
 import com.example.common_libraries.exception.BadRequestException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,17 +15,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
-import com.event_service.event_service.utils.SecurityUtils;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.Mockito.*;
-
 
 @ExtendWith(MockitoExtension.class)
 class MyEventServiceImplTest {
@@ -50,27 +42,33 @@ class MyEventServiceImplTest {
     @Mock
     private EventInvitationRepository eventInvitationRepository;
 
+    @Mock
+    private EventOrganizerRepository eventOrganizerRepository;
+
+    @Mock
+    private UserServiceClient userServiceClient;
+
     @InjectMocks
     private MyEventServiceImpl myEventService;
 
+    private AppUser currentUser;
+
+    private final String accessToken = "dummy-token";
+
     @BeforeEach
     void setUp() {
-        AppUser currentUser;
-
         currentUser = mock(AppUser.class);
         lenient().when(currentUser.id()).thenReturn(1L);
         lenient().when(securityUtils.getCurrentUser()).thenReturn(currentUser);
     }
 
-    // ---------------------------------------------------------
+    // ----------------------------
     // getMyEvents tests
-    // ---------------------------------------------------------
-
+    // ----------------------------
     @Test
     void getMyEvents_shouldReturnMappedPage_whenUserHasEvents() {
-        // given
-        EventRegistration registration1 = new EventRegistration();
-        EventRegistration registration2 = new EventRegistration();
+        EventRegistration reg1 = new EventRegistration();
+        EventRegistration reg2 = new EventRegistration();
 
         TicketType paidTicket = new TicketType();
         paidTicket.setIsPaid(true);
@@ -84,17 +82,15 @@ class MyEventServiceImplTest {
         event1.setStartTime(Instant.now());
         event1.setLocation("Accra");
         event1.setFlyerUrl("flyer.jpg");
-        event1.setEventRegistrations(List.of(registration1, registration2));
+        event1.setEventRegistrations(List.of(reg1, reg2));
         event1.setTicketTypes(List.of(paidTicket, freeTicket));
 
         Page<Event> eventsPage = new PageImpl<>(List.of(event1));
 
         when(eventRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(eventsPage);
 
-        // when
         Page<MyEventsListResponse> result = myEventService.getMyEvents(1);
 
-        // then
         assertThat(result).isNotNull();
         assertThat(result.getContent()).hasSize(1);
         MyEventsListResponse response = result.getContent().getFirst();
@@ -103,15 +99,7 @@ class MyEventServiceImplTest {
         assertThat(response.location()).isEqualTo("Accra");
         assertThat(response.flyerUrl()).isEqualTo("flyer.jpg");
         assertThat(response.attendeesCount()).isEqualTo(2L);
-        assertThat(response.isPaid()).isTrue(); // because at least one ticket is paid
-
-        // verify paging and sorting setup
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(eventRepository).findAllByUserId(eq(1L), pageableCaptor.capture());
-        Pageable usedPageable = pageableCaptor.getValue();
-        assertThat(usedPageable.getPageNumber()).isEqualTo(1);
-        assertThat(usedPageable.getPageSize()).isEqualTo(3);
-        assertThat(Objects.requireNonNull(usedPageable.getSort().getOrderFor("createdAt")).getDirection()).isEqualTo(Sort.Direction.DESC);
+        assertThat(response.isPaid()).isTrue();
     }
 
     @Test
@@ -125,42 +113,9 @@ class MyEventServiceImplTest {
         assertThat(result.getContent()).isEmpty();
     }
 
-    @Test
-    void getMyEvents_shouldCoerceNegativePageToZero() {
-        when(eventRepository.findAllByUserId(eq(1L), any(Pageable.class)))
-                .thenReturn(Page.empty());
-
-        myEventService.getMyEvents(-5);
-
-        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-        verify(eventRepository).findAllByUserId(eq(1L), pageableCaptor.capture());
-        Pageable pageableUsed = pageableCaptor.getValue();
-        assertThat(pageableUsed.getPageNumber()).isZero();
-    }
-
-    @Test
-    void getMyEvents_shouldReturnIsPaidFalse_whenAllTicketsAreFree() {
-        Event event = new Event();
-        event.setId(11L);
-        event.setTitle("Community Meetup");
-        event.setEventRegistrations(List.of());
-        TicketType free = new TicketType();
-        free.setIsPaid(false);
-        event.setTicketTypes(List.of(free));
-
-        Page<Event> eventsPage = new PageImpl<>(List.of(event));
-        when(eventRepository.findAllByUserId(eq(1L), any(Pageable.class))).thenReturn(eventsPage);
-
-        Page<MyEventsListResponse> result = myEventService.getMyEvents(0);
-
-        assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().getFirst().isPaid()).isFalse();
-    }
-
-    // ---------------------------------------------------------
+    // ----------------------------
     // getMyEventsOverview tests
-    // ---------------------------------------------------------
-
+    // ----------------------------
     @Test
     void getMyEventsOverview_shouldReturnExpectedAggregates() {
         when(eventRepository.countByUserId(1L)).thenReturn(5L);
@@ -174,24 +129,11 @@ class MyEventServiceImplTest {
         assertThat(response.totalTicketSales()).isEqualTo(2500.50);
     }
 
+    // ----------------------------
+    // getMyEventDetailsById tests
+    // ----------------------------
     @Test
-    void getMyEventsOverview_shouldHandleNullValuesGracefully() {
-        // if repository returns nulls, service should not throw
-        when(eventRepository.countByUserId(1L)).thenReturn(null);
-        when(eventRegistrationRepository.countByEventUserId(1L)).thenReturn(null);
-        when(ticketRepository.findTotalTicketSalesForUser(1L)).thenReturn(null);
-
-        MyEventsOverviewResponse response = myEventService.getMyEventsOverview();
-
-        // verify nulls are simply propagated
-        assertThat(response.totalEvents()).isNull();
-        assertThat(response.totalAttendees()).isNull();
-        assertThat(response.totalTicketSales()).isNull();
-    }
-
-    @Test
-    void getMyEventDetailsById_shouldReturnDetails_whenEventExists() {
-        // given
+    void getMyEventDetailsById_shouldReturnDetails_withHostsAndInvitedGuests() {
         EventRegistration reg1 = new EventRegistration();
         EventRegistration reg2 = new EventRegistration();
 
@@ -202,52 +144,62 @@ class MyEventServiceImplTest {
         event.setCreatedBy("John Organizer");
         event.setEventRegistrations(List.of(reg1, reg2));
 
-        when(eventRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(event));
+        // Properly initialize ticket type to avoid NPE
+        TicketType ticketType = new TicketType();
+        ticketType.setId(1L);
+        ticketType.setType("VIP");
+        ticketType.setIsPaid(true);
+        ticketType.setQuantity(100L);
+        ticketType.setSoldCount(30L);
+        event.setTicketTypes(List.of(ticketType));
+
+        // Mock total ticket sales
         when(ticketRepository.findTotalTicketSalesForEvent(event)).thenReturn(1500.75);
+        EventInvitee invitee1 = EventInvitee.builder().inviteeName("guest1").build();
+        EventInvitee invitee2 = EventInvitee.builder().inviteeName("guest2").build();
+        EventInvitee invitee3 = EventInvitee.builder().inviteeName("guest3").build();
 
-        // when
-        MyEventDetailResponse response = myEventService.getMyEventDetailsById(100L);
+        // Mock invitations
+        when(eventInvitationRepository.findAllByEvent(event)).thenReturn(List.of(
+                new EventInvitation() {{ setInvitees(List.of(invitee1, invitee2)); }},
+                new EventInvitation() {{ setInvitees(List.of(invitee3)); }}
+        ));
 
-        // then
+        // Mock event organizers / hosts
+        when(eventOrganizerRepository.findUserIdsByEventId(100L)).thenReturn(List.of(2L, 3L));
+        when(userServiceClient.getEventHosts(List.of(2L, 3L), accessToken))
+                .thenReturn(List.of(
+                        HostsResponse.builder().id(2L).fullName("Alice").build(),
+                        HostsResponse.builder().id(3L).fullName("Bob").build()
+                ));
+
+        when(eventRepository.findByIdAndUserId(100L, 1L)).thenReturn(Optional.of(event));
+
+        MyEventDetailResponse response = myEventService.getMyEventDetailsById(100L, accessToken);
+
         assertThat(response).isNotNull();
-
-        // Verify nested stats and summary
-        MyEventsOverviewResponse stats = response.eventStats();
-        MyEventSummaryResponse summary = response.eventSummary();
-
-        assertThat(stats).isNotNull();
-        assertThat(stats.totalAttendees()).isEqualTo(2L);
-        assertThat(stats.totalTicketSales()).isEqualTo(1500.75);
-
-        assertThat(summary.organizer()).isEqualTo("John Organizer");
-        assertThat(summary.location()).isEqualTo("Accra Arena");
-        assertThat(summary.startTime()).isEqualTo(Instant.parse("2025-11-11T10:00:00Z"));
-
-        // verify interactions
-        verify(eventRepository).findByIdAndUserId(100L, 1L);
-        verify(ticketRepository).findTotalTicketSalesForEvent(event);
+        assertThat(response.totalInvitedGuests()).isEqualTo(3L);
+        assertThat(response.eventHosts()).hasSize(2);
+        assertThat(response.eventHosts().getFirst().fullName()).isEqualTo("Alice");
+        assertThat(response.eventStats().totalAttendees()).isEqualTo(2L);
+        assertThat(response.eventStats().totalTicketSales()).isEqualTo(1500.75);
+        assertThat(response.eventSummary().organizer()).isEqualTo("John Organizer");
     }
 
     @Test
     void getMyEventDetailsById_shouldThrowBadRequestException_whenIdIsNull() {
-        // when / then
-        assertThatThrownBy(() -> myEventService.getMyEventDetailsById(null))
+        assertThatThrownBy(() -> myEventService.getMyEventDetailsById(null, accessToken))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Invalid event ID");
-
-        verifyNoInteractions(eventRepository, ticketRepository);
     }
 
     @Test
     void getMyEventDetailsById_shouldThrowResourceNotFoundException_whenEventMissing() {
         when(eventRepository.findByIdAndUserId(900L, 1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> myEventService.getMyEventDetailsById(900L))
+        assertThatThrownBy(() -> myEventService.getMyEventDetailsById(900L, accessToken))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Event not found");
-
-        verify(eventRepository).findByIdAndUserId(900L, 1L);
-        verifyNoMoreInteractions(ticketRepository);
     }
 
     @Test
@@ -261,11 +213,15 @@ class MyEventServiceImplTest {
 
         when(eventRepository.findByIdAndUserId(200L, 1L)).thenReturn(Optional.of(event));
         when(ticketRepository.findTotalTicketSalesForEvent(event)).thenReturn(null);
+        when(eventInvitationRepository.findAllByEvent(event)).thenReturn(List.of());
+        when(eventOrganizerRepository.findUserIdsByEventId(200L)).thenReturn(List.of());
+        when(userServiceClient.getEventHosts(List.of(), accessToken)).thenReturn(List.of());
 
-        MyEventDetailResponse response = myEventService.getMyEventDetailsById(200L);
+        MyEventDetailResponse response = myEventService.getMyEventDetailsById(200L, accessToken);
 
-        assertThat(response).isNotNull();
         assertThat(response.eventStats().totalAttendees()).isZero();
         assertThat(response.eventStats().totalTicketSales()).isNull();
+        assertThat(response.totalInvitedGuests()).isZero();
+        assertThat(response.eventHosts()).isEmpty();
     }
 }

@@ -107,10 +107,17 @@ public class UserManagementController {
         return ResponseEntity.ok(response);
     }
 
+    // Inter-Service Endpoints
     @GetMapping("/top-organizers")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<TopOrganizerResponse>> getTopOrganizers(){
         return ResponseEntity.status(HttpStatus.OK).body(userService.getTopOrganizers());
+    }
+
+    @GetMapping("/hosts")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    public ResponseEntity<List<HostsResponse>> getEventHosts(@RequestParam List<Long> hostIds){
+        return ResponseEntity.status(HttpStatus.OK).body(userService.getEventHosts(hostIds));
     }
 
     @GetMapping("/exists")
