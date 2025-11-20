@@ -14,6 +14,7 @@ import java.sql.Types;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -153,4 +154,13 @@ public class Event {
             }
         }
     }
+
+    public void addTicketType(TicketType ticketType) {
+        if (this.ticketTypes == null) {
+            this.ticketTypes = new ArrayList<>();
+        }
+        this.ticketTypes.add(ticketType);
+        ticketType.setEvent(this);
+    }
+
 }
