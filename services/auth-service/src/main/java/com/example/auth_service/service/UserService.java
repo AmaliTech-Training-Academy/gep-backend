@@ -21,7 +21,6 @@ public interface UserService {
     Page<UserListResponse> getAdminUsers(String keyword, Boolean status, int page);
     UserResponse getUserById(Long userId);
     UserResponse updateUser(Long userId, UserUpdateRequest request, MultipartFile profilePicture);
-//    Page<UserManagementResponse> filterUsers(UserRole role, Boolean status, int page);
     List<TopOrganizerResponse> getTopOrganizers();
     List<UserInfoResponse> getActiveAdmins();
     UserCreationResponse getUserByEmail(String email);
