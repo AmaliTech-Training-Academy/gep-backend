@@ -103,7 +103,7 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
                     .soldCount(0L)
                     .isActive(true)
                     .isPaid(true)
-                    .type("PAID")
+                    .type("REGULAR")
                     .quantityPerAttendee(1)
                     .build();
 
