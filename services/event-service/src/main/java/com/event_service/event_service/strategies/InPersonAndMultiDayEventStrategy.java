@@ -70,7 +70,6 @@ public class InPersonAndMultiDayEventStrategy implements EventStrategy {
                 .location(eventRequest.location())
                 .build();
         attachEventImages(eventImages, event);
-        attachEventImages(eventImages, event);
 
         createFreeTicket(eventRequest, event);
 
