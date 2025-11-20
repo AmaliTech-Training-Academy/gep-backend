@@ -55,9 +55,15 @@
                                         Event description goes here.
                                     </p>
                                     <p style="margin: 0; font-size: 14px; color: #333;">
-                                        <strong>Date & Time:</strong>
+                                        <strong>Start Time:</strong>
                                         <span th:text="${#temporals.format(eventDetails.startTime, 'EEEE, MMMM d, yyyy - h:mm a')}">
-                                            Event Date
+                                            Event Start Date
+                                        </span>
+                                    </p>
+                                    <p style="margin: 0; font-size: 14px; color: #333;">
+                                        <strong>End Time:</strong>
+                                        <span th:text="${#temporals.format(eventDetails.endTime, 'EEEE, MMMM d, yyyy - h:mm a')}">
+                                            Event End Date
                                         </span>
                                     </p>
                                     <p style="margin: 0 0 5px 0; font-size: 14px; color: #333;">

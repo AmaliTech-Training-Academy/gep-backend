@@ -7,12 +7,10 @@ import java.time.Instant;
 public record TicketEventDetailResponse(
         Long id,
         String title,
+        String organizerName,
         String description,
         Instant startTime,
+        Instant endTime,
         String eventMeetingType,
         String zoneId
-) {
-    public Instant endTime() {
-        return startTime.plusSeconds(10800);
-    }
-}
+) { }

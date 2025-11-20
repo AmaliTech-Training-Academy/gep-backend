@@ -29,8 +29,10 @@ class ICSGeneratorTest {
         var eventDetails = new TicketEventDetailResponse(
                 1L,
                 "Tech Summit 2025",
+                "EventHub",
                 "A virtual summit on modern software practices",
                 Instant.parse("2025-12-10T10:00:00Z"),
+                Instant.parse("2025-12-10T11:00:00Z"),
                 "VIRTUAL",
                 "UTC"
         );
@@ -75,8 +77,10 @@ class ICSGeneratorTest {
         var details = new TicketEventDetailResponse(
                 2L,
                 "DevOps, Cloud; & 'Kubernetes'\nSession",
+                "EventHub",
                 "Line1\nLine2;Line3,End",
                 Instant.parse("2025-12-10T10:00:00Z"),
+                Instant.parse("2025-12-10T11:00:00Z"),
                 "ONLINE",
                 "UTC"
         );
