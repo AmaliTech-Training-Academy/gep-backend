@@ -5,7 +5,7 @@ import com.example.auth_service.dto.request.UserUpdateRequest;
 import com.example.auth_service.dto.response.*;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.repository.UserEventStatsRepository;
-import com.example.common_libraries.dto.AppUser;
+import com.example.auth_service.utils.AuthUserUtil;
 import com.example.common_libraries.dto.TopOrganizerResponse;
 import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.common_libraries.dto.UserInfoResponse;
@@ -42,14 +42,9 @@ public class UserServiceImpl implements UserService {
     private final ProfileRepository profileRepository;
     private final S3Service s3Service;
     private final UserEventStatsRepository userEventStatsRepository;
+    private final AuthUserUtil authUserUtil;
 
-    /**
-     * Generates a summary report of user-related metrics including total users, total organizers,
-     * total attendees, total deactivated users, and a paginated list of users.
-     *
-     * @return a UserSummaryReport object containing the user summary metrics and a paginated
-     *         list of UserManagementResponse objects.
-     */
+
     @Override
     public UserSummaryReport getUserSummaryReport() {
         // Fetch paginated user data
@@ -67,13 +62,7 @@ public class UserServiceImpl implements UserService {
         return UserMapper.toUserSummary(userResponse,userStats);
     }
 
-    /**
-     * Updates the activation status of a user. If the user is currently active,
-     * it deactivates the user, and vice versa.
-     *
-     * @param userId the ID of the user whose active status needs to be updated
-     * @throws ResourceNotFoundException if the user with the given ID does not exist
-     */
+
     @Override
     public void updateUserStatus(Long userId) {
 
@@ -86,21 +75,7 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    /**
-     * Searches for users based on the specified criteria such as keyword, role, and status,
-     * and returns a paginated list of matching users.
-     *
-     * @param keyword a string to search for in user attributes like full name or email;
-     *                can be null or empty, in which case it is ignored
-     * @param role the role of the user (e.g., ATTENDEE, ORGANISER, ADMIN) to filter by;
-     *             can be null, in which case it is ignored
-     * @param status a boolean indicating whether to search for active or inactive users;
-     *               can be null, in which case it is ignored
-     * @param page the page number for pagination, where 0 indicates the first page;
-     *             values below 0 are treated as 0
-     * @return a {@code Page} of {@code UserManagementResponse}, containing user details
-     *         that match the search criteria
-     */
+
     @Override
     public Page<UserManagementResponse> userSearch(String keyword,UserRole role, Boolean status, int page) {
         Page<User> searchResults = filterUserList(page,keyword, role,status);
@@ -135,56 +110,54 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    /**
-     * Retrieves a user by their unique ID.
-     *
-     * @param userId the ID of the user to retrieve
-     * @return a UserResponse object containing the user's details
-     * @throws ResourceNotFoundException if no user is found with the specified ID
-     */
+
     @Override
     public UserResponse getUserById(Long userId) {
+        User currentUser = authUserUtil.getAuthenticatedUser();
+        if(!Objects.equals(currentUser.getRole().name(), "ADMIN") && !Objects.equals(currentUser.getId(), userId)){
+            throw new ResourceNotFoundException("User not found with id: " + userId);
+        }
+
         User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
         return UserMapper.toUserResponse(user);
     }
 
-    /**
-     * Updates the details and profile information of an existing user based on the provided request.
-     * Fields in the user object are updated only if there are changes.
-     *
-     * @param userId         the ID of the user to update
-     * @param request        an instance of {@code UserUpdateRequest} containing the new user details
-     * @param profilePicture
-     * @return a {@code UserResponse} object representing the updated user data
-     * @throws ResourceNotFoundException if the user with the given ID is not found
-     */
+
     @Override
     @Transactional
     public UserResponse updateUser(Long userId, UserUpdateRequest request, MultipartFile profilePicture) {
+        User currentUser = authUserUtil.getAuthenticatedUser();
+        if(!Objects.equals(currentUser.getRole().name(), "ADMIN") && !Objects.equals(currentUser.getId(), userId)){
+            throw new ResourceNotFoundException("User not found with id: " + userId);
+        }
+
         User userToUpdate = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
-        Optional<User> userWithEmail = userRepository.findByEmail(request.email());
-        if(userWithEmail.isPresent() && !userWithEmail.get().getId().equals(userId)){
-            throw new DuplicateResourceException("Email already in use");
-        }
 
-        // User updates
-        if(!Objects.equals(request.fullName(), userToUpdate.getFullName())){
-            userToUpdate.setFullName(request.fullName());
-        }
-        if(!Objects.equals(request.email(), userToUpdate.getEmail())){
-            userToUpdate.setEmail(request.email());
-        }
-        if(request.status() != userToUpdate.isActive()){
-            userToUpdate.setActive(request.status());
-        }
+        if(request != null) {
+            Optional<User> userWithEmail = userRepository.findByEmail(request.email());
+            if (userWithEmail.isPresent() && !userWithEmail.get().getId().equals(userId)) {
+                throw new DuplicateResourceException("Email already in use");
+            }
+
+            // User updates
+            if (!Objects.equals(request.fullName(), userToUpdate.getFullName())) {
+                userToUpdate.setFullName(request.fullName());
+            }
+            if (!Objects.equals(request.email(), userToUpdate.getEmail())) {
+                userToUpdate.setEmail(request.email());
+            }
+            if (request.status() != userToUpdate.isActive()) {
+                userToUpdate.setActive(request.status());
+            }
 
 
-        // Profile updates
-        if(!Objects.equals(request.phone(), userToUpdate.getProfile().getPhoneNumber())){
-            userToUpdate.getProfile().setPhoneNumber(request.phone());
-        }
-        if(!Objects.equals(request.address(), userToUpdate.getProfile().getAddress())){
-            userToUpdate.getProfile().setAddress(request.address());
+            // Profile updates
+            if (!Objects.equals(request.phone(), userToUpdate.getProfile().getPhoneNumber())) {
+                userToUpdate.getProfile().setPhoneNumber(request.phone());
+            }
+            if (!Objects.equals(request.address(), userToUpdate.getProfile().getAddress())) {
+                userToUpdate.getProfile().setAddress(request.address());
+            }
         }
         if(profilePicture != null){
             log.info("Profile picture is not null: {}", profilePicture.getOriginalFilename());
