@@ -65,6 +65,7 @@ public class OtpServiceImpl implements OtpService {
         try{
             String messageBody = objectMapper.writeValueAsString(event);
             sendMessageToQueue(messageBody, userLoginQueueUrl);
+            log.info("Message sent to login SQS queue");
         }catch(Exception ex){
             log.error("Error sending login message to queue: {}", ex.getMessage());
         }

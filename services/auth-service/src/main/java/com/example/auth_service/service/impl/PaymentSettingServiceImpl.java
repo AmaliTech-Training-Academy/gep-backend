@@ -13,7 +13,7 @@ import com.example.auth_service.model.UserMobileMoney;
 import com.example.auth_service.repository.UserBankAccountRepository;
 import com.example.auth_service.repository.UserMobileMoneyRepository;
 import com.example.auth_service.service.PaymentSettingService;
-import com.example.common_libraries.exception.BadRequestException;
+import com.example.auth_service.utils.AuthUserUtil;
 import com.example.common_libraries.exception.DuplicateResourceException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +29,12 @@ public class PaymentSettingServiceImpl implements PaymentSettingService {
     private final UserBankAccountRepository userBankAccountRepository;
     private final UserMobileMoneyRepository userMobileMoneyRepository;
     private final AuthServiceImpl authServiceImpl;
+    private final AuthUserUtil authUserUtil;
 
     @Override
     @Transactional
     public void createBankAccount(UserBankAccountCreationRequest request) {
-        User currentUser = authServiceImpl.getAuthenticatedUser();
+        User currentUser = authUserUtil.getAuthenticatedUser();
         if(userBankAccountRepository.existsByUser(currentUser)){
             throw new DuplicateResourceException("User bank account already exists");
         }
@@ -49,7 +50,7 @@ public class PaymentSettingServiceImpl implements PaymentSettingService {
 
     @Override
     public UserBankAccountResponse getBankAccountDetails(){
-        User currentUser = authServiceImpl.getAuthenticatedUser();
+        User currentUser = authUserUtil.getAuthenticatedUser();
         UserBankAccount bankAccount = userBankAccountRepository.findByUser(currentUser).
                 orElseThrow(() -> new ResourceNotFoundException("User bank account not found"));
         return UserPaymentSettingsMapper.toBankAccountResponse(bankAccount);
@@ -58,7 +59,7 @@ public class PaymentSettingServiceImpl implements PaymentSettingService {
     @Override
     @Transactional
     public void updateBankAccount(UserBankAccountUpdateRequest request){
-        User currentUser = authServiceImpl.getAuthenticatedUser();
+        User currentUser = authUserUtil.getAuthenticatedUser();
         UserBankAccount bankAccount = userBankAccountRepository.findByUser(currentUser).orElseThrow(()-> new ResourceNotFoundException("User bank account not found"));
         if(request.bankName() != null && !Objects.equals(request.bankName(), bankAccount.getBankName())){
             bankAccount.setBankName(request.bankName());
@@ -78,7 +79,7 @@ public class PaymentSettingServiceImpl implements PaymentSettingService {
     @Override
     @Transactional
     public void createMobileMoneyAccount(UserMobileMoneyCreationRequest request){
-        User currentUser = authServiceImpl.getAuthenticatedUser();
+        User currentUser = authUserUtil.getAuthenticatedUser();
         if(userMobileMoneyRepository.existsByUser(currentUser)){
             throw new DuplicateResourceException("User mobile money account already exists");
         }
@@ -95,7 +96,7 @@ public class PaymentSettingServiceImpl implements PaymentSettingService {
     @Override
     @Transactional
     public UserMobileMoneyResponse getMobileMoneyAccount(){
-        User currentUser = authServiceImpl.getAuthenticatedUser();
+        User currentUser = authUserUtil.getAuthenticatedUser();
         UserMobileMoney mobileMoneyAccount = userMobileMoneyRepository.findByUser(currentUser)
                 .orElseThrow(() -> new ResourceNotFoundException("User mobile money account not found"));
         return UserPaymentSettingsMapper.toMobileMoneyResponse(mobileMoneyAccount);
@@ -104,7 +105,7 @@ public class PaymentSettingServiceImpl implements PaymentSettingService {
     @Override
     @Transactional
     public void updateMobileMoneyAccount(UserMobileMoneyUpdateRequest request){
-        User currentUser = authServiceImpl.getAuthenticatedUser();
+        User currentUser = authUserUtil.getAuthenticatedUser();
         UserMobileMoney mobileMoneyAccount = userMobileMoneyRepository.findByUser(currentUser)
                 .orElseThrow(() -> new ResourceNotFoundException("User mobile money account not found"));
         if(request.networkOperator() != null && !Objects.equals(request.networkOperator(), mobileMoneyAccount.getNetworkOperator())){

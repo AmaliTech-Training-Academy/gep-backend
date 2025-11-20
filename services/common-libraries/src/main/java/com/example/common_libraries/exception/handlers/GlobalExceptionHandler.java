@@ -94,6 +94,12 @@ public class GlobalExceptionHandler {
     }
 
     // Core Exceptions
+    @ExceptionHandler(FileUploadException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleFileUploadException(FileUploadException ex){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<CustomApiResponse<?>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex){
         if(ex.getRequiredType() == LocalDate.class){
