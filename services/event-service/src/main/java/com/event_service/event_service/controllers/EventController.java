@@ -6,6 +6,7 @@ import com.event_service.event_service.services.*;
 import com.example.common_libraries.dto.CustomApiResponse;
 import com.example.common_libraries.dto.EventRegistrationResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -45,6 +47,26 @@ public class EventController {
         try {
             EventRequest eventRequest = objectMapper.readValue(eventRequestJSON, EventRequest.class);
             return ResponseEntity.ok(eventService.createEvent(eventRequest,image,eventImages));
+        }catch (Exception e){
+            log.error("Error parsing event request JSON {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    @PostMapping(value = "/{id}",consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<EventUpdateResponse> updateEvent(
+            @RequestPart("event") String eventRequestJSON,
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestPart(value = "eventImages", required = false) List<MultipartFile> eventImages,
+            @RequestPart(value = "imagesToUpdate", required = false) String imagesToUpdateJson,
+            @PathVariable Long id
+    ) throws JsonProcessingException {
+        try {
+            EventRequest eventRequest = objectMapper.readValue(eventRequestJSON, EventRequest.class);
+            List<Long> imagesToUpdate = (imagesToUpdateJson != null && !imagesToUpdateJson.isEmpty())
+                    ? objectMapper.readValue(imagesToUpdateJson, new TypeReference<List<Long>>() {})
+                    : Collections.emptyList();
+            return ResponseEntity.ok(eventService.updateEvent(id,eventRequest,image,eventImages,imagesToUpdate));
         }catch (Exception e){
             log.error("Error parsing event request JSON {}", e.getMessage());
             throw e;
@@ -126,9 +148,10 @@ public class EventController {
     @GetMapping("/my-events/details/{eventId}")
     @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
     public ResponseEntity<CustomApiResponse<MyEventDetailResponse>> getMyEventDetails(
+            @CookieValue(name = "accessToken", required = false) String accessToken,
             @PathVariable Long eventId
     ){
-        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEventDetailsById(eventId)));
+        return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEventDetailsById(eventId, accessToken)));
     }
 
     @GetMapping("/my-events")

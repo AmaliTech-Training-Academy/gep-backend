@@ -1,493 +1,262 @@
 package com.example.auth_service.service.impl;
 
+import com.example.auth_service.dto.projection.TopOrganizerProjection;
 import com.example.auth_service.dto.request.UserUpdateRequest;
-import com.example.auth_service.dto.response.UserManagementResponse;
-import com.example.auth_service.dto.response.UserResponse;
-import com.example.auth_service.dto.response.UserStatistics;
-import com.example.auth_service.dto.response.UserSummaryReport;
+import com.example.auth_service.dto.response.*;
 import com.example.auth_service.enums.UserRole;
-import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.example.auth_service.model.Profile;
 import com.example.auth_service.model.User;
-import com.example.auth_service.model.UserEventStats;
 import com.example.auth_service.repository.ProfileRepository;
+import com.example.auth_service.repository.UserEventStatsRepository;
 import com.example.auth_service.repository.UserRepository;
+import com.example.auth_service.utils.AuthUserUtil;
+import com.example.common_libraries.dto.TopOrganizerResponse;
+import com.example.common_libraries.dto.UserCreationResponse;
+import com.example.common_libraries.dto.UserInfoResponse;
+import com.example.common_libraries.exception.DuplicateResourceException;
+import com.example.common_libraries.exception.ResourceNotFoundException;
+import com.example.common_libraries.service.S3Service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
-import org.springframework.data.jpa.domain.Specification;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
 
-    @Mock
-    private UserRepository userRepository;
+    @Mock UserRepository userRepository;
+    @Mock ProfileRepository profileRepository;
+    @Mock S3Service s3Service;
+    @Mock UserEventStatsRepository userEventStatsRepository;
+    @Mock AuthUserUtil authUserUtil;
 
-    @Mock
-    private ProfileRepository profileRepository;
+    @InjectMocks UserServiceImpl userService;
 
-    @InjectMocks
-    private UserServiceImpl userService;
-
-    private User testUser;
-    private Profile testProfile;
-    private UserEventStats testUserEventStats;
-    private UserUpdateRequest testUpdateRequest;
+    private User adminUser;
+    private User regularUser;
+    private Profile profile;
 
     @BeforeEach
     void setUp() {
-        // Initialize test data
-        testProfile = Profile.builder()
-                .id(1L)
-                .phoneNumber("1234567890")
-                .address("123 Test Street")
-                .profileImageUrl("http://example.com/profile.jpg")
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        profile = new Profile();
+        profile.setId(1L);
+        profile.setAddress("Old Addr");
+        profile.setPhoneNumber("111");
+        profile.setProfileImageUrl("old.png");
 
-        testUserEventStats = UserEventStats
-                .builder()
-                .id(1L)
-                .build();
+        regularUser = new User();
+        regularUser.setId(5L);
+        regularUser.setEmail("test@test.com");
+        regularUser.setFullName("Test User");
+        regularUser.setActive(true);
+        regularUser.setRole(UserRole.ORGANISER);
+        regularUser.setProfile(profile);
 
-        testUser = User.builder()
-                .id(1L)
-                .fullName("John Doe")
-                .email("john.doe@example.com")
-                .password("encodedPassword")
-                .role(UserRole.ORGANISER)
-                .isActive(true)
-                .profile(testProfile)
-                .userEventStats(testUserEventStats)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-
-        testProfile.setUser(testUser);
-        testUserEventStats.setUser(testUser);
-
-        testUpdateRequest = new UserUpdateRequest(
-                "Jane Doe",
-                "jane.doe@example.com",
-                "9876543210",
-                "456 New Avenue",
-                false
-        );
+        adminUser = new User();
+        adminUser.setId(1L);
+        adminUser.setEmail("admin@test.com");
+        adminUser.setFullName("Admin");
+        adminUser.setActive(true);
+        adminUser.setRole(UserRole.ADMIN);
+        adminUser.setProfile(profile);
     }
 
-    // ==================== getUserSummaryReport Tests ====================
-
+    // ----------------------------------------------------------
+    // getUserById
+    // ----------------------------------------------------------
     @Test
-    void shouldReturnUserSummaryReportSuccessfully() {
-        // Arrange
-        List<User> users = List.of(testUser);
-        Page<User> userPage = new PageImpl<>(users, PageRequest.of(0, 10, Sort.by("fullName")), 1);
+    void getUserById_shouldThrow_whenNonAdminAccessesAnotherUser() {
+        when(authUserUtil.getAuthenticatedUser()).thenReturn(regularUser);
 
-        // Mock the combined statistics query
-        UserStatisticsImpl stats = new UserStatisticsImpl(10L, 3L, 7L, 2L);
-        when(userRepository.findAll(any(Pageable.class))).thenReturn(userPage);
-        when(userRepository.getUserStatistics()).thenReturn(stats);
-
-        // Act
-        UserSummaryReport result = userService.getUserSummaryReport();
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(10L, result.totalUsers());
-        assertEquals(3L, result.totalOrganizers());
-        assertEquals(7L, result.totalAttendees());
-        assertEquals(2L, result.totalDeactivatedUsers());
-        assertNotNull(result.users());
-        assertEquals(1, result.users().getTotalElements());
-
-        verify(userRepository).findAll(any(Pageable.class));
-        verify(userRepository).getUserStatistics();
+        assertThrows(ResourceNotFoundException.class,
+                () -> userService.getUserById(999L));
     }
 
     @Test
-    void shouldReturnUserSummaryReportWithEmptyUserList() {
-        // Arrange
-        Page<User> emptyPage = new PageImpl<>(new ArrayList<>(), PageRequest.of(0, 10, Sort.by("fullName")), 0);
+    void getUserById_shouldReturn_whenAdminAccessesAnyone() {
+        when(authUserUtil.getAuthenticatedUser()).thenReturn(adminUser);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(regularUser));
 
-        // Mock the combined statistics query for empty dataset
-        UserStatisticsImpl stats = new UserStatisticsImpl(0L, 0L, 0L, 0L);
-        when(userRepository.findAll(any(Pageable.class))).thenReturn(emptyPage);
-        when(userRepository.getUserStatistics()).thenReturn(stats);
-
-        // Act
-        UserSummaryReport result = userService.getUserSummaryReport();
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(0L, result.totalUsers());
-        assertEquals(0L, result.totalOrganizers());
-        assertEquals(0L, result.totalAttendees());
-        assertEquals(0L, result.totalDeactivatedUsers());
-        assertEquals(0, result.users().getTotalElements());
-
-        verify(userRepository).findAll(any(Pageable.class));
-        verify(userRepository).getUserStatistics();
-    }
-
-
-    // ==================== updateUserStatus Tests ====================
-
-    @Test
-    void shouldToggleStatusFromActiveThenInactiveWhenUserExists() {
-        // Arrange
-        testUser.setActive(true);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
-
-        // Act
-        userService.updateUserStatus(1L);
-
-        // Assert
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
-        assertFalse(userCaptor.getValue().isActive());
+        UserResponse res = userService.getUserById(5L);
+        assertNotNull(res);
+        assertEquals("Test User", res.fullName());
     }
 
     @Test
-    void shouldToggleStatusFromInactiveToActiveWhenUserExists() {
-        // Arrange
-        testUser.setActive(false);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
+    void getUserById_shouldReturn_whenUserAccessesSelf() {
+        when(authUserUtil.getAuthenticatedUser()).thenReturn(regularUser);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(regularUser));
 
-        // Act
-        userService.updateUserStatus(1L);
+        UserResponse res = userService.getUserById(5L);
+        assertNotNull(res);
+        assertEquals("Test User", res.fullName());
+    }
 
-        // Assert
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
-        assertTrue(userCaptor.getValue().isActive());
+    // ----------------------------------------------------------
+    // updateUser
+    // ----------------------------------------------------------
+    @Test
+    void updateUser_shouldThrow_whenNonAdminUpdatesAnotherUser() {
+        when(authUserUtil.getAuthenticatedUser()).thenReturn(regularUser);
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> userService.updateUser(999L, null, null));
     }
 
     @Test
-    void shouldThrowExceptionWhenUserNotFoundDuringStatusUpdate() {
-        // Arrange
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+    void updateUser_shouldThrow_whenUserNotFound() {
+        when(authUserUtil.getAuthenticatedUser()).thenReturn(adminUser);
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        // Act & Assert
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> userService.updateUserStatus(999L)
-        );
-        assertEquals("User not found with id: 999", exception.getMessage());
-        verify(userRepository, never()).save(any(User.class));
+        assertThrows(ResourceNotFoundException.class,
+                () -> userService.updateUser(99L, null, null));
     }
 
     @Test
-    void shouldThrowExceptionWhenNullUserIdProvidedForStatusUpdate() {
-        // Arrange
-        when(userRepository.findById(null)).thenReturn(Optional.empty());
+    void updateUser_shouldThrow_whenEmailExists() {
+        UserUpdateRequest req = new UserUpdateRequest("New", "taken@mail.com", "0548730194", "123", true);
 
-        // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> userService.updateUserStatus(null));
-        verify(userRepository, never()).save(any(User.class));
+        when(authUserUtil.getAuthenticatedUser()).thenReturn(adminUser);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(regularUser));
+
+        User another = new User();
+        another.setId(9L);
+        another.setEmail("taken@mail.com");
+
+        when(userRepository.findByEmail("taken@mail.com"))
+                .thenReturn(Optional.of(another));
+
+        assertThrows(DuplicateResourceException.class,
+                () -> userService.updateUser(5L, req, null));
     }
 
-    // ==================== userSearch Tests ====================
+    @Test
+    void updateUser_shouldUpdateWithoutProfilePicture() {
+        UserUpdateRequest req = new UserUpdateRequest("New Name", "new@mail.com", "0548730194", "222", false);
+
+        when(authUserUtil.getAuthenticatedUser()).thenReturn(adminUser);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(regularUser));
+        when(userRepository.findByEmail("new@mail.com")).thenReturn(Optional.empty());
+
+        UserResponse res = userService.updateUser(5L, req, null);
+
+        assertEquals("New Name", res.fullName());
+        assertEquals("new@mail.com", res.email());
+        assertFalse(res.status());
+    }
 
     @Test
-    void shouldReturnSearchResultsWhenKeywordMatches() {
-        // Arrange
-        List<User> users = List.of(testUser);
-        Page<User> searchPage = new PageImpl<>(users, PageRequest.of(0, 10, Sort.by("fullName")), 1);
+    void updateUser_shouldUploadProfilePicture() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.getOriginalFilename()).thenReturn("img.png");
 
-        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName")))))
-                .thenReturn(searchPage);
+        when(authUserUtil.getAuthenticatedUser()).thenReturn(adminUser);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(regularUser));
 
-        // Act
-        Page<UserManagementResponse> result = userService.userSearch("John", null, null, 0);
+        when(s3Service.uploadImage(file)).thenReturn("https://s3/img.png");
 
-        // Assert
-        assertNotNull(result);
+        UserResponse res = userService.updateUser(5L, null, file);
+
+        assertEquals("https://s3/img.png", res.profileImageUrl());
+    }
+
+    // ----------------------------------------------------------
+    // userSearch
+    // ----------------------------------------------------------
+    @Test
+    void userSearch_shouldReturnPagedResults() {
+        Page<User> page = new PageImpl<>(List.of(regularUser));
+
+        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        Page<UserManagementResponse> result =
+                userService.userSearch("test", UserRole.ORGANISER, true, 0);
+
         assertEquals(1, result.getTotalElements());
-        verify(userRepository).findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName"))));
+        assertEquals("Test User", result.getContent().get(0).fullName());
+    }
+
+    // ----------------------------------------------------------
+    // getAdminUsers
+    // ----------------------------------------------------------
+    @Test
+    void getAdminUsers_shouldReturnList() {
+        Page<User> page = new PageImpl<>(List.of(adminUser));
+
+        when(userRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(page);
+
+        Page<UserListResponse> result = userService.getAdminUsers("admin", true, 0);
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Admin", result.getContent().get(0).fullName());
+    }
+
+    // ----------------------------------------------------------
+    // getTopOrganizers
+    // ----------------------------------------------------------
+    @Test
+    void getTopOrganizers_shouldReturnList() {
+        TopOrganizerProjection projection = mock(TopOrganizerProjection.class);
+        when(projection.getEmail()).thenReturn("aaa@test.com");
+        when(projection.getFullName()).thenReturn("AAA");
+        when(projection.getTotalEventsCreated()).thenReturn(10L);
+        when(projection.getGrowthPercentage()).thenReturn(50.0);
+
+        when(userEventStatsRepository.findTopOrganizers(any()))
+                .thenReturn(List.of(projection));
+
+        List<TopOrganizerResponse> list = userService.getTopOrganizers();
+
+        assertEquals(1, list.size());
+        assertEquals("AAA", list.get(0).name());
+        assertEquals(10L, list.get(0).eventCount());
+    }
+
+    // ----------------------------------------------------------
+    // getActiveAdmins
+    // ----------------------------------------------------------
+    @Test
+    void getActiveAdmins_shouldReturnAdminList() {
+        when(userRepository.findByRoleAndIsActiveTrue(UserRole.ADMIN))
+                .thenReturn(List.of(adminUser));
+
+        List<UserInfoResponse> result = userService.getActiveAdmins();
+
+        assertEquals(1, result.size());
+        assertEquals("Admin", result.get(0).fullName());
+    }
+
+    // ----------------------------------------------------------
+    // getUserByEmail
+    // ----------------------------------------------------------
+    @Test
+    void getUserByEmail_shouldReturnResponse() {
+        when(userRepository.findByEmail("x@test.com"))
+                .thenReturn(Optional.of(regularUser));
+
+        UserCreationResponse res = userService.getUserByEmail("x@test.com");
+
+        assertNotNull(res);
+        assertEquals(5L, res.id());
     }
 
     @Test
-    void shouldReturnEmptyResultsWhenKeywordDoesNotMatch() {
-        // Arrange
-        Page<User> emptyPage = new PageImpl<>(new ArrayList<>(), PageRequest.of(0, 10, Sort.by("fullName")), 0);
+    void getUserByEmail_shouldReturnNullWhenNotFound() {
+        when(userRepository.findByEmail("none@test.com"))
+                .thenReturn(Optional.empty());
 
-        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName")))))
-                .thenReturn(emptyPage);
-
-        // Act
-        Page<UserManagementResponse> result = userService.userSearch("NonExistent", null, null, 0);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(0, result.getTotalElements());
-    }
-
-    @Test
-    void shouldHandleEmptyKeywordInSearch() {
-        // Arrange
-        List<User> users = List.of(testUser);
-        Page<User> searchPage = new PageImpl<>(users, PageRequest.of(0, 10, Sort.by("fullName")), 1);
-
-        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName")))))
-                .thenReturn(searchPage);
-
-        // Act
-        Page<UserManagementResponse> result = userService.userSearch("", null, null, 0);
-
-        // Assert
-        assertNotNull(result);
-        verify(userRepository).findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName"))));
-    }
-
-    @Test
-    void shouldDefaultToPageZeroWhenNegativePageProvided() {
-        // Arrange
-        Page<User> searchPage = new PageImpl<>(List.of(testUser), PageRequest.of(0, 10, Sort.by("fullName")), 1);
-
-        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName")))))
-                .thenReturn(searchPage);
-
-        // Act
-        userService.userSearch("John", null, null, -5);
-
-        // Assert
-        verify(userRepository).findAll(any(Specification.class), eq(PageRequest.of(0, 10, Sort.by("fullName"))));
-    }
-
-    @Test
-    void shouldHandleValidPageNumberInSearch() {
-        // Arrange
-        Page<User> searchPage = new PageImpl<>(List.of(testUser), PageRequest.of(2, 10, Sort.by("fullName")), 1);
-
-        when(userRepository.findAll(any(Specification.class), eq(PageRequest.of(2, 10, Sort.by("fullName")))))
-                .thenReturn(searchPage);
-
-        // Act
-        userService.userSearch("John", null, null, 2);
-
-        // Assert
-        verify(userRepository).findAll(any(Specification.class), eq(PageRequest.of(2, 10, Sort.by("fullName"))));
-    }
-
-
-    // ==================== getUserById Tests ====================
-
-    @Test
-    void shouldReturnUserWhenUserExistsById() {
-        // Arrange
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-
-        // Act
-        UserResponse result = userService.getUserById(1L);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1L, result.userId());
-        assertEquals("John Doe", result.fullName());
-        assertEquals("john.doe@example.com", result.email());
-        verify(userRepository).findById(1L);
-    }
-
-    @Test
-    void shouldThrowExceptionWhenUserNotFoundById() {
-        // Arrange
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> userService.getUserById(999L)
-        );
-        assertEquals("User not found with id: 999", exception.getMessage());
-    }
-
-    @Test
-    void shouldThrowExceptionWhenNullUserIdProvidedForGetById() {
-        // Arrange
-        when(userRepository.findById(null)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> userService.getUserById(null));
-    }
-
-    // ==================== updateUser Tests ====================
-
-    @Test
-    void shouldUpdateUserWithAllFieldsChanged() {
-        // Arrange
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
-        when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
-
-        // Act
-        UserResponse result = userService.updateUser(1L, testUpdateRequest, null);
-
-        // Assert
-        assertNotNull(result);
-        verify(userRepository).save(any(User.class));
-        verify(profileRepository).save(any(Profile.class));
-        
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
-        User updatedUser = userCaptor.getValue();
-        
-        assertEquals("Jane Doe", updatedUser.getFullName());
-        assertEquals("jane.doe@example.com", updatedUser.getEmail());
-        assertFalse(updatedUser.isActive());
-        assertEquals("9876543210", updatedUser.getProfile().getPhoneNumber());
-        assertEquals("456 New Avenue", updatedUser.getProfile().getAddress());
-    }
-
-    @Test
-    void shouldUpdateOnlyChangedFields() {
-        // Arrange
-        UserUpdateRequest partialUpdate = new UserUpdateRequest(
-                "John Doe",  // Same as original
-                "new.email@example.com",  // Changed
-                "1234567890",  // Same as original
-                "123 Test Street",  // Same as original
-                true  // Same as original
-        );
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
-        when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
-
-        // Act
-        UserResponse result = userService.updateUser(1L, partialUpdate, null);
-
-        // Assert
-        assertNotNull(result);
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
-        User updatedUser = userCaptor.getValue();
-        
-        assertEquals("new.email@example.com", updatedUser.getEmail());
-        assertEquals("John Doe", updatedUser.getFullName());  // Unchanged
-    }
-
-    @Test
-    void shouldNotUpdateWhenNoFieldsChanged() {
-        // Arrange
-        UserUpdateRequest sameDataRequest = new UserUpdateRequest(
-                "John Doe",
-                "john.doe@example.com",
-                "1234567890",
-                "123 Test Street",
-                true
-        );
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
-        when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
-
-        // Act
-        UserResponse result = userService.updateUser(1L, sameDataRequest, null);
-
-        // Assert
-        assertNotNull(result);
-        verify(userRepository).save(any(User.class));
-        verify(profileRepository).save(any(Profile.class));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenUpdatingNonExistentUser() {
-        // Arrange
-        when(userRepository.findById(999L)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> userService.updateUser(999L, testUpdateRequest, null)
-        );
-        assertEquals("User not found with id: 999", exception.getMessage());
-        verify(userRepository, never()).save(any(User.class));
-        verify(profileRepository, never()).save(any(Profile.class));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenNullUserIdProvidedForUpdate() {
-        // Arrange
-        when(userRepository.findById(null)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThrows(ResourceNotFoundException.class, 
-                () -> userService.updateUser(null, testUpdateRequest, null));
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    void shouldUpdateUserStatusFromTrueToFalse() {
-        // Arrange
-        testUser.setActive(true);
-        UserUpdateRequest statusChangeRequest = new UserUpdateRequest(
-                "John Doe",
-                "john.doe@example.com",
-                "1234567890",
-                "123 Test Street",
-                false
-        );
-
-        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
-        when(profileRepository.save(any(Profile.class))).thenReturn(testProfile);
-
-        // Act
-        userService.updateUser(1L, statusChangeRequest, null);
-
-        // Assert
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(userCaptor.capture());
-        assertFalse(userCaptor.getValue().isActive());
-    }
-}
-class UserStatisticsImpl implements UserStatistics {
-    private final Long totalUsers;
-    private final Long totalOrganizers;
-    private final Long totalAttendees;
-    private final Long totalDeactivatedUsers;
-
-    UserStatisticsImpl(Long totalUsers, Long totalOrganizers, Long totalAttendees, Long totalDeactivatedUsers) {
-        this.totalUsers = totalUsers;
-        this.totalOrganizers = totalOrganizers;
-        this.totalAttendees = totalAttendees;
-        this.totalDeactivatedUsers = totalDeactivatedUsers;
-    }
-
-    @Override
-    public long getTotalUsers() {
-        return this.totalUsers;
-    }
-
-    @Override
-    public long getTotalOrganizers() {
-        return this.totalOrganizers;
-    }
-
-    @Override
-    public long getTotalAttendees() {
-        return this.totalAttendees;
-    }
-
-    @Override
-    public long getTotalDeactivatedUsers() {
-        return this.totalDeactivatedUsers;
+        assertNull(userService.getUserByEmail("none@test.com"));
     }
 }

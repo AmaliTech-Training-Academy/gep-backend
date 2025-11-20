@@ -68,9 +68,8 @@ public class InPersonAndMultiDayEventStrategy implements EventStrategy {
                 .userId(authenticatedUser.id())
                 .location(eventRequest.location())
                 .build();
-        Event eventWithImages = attachEventImages(eventImages, event);
-        eventWithImages.setEventOptions(eventOptions);
-        return  eventRepository.save(event);
+        attachEventImages(eventImages, event);
+        return eventRepository.save(event);
     }
 
     public Event attachEventImages(List<MultipartFile> eventImages, Event event){

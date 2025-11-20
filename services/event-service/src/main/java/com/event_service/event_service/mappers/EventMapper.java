@@ -5,6 +5,8 @@ import com.event_service.event_service.models.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import java.util.List;
+import java.util.Set;
 
 
 @Mapper(componentModel = "spring")
@@ -19,6 +21,17 @@ public interface EventMapper {
     @Mapping(target = "ticketPrice", expression = "java(extractTicketPrice(event))")
     @Mapping(target = "attendeeCount", expression = "java(extractInvitationCount(event))")
     ExploreEventResponse toExploreEventResponse(Event event);
+
+    @Mapping(source = "eventImages", target = "images")
+    @Mapping(target = "startTime", expression = "java(determineDisplayTime(event))")
+    @Mapping(target = "location", expression = "java(determineMeetingLocation(event))")
+    @Mapping(target = "timeZoneOffSet", expression = "java(determineZoneId(event))")
+    EventUpdateResponse toEventUpdateResponse(Event event);
+
+    @Mapping(source = "image", target = "image")
+    EventImageResponse toEventImageResponse(EventImages image);
+
+    List<EventImageResponse> toEventImageResponseList(Set<EventImages> images);
 
     default Long extractInvitationCount(Event event) {
         if (event.getInvitations() == null) return 0L;

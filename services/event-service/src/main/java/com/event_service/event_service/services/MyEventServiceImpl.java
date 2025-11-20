@@ -1,14 +1,13 @@
 package com.event_service.event_service.services;
 
+import com.event_service.event_service.client.UserServiceClient;
 import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.TicketType;
-import com.event_service.event_service.repositories.EventInvitationRepository;
-import com.event_service.event_service.repositories.EventRegistrationRepository;
-import com.event_service.event_service.repositories.EventRepository;
-import com.event_service.event_service.repositories.TicketRepository;
+import com.event_service.event_service.repositories.*;
 import com.event_service.event_service.utils.SecurityUtils;
 import com.example.common_libraries.dto.AppUser;
+import com.example.common_libraries.dto.HostsResponse;
 import com.example.common_libraries.exception.BadRequestException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +29,8 @@ public class MyEventServiceImpl implements MyEventService {
     private final EventRegistrationRepository eventRegistrationRepository;
     private final TicketRepository ticketRepository;
     private final EventInvitationRepository eventInvitationRepository;
+    private final UserServiceClient userServiceClient;
+    private final EventOrganizerRepository eventOrganizerRepository;
 
     @Override
     public Page<MyEventsListResponse> getMyEvents(int page) {
@@ -69,7 +70,7 @@ public class MyEventServiceImpl implements MyEventService {
     }
 
     @Override
-    public MyEventDetailResponse getMyEventDetailsById(Long eventId) {
+    public MyEventDetailResponse getMyEventDetailsById(Long eventId, String accessToken) {
         if(eventId == null){
             throw new BadRequestException("Invalid event ID");
         }
@@ -89,9 +90,11 @@ public class MyEventServiceImpl implements MyEventService {
 
         MyEventSummaryResponse eventSummary = MyEventSummaryResponse
                 .builder()
+                .title(event.getTitle())
                 .organizer(event.getCreatedBy())
                 .location(event.getLocation())
                 .startTime(event.getStartTime())
+                .eventStatus(event.getStatus().name())
                 .build();
 
         List<MyEventTicketTypeStats> ticketTypes = Optional.ofNullable(event.getTicketTypes()).orElse(List.of())
@@ -110,12 +113,17 @@ public class MyEventServiceImpl implements MyEventService {
                 .mapToLong(invitation -> invitation.getInvitees().size())
                 .sum();
 
+        // Inter-service call to user-service to fetch hosts details
+        List<Long> hostIds = eventOrganizerRepository.findUserIdsByEventId(eventId);
+        List<HostsResponse> eventHosts = userServiceClient.getEventHosts(hostIds, accessToken);
+
         return MyEventDetailResponse
                 .builder()
                 .eventStats(eventStat)
                 .eventSummary(eventSummary)
                 .ticketTypes(ticketTypes)
                 .totalInvitedGuests(totalInvitedGuests)
+                .eventHosts(eventHosts)
                 .build();
     }
 }

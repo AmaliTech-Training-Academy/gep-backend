@@ -184,4 +184,38 @@ public class UserServiceClient {
             throw new ServiceCommunicationException("Unexpected error calling User Service: " + ex.getMessage());
         }
     }
+
+    public List<HostsResponse> getEventHosts(List<Long> hostIds, String accessToken){
+        try{
+            log.info("Calling User Service to get event hosts");
+
+            return webClient.get()
+
+                    .uri(uriBuilder -> uriBuilder
+                                    .path("/api/v1/users/hosts")
+                                    .queryParam("hostIds", hostIds)
+                                    .build())
+                    .cookie("accessToken", accessToken)
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<List<HostsResponse>>() {})
+                    .block();
+        } catch (WebClientResponseException.Unauthorized ex) {
+            log.error("Unauthorized error when calling User Service for event hosts");
+            throw new UnauthorizedException("Unauthorized: " + ex.getResponseBodyAsString());
+
+        } catch (WebClientResponseException.Forbidden ex) {
+            log.error("Forbidden error when calling User Service for event hosts");
+            throw new ForbiddenException("Forbidden: " + ex.getResponseBodyAsString());
+
+        } catch (WebClientResponseException ex) {
+            log.error("Service communication error when calling User Service for event hosts (status {}):", ex.getStatusCode());
+            throw new ServiceCommunicationException(
+                    "Service communication error (status " + ex.getStatusCode() + "): " + ex.getResponseBodyAsString()
+            );
+
+        } catch (Exception ex) {
+            log.error("Unexpected error calling User Service", ex);
+            throw new ServiceCommunicationException("Unexpected error calling User Service: " + ex.getMessage());
+        }
+    }
 }

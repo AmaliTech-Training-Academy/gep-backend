@@ -21,10 +21,11 @@
                 </tr>
 
                 <!-- Success Icon -->
+                <!-- Success Icon -->
                 <tr>
                     <td align="center" style="padding: 20px 0 10px 0;">
-                        <div style="width: 60px; height: 60px; background-color: #4caf50; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
-                            <span style="color: white; font-size: 36px; line-height: 60px;">✓</span>
+                        <div style="width: 60px; height: 60px; background-color: #4caf50; border-radius: 50%; display: inline-block; line-height: 60px; text-align: center;">
+                            <span style="color: white; font-size: 36px; line-height: 60px; vertical-align: middle;">✓</span>
                         </div>
                     </td>
                 </tr>
@@ -53,10 +54,16 @@
                                     <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;" th:text="${eventDetails.description}">
                                         Event description goes here.
                                     </p>
-                                    <p style="margin: 0 0 5px 0; font-size: 14px; color: #333;">
-                                        <strong>Date & Time:</strong>
-                                        <span th:text="${eventDetails.startTime()}">
-                                            Event Date
+                                    <p style="margin: 0; font-size: 14px; color: #333;">
+                                        <strong>Start Time:</strong>
+                                        <span th:text="${#temporals.format(eventDetails.startTime, 'EEEE, MMMM d, yyyy - h:mm a')}">
+                                            Event Start Date
+                                        </span>
+                                    </p>
+                                    <p style="margin: 0; font-size: 14px; color: #333;">
+                                        <strong>End Time:</strong>
+                                        <span th:text="${#temporals.format(eventDetails.endTime, 'EEEE, MMMM d, yyyy - h:mm a')}">
+                                            Event End Date
                                         </span>
                                     </p>
                                     <p style="margin: 0 0 5px 0; font-size: 14px; color: #333;">

@@ -1,10 +1,18 @@
 package com.event_service.event_service.services;
 
+import com.event_service.event_service.dto.*;
+import com.event_service.event_service.exceptions.NotFoundException;
+import com.event_service.event_service.repositories.EventImagesRepository;
+import com.event_service.event_service.strategies.manage.*;
+import com.event_service.event_service.utils.TimeZoneUtils;
 import com.event_service.event_service.client.UserServiceClient;
 import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
 import com.event_service.event_service.dto.ExploreEventResponse;
 import com.event_service.event_service.dto.PagedExploreEventResponse;
+import com.event_service.event_service.repositories.TicketRepository;
+import com.event_service.event_service.repositories.TicketTypeRepository;
+import com.event_service.event_service.validations.FileValidator;
 import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.dto.PlatformNotificationSettingDto;
 import com.example.common_libraries.dto.UserInfoResponse;
@@ -17,11 +25,13 @@ import com.event_service.event_service.models.enums.EventTypeEnum;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.strategies.*;
 import com.event_service.event_service.validations.EventValidator;
+import com.example.common_libraries.service.S3Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -59,6 +69,15 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
+    private final S3Service s3Service;
+    private final EventImagesRepository eventImagesRepository;
+    private final EventUpdateStrategyContext eventUpdateStrategyContext;
+    private final InPersonAndDayEventUpdateStrategy inPersonAndDayEventUpdateStrategy;
+    private final VirtualAndDayEventUpdateStrategy virtualAndDayEventUpdateStrategy;
+    private final VirtualAndMultiDayEventUpdateStrategy virtualAndMultiDayEventUpdateStrategy;
+    private final InPersonAndMultiDayUpdateEventStrategy inPersonAndMultiDayEventUpdateStrategy;
+    private final FileValidator fileValidator;
+    private final TicketTypeRepository ticketTypeRepository;
     private final UserServiceClient userServiceClient;
     private final HttpServletRequest request;
 
@@ -73,6 +92,11 @@ public class EventServiceImpl implements EventService {
     @PreAuthorize("hasRole('ORGANISER')")
     public EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages) {
         eventValidator.validateRequiredGroup(eventRequest);
+        fileValidator.validate(image);
+
+        if(!CollectionUtils.isEmpty(eventImages)){
+            fileValidator.validate(eventImages);
+        }
 
         if (!CollectionUtils.isEmpty(eventImages) && eventImages.size() > 5) {
             throw new ValidationException(List.of("You can upload a maximum of 5 images per event."));
@@ -121,6 +145,10 @@ public class EventServiceImpl implements EventService {
 
 
     @Override
+    @Cacheable(
+            value = "events",
+            key = "{#pageNumber, #pageSize, #hasTitle, #sortBy, #location, #date, #priceFilter, #past}"
+    )
     public PagedExploreEventResponse listEvents(
             int pageNumber,
             int pageSize,
@@ -131,9 +159,8 @@ public class EventServiceImpl implements EventService {
             String priceFilter,
             Boolean past
     ) {
-        int adjustedPageNumber = pageNumber > 0 ? pageNumber - 1 : pageNumber;
         Pageable pageable = PageRequest.of(
-                adjustedPageNumber,
+                pageNumber,
                 pageSize,
                 Sort.by(Sort.Direction.DESC, sortBy)
         );
@@ -161,6 +188,55 @@ public class EventServiceImpl implements EventService {
                 eventPage.getTotalPages(),
                 eventsToExplore
         );
+    }
+
+    @Override
+    @Transactional
+    @PreAuthorize("hasRole('ORGANISER') and @eventOwnerShipService.checkOwnerShip(#id, authentication.principal.id)")
+    public EventUpdateResponse updateEvent(Long id,
+                                           EventRequest eventRequest,
+                                           MultipartFile image,
+                                           List<MultipartFile> newEventImages,
+                                           List<Long> imagesToRemove) {
+        eventValidator.validateRequiredGroup(eventRequest);
+
+        Event event = getEventById(id);
+
+        EventType eventType = eventTypeService.findById(eventRequest.event_type_id());
+        EventMeetingType eventMeetingType =
+                eventMeetingTypeService.findEventMeetingTypeById(eventRequest.event_meeting_type_id());
+
+
+        if(eventType.getName().name().equals(EventTypeEnum.DAY_EVENT.name())
+                && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.IN_PERSON.name())) {
+            eventValidator.validateInPersonSingleDayGroup(eventRequest);
+            eventUpdateStrategyContext.setUpdateEventStrategy(inPersonAndDayEventUpdateStrategy);
+           event = eventUpdateStrategyContext.executeStrategy(id, eventRequest, image, newEventImages, imagesToRemove,event, eventType, eventMeetingType);
+        }
+
+        if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
+                && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.IN_PERSON.name())) {
+            eventValidator.validateInPersonMultiDayGroup(eventRequest);
+            eventUpdateStrategyContext.setUpdateEventStrategy(inPersonAndMultiDayEventUpdateStrategy);
+            event = eventUpdateStrategyContext.executeStrategy(id, eventRequest, image, newEventImages, imagesToRemove,event, eventType, eventMeetingType);
+        }
+
+        if(eventType.getName().name().equals(EventTypeEnum.DAY_EVENT.name())
+                && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.VIRTUAL.name())) {
+            eventValidator.validateVirtualSingleDayGroup(eventRequest);
+            eventUpdateStrategyContext.setUpdateEventStrategy(virtualAndDayEventUpdateStrategy);
+            event = eventUpdateStrategyContext.executeStrategy(id, eventRequest, image, newEventImages, imagesToRemove,event, eventType, eventMeetingType);
+        }
+
+        if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
+                && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.VIRTUAL.name())) {
+            eventValidator.validateVirtualMultiDayGroup(eventRequest);
+            eventUpdateStrategyContext.setUpdateEventStrategy(virtualAndMultiDayEventUpdateStrategy);
+            event = eventUpdateStrategyContext.executeStrategy(id, eventRequest, image, newEventImages, imagesToRemove,event, eventType, eventMeetingType);
+        }
+
+        Event updated = eventRepository.save(event);
+        return eventMapper.toEventUpdateResponse(updated);
     }
 
     private void publishEventCreationNotificationToQueue(Event event){
@@ -204,6 +280,11 @@ public class EventServiceImpl implements EventService {
     public AppUser getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return (AppUser) authentication.getPrincipal();
+    }
+
+    private Event getEventById(Long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(()-> new NotFoundException("Event not found"));
     }
 
     private String getCookieValue(String cookieName) {

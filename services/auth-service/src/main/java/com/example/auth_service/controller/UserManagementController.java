@@ -29,15 +29,6 @@ public class UserManagementController {
     private final UserService userService;
     private final Validator validator;
 
-    /**
-     * Handles the management of user data and retrieves a summary report containing
-     * information about the total number of users, organizers, attendees, deactivated users,
-     * and a paginated overview of user details.
-     *
-     * This method is accessible only to users with the `ADMIN` authority.
-     *
-     * @return a ResponseEntity containing a CustomApiResponse with a UserSummaryReport object
-     */
     @GetMapping("/management")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CustomApiResponse<UserSummaryReport>> userManagement(){
@@ -45,30 +36,14 @@ public class UserManagementController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Deactivates a user by updating their status based on the provided user ID.
-     * This method requires the requesting user to have admin authority or ownership of the user resource.
-     *
-     * @param userId the ID of the user whose status will be updated
-     * @return a ResponseEntity with no content
-     */
     @PostMapping("/{userId}/deactivate")
-    @PreAuthorize("hasRole('ADMIN') or @resourceOwner.isOwner(#userId,principal)")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> updateUserStatus(@PathVariable Long userId){
         userService.updateUserStatus(userId);
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * Searches for users based on the provided criteria, including keyword, role, status, and page number.
-     * This method is accessible only to users with the `ADMIN` authority.
-     *
-     * @param keyword the search keyword to filter users by their full name or email (optional)
-     * @param role the role of the users to filter (optional)
-     * @param status the active status of the users to filter (optional)
-     * @param page the page number for pagination (defaults to 0 if not provided)
-     * @return a ResponseEntity containing a CustomApiResponse with a paginated list of UserManagementResponse objects
-     */
+
     @GetMapping("/search")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CustomApiResponse<Page<UserManagementResponse>>> userSearch(
@@ -92,31 +67,17 @@ public class UserManagementController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Retrieves a user's information by their ID.
-     * This method requires the requesting user to have either admin authority
-     * or ownership of the user resource.
-     *
-     * @param userId the ID of the user to be retrieved
-     * @return a ResponseEntity containing a CustomApiResponse with the user's details
-     */
+
     @GetMapping("/{userId}")
-    @PreAuthorize("hasRole('ADMIN') or @resourceOwner.isOwner(#userId,principal)")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
     public ResponseEntity<CustomApiResponse<UserResponse>> getUserById(@PathVariable Long userId){
         CustomApiResponse<UserResponse> response = CustomApiResponse.success(userService.getUserById(userId));
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Updates the details of an existing user with the specified user ID.
-     * This method requires the requesting user to have either admin authority or ownership of the user resource.
-     *
-     * @param userId the ID of the user to be updated
-     * @param userUpdateRequestJson the new details for the user, including fields such as full name, email, phone, address, and status
-     * @return a ResponseEntity containing a CustomApiResponse with the updated user's details
-     */
+
     @PutMapping(path = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('ADMIN') or @resourceOwner.isOwner(#userId, principal)")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
     public ResponseEntity<CustomApiResponse<UserResponse>> updateUser(
             @PathVariable Long userId,
             @RequestPart(value = "userUpdateRequest", required = false) String userUpdateRequestJson,
@@ -129,15 +90,15 @@ public class UserManagementController {
             try {
                 ObjectMapper objectMapper = new ObjectMapper();
                 userUpdateRequest = objectMapper.readValue(userUpdateRequestJson, UserUpdateRequest.class);
+
+                // validate DTO
+                var violations = validator.validate(userUpdateRequest);
+                if(!violations.isEmpty()){
+                    throw new ConstraintViolationException(violations);
+                }
             } catch (Exception e) {
                 throw new IllegalArgumentException("Invalid request.");
             }
-        }
-
-        // validate DTO
-        var violations = validator.validate(userUpdateRequest);
-        if(!violations.isEmpty()){
-            throw new ConstraintViolationException(violations);
         }
 
         CustomApiResponse<UserResponse> response =
@@ -146,10 +107,17 @@ public class UserManagementController {
         return ResponseEntity.ok(response);
     }
 
+    // Inter-Service Endpoints
     @GetMapping("/top-organizers")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<TopOrganizerResponse>> getTopOrganizers(){
         return ResponseEntity.status(HttpStatus.OK).body(userService.getTopOrganizers());
+    }
+
+    @GetMapping("/hosts")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    public ResponseEntity<List<HostsResponse>> getEventHosts(@RequestParam List<Long> hostIds){
+        return ResponseEntity.status(HttpStatus.OK).body(userService.getEventHosts(hostIds));
     }
 
     @GetMapping("/exists")

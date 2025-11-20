@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.reactive.resource.NoResourceFoundException;
 
@@ -30,6 +31,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private String maxFileSizeErrorText = "File too large! Maximum allowed size is 10MB";
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<CustomApiResponse<?>> handleValidationException(ValidationException ex){
@@ -78,6 +81,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(CustomApiResponse.error(ex.getMessage()));
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleMaxSizeException(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(413).body(CustomApiResponse.error(maxFileSizeErrorText));
+    }
+
+    @ExceptionHandler(InvalidFileException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleInvalidFileException(InvalidFileException ex) {
+        return ResponseEntity.status(413).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
     @ExceptionHandler(InputOutputException.class)
     public ResponseEntity<CustomApiResponse<?>> handleInputOutputException(InputOutputException ex){
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(CustomApiResponse.error(ex.getMessage()));
@@ -95,6 +108,12 @@ public class GlobalExceptionHandler {
     }
 
     // Core Exceptions
+    @ExceptionHandler(FileUploadException.class)
+    public ResponseEntity<CustomApiResponse<?>> handleFileUploadException(FileUploadException ex){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(CustomApiResponse.error(ex.getMessage()));
+    }
+
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<CustomApiResponse<?>> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException ex){
         if(ex.getRequiredType() == LocalDate.class){
