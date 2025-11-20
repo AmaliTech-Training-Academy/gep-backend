@@ -1,5 +1,10 @@
 package com.event_service.event_service.services;
 
+import com.event_service.event_service.dto.*;
+import com.event_service.event_service.exceptions.NotFoundException;
+import com.event_service.event_service.repositories.EventImagesRepository;
+import com.event_service.event_service.strategies.manage.*;
+import com.event_service.event_service.utils.TimeZoneUtils;
 import com.event_service.event_service.client.UserServiceClient;
 import com.event_service.event_service.dto.EventRequest;
 import com.event_service.event_service.dto.EventResponse;
@@ -20,6 +25,7 @@ import com.event_service.event_service.models.enums.EventTypeEnum;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.strategies.*;
 import com.event_service.event_service.validations.EventValidator;
+import com.example.common_libraries.service.S3Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,6 +69,13 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
+    private final S3Service s3Service;
+    private final EventImagesRepository eventImagesRepository;
+    private final EventUpdateStrategyContext eventUpdateStrategyContext;
+    private final InPersonAndDayEventUpdateStrategy inPersonAndDayEventUpdateStrategy;
+    private final VirtualAndDayEventUpdateStrategy virtualAndDayEventUpdateStrategy;
+    private final VirtualAndMultiDayEventUpdateStrategy virtualAndMultiDayEventUpdateStrategy;
+    private final InPersonAndMultiDayUpdateEventStrategy inPersonAndMultiDayEventUpdateStrategy;
     private final FileValidator fileValidator;
     private final TicketTypeRepository ticketTypeRepository;
     private final UserServiceClient userServiceClient;
@@ -177,6 +190,55 @@ public class EventServiceImpl implements EventService {
         );
     }
 
+    @Override
+    @Transactional
+    @PreAuthorize("hasRole('ORGANISER') and @eventOwnerShipService.checkOwnerShip(#id, authentication.principal.id)")
+    public EventUpdateResponse updateEvent(Long id,
+                                           EventRequest eventRequest,
+                                           MultipartFile image,
+                                           List<MultipartFile> newEventImages,
+                                           List<Long> imagesToRemove) {
+        eventValidator.validateRequiredGroup(eventRequest);
+
+        Event event = getEventById(id);
+
+        EventType eventType = eventTypeService.findById(eventRequest.event_type_id());
+        EventMeetingType eventMeetingType =
+                eventMeetingTypeService.findEventMeetingTypeById(eventRequest.event_meeting_type_id());
+
+
+        if(eventType.getName().name().equals(EventTypeEnum.DAY_EVENT.name())
+                && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.IN_PERSON.name())) {
+            eventValidator.validateInPersonSingleDayGroup(eventRequest);
+            eventUpdateStrategyContext.setUpdateEventStrategy(inPersonAndDayEventUpdateStrategy);
+           event = eventUpdateStrategyContext.executeStrategy(id, eventRequest, image, newEventImages, imagesToRemove,event, eventType, eventMeetingType);
+        }
+
+        if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
+                && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.IN_PERSON.name())) {
+            eventValidator.validateInPersonMultiDayGroup(eventRequest);
+            eventUpdateStrategyContext.setUpdateEventStrategy(inPersonAndMultiDayEventUpdateStrategy);
+            event = eventUpdateStrategyContext.executeStrategy(id, eventRequest, image, newEventImages, imagesToRemove,event, eventType, eventMeetingType);
+        }
+
+        if(eventType.getName().name().equals(EventTypeEnum.DAY_EVENT.name())
+                && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.VIRTUAL.name())) {
+            eventValidator.validateVirtualSingleDayGroup(eventRequest);
+            eventUpdateStrategyContext.setUpdateEventStrategy(virtualAndDayEventUpdateStrategy);
+            event = eventUpdateStrategyContext.executeStrategy(id, eventRequest, image, newEventImages, imagesToRemove,event, eventType, eventMeetingType);
+        }
+
+        if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
+                && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.VIRTUAL.name())) {
+            eventValidator.validateVirtualMultiDayGroup(eventRequest);
+            eventUpdateStrategyContext.setUpdateEventStrategy(virtualAndMultiDayEventUpdateStrategy);
+            event = eventUpdateStrategyContext.executeStrategy(id, eventRequest, image, newEventImages, imagesToRemove,event, eventType, eventMeetingType);
+        }
+
+        Event updated = eventRepository.save(event);
+        return eventMapper.toEventUpdateResponse(updated);
+    }
+
     private void publishEventCreationNotificationToQueue(Event event){
         String accessToken = getCookieValue("accessToken");
         PlatformNotificationSettingDto platformNotification = userServiceClient.getNotificationSetting(accessToken);
@@ -218,6 +280,11 @@ public class EventServiceImpl implements EventService {
     public AppUser getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return (AppUser) authentication.getPrincipal();
+    }
+
+    private Event getEventById(Long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(()-> new NotFoundException("Event not found"));
     }
 
     private String getCookieValue(String cookieName) {

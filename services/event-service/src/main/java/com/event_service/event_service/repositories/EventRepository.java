@@ -64,6 +64,8 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     Long countByUserId(Long id);
 
     Optional<Event> findByIdAndUserId(Long eventId, Long userId);
+    boolean existsByIdAndUserId(Long id, Long userId);
+
 
     @Query(value = """
         SELECT
