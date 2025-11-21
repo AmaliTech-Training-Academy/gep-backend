@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -67,7 +68,47 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
 
         attachEventImages(eventImages, event);
 
+        createFreeTicket(eventRequest, event);
+
+        createPaidTicket(eventRequest, event);
+
+
         return eventRepository.save(event);
+    }
+
+    private static void createFreeTicket(EventRequest eventRequest, Event savedEvent) {
+        if (eventRequest.eventOptionsRequest().ticketPrice().compareTo(BigDecimal.ZERO) == 0) {
+
+            TicketType freeTicket = TicketType.builder()
+                    .event(savedEvent)
+                    .description("Free Ticket")
+                    .price(0.0)
+                    .quantity(eventRequest.eventOptionsRequest().capacity())
+                    .soldCount(0L)
+                    .isActive(true)
+                    .isPaid(false)
+                    .type("FREE")
+                    .quantityPerAttendee(1)
+                    .build();
+            savedEvent.addTicketType(freeTicket);
+        }
+    }
+
+    private static void createPaidTicket(EventRequest eventRequest, Event savedEvent) {
+        if (eventRequest.eventOptionsRequest().ticketPrice().compareTo(BigDecimal.ZERO) > 0) {
+            TicketType paidTicket = TicketType.builder()
+                    .description("General Admission")
+                    .price(eventRequest.eventOptionsRequest().ticketPrice().doubleValue())
+                    .quantity(eventRequest.eventOptionsRequest().capacity())
+                    .soldCount(0L)
+                    .isActive(true)
+                    .isPaid(true)
+                    .type("REGULAR")
+                    .quantityPerAttendee(1)
+                    .build();
+
+            savedEvent.addTicketType(paidTicket);
+        }
     }
 
     public void attachEventImages(List<MultipartFile> eventImages, Event event){
