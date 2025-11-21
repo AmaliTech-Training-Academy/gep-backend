@@ -46,6 +46,7 @@ class EventServiceImplTest {
     private EventRequest eventRequest;
     private MockMultipartFile flyer;
     private List<MultipartFile> eventImages;
+    private List<MultipartFile> sectionImages;
     private Event event;
     private EventResponse response;
 
@@ -70,6 +71,11 @@ class EventServiceImplTest {
 
 
         flyer = new MockMultipartFile("flyer", "flyer.jpg", "image/jpeg", "fake-flyer".getBytes());
+        sectionImages = List.of(
+                new MockMultipartFile("images", "img1.jpg", "image/jpeg", "fake-img1".getBytes()),
+                new MockMultipartFile("images", "img2.jpg", "image/jpeg", "fake-img2".getBytes())
+        );
+
         eventImages = List.of(
                 new MockMultipartFile("images", "img1.jpg", "image/jpeg", "fake-img1".getBytes()),
                 new MockMultipartFile("images", "img2.jpg", "image/jpeg", "fake-img2".getBytes())
@@ -102,14 +108,14 @@ class EventServiceImplTest {
 
         when(eventTypeService.findById(any())).thenReturn(eventType);
         when(eventMeetingTypeService.findEventMeetingTypeById(any())).thenReturn(eventMeetingType);
-        when(inPersonAndDayEventStrategy.createEvent(any(), any(), any(), any(), any())).thenReturn(event);
+        when(inPersonAndDayEventStrategy.createEvent(any(), any(), any(), any(), any(), any())).thenReturn(event);
         when(eventMapper.toResponse(event)).thenReturn(response);
 
-        EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages);
+        EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages,sectionImages);
 
         verify(eventValidator).validateRequiredGroup(eventRequest);
         verify(eventValidator).validateInPersonSingleDayGroup(eventRequest);
-        verify(inPersonAndDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType);
+        verify(inPersonAndDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType,sectionImages);
         assertThat(result).isEqualTo(response);
     }
 
@@ -122,14 +128,14 @@ class EventServiceImplTest {
 
         when(eventTypeService.findById(any())).thenReturn(eventType);
         when(eventMeetingTypeService.findEventMeetingTypeById(any())).thenReturn(eventMeetingType);
-        when(inPersonAndMultiDayEventStrategy.createEvent(any(), any(), any(), any(), any())).thenReturn(event);
+        when(inPersonAndMultiDayEventStrategy.createEvent(any(), any(), any(), any(), any(),any())).thenReturn(event);
         when(eventMapper.toResponse(event)).thenReturn(response);
 
-        EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages);
+        EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages,sectionImages);
 
         verify(eventValidator).validateRequiredGroup(eventRequest);
         verify(eventValidator).validateInPersonMultiDayGroup(eventRequest);
-        verify(inPersonAndMultiDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType);
+        verify(inPersonAndMultiDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType,sectionImages);
         assertThat(result).isEqualTo(response);
     }
 
@@ -142,14 +148,14 @@ class EventServiceImplTest {
 
         when(eventTypeService.findById(any())).thenReturn(eventType);
         when(eventMeetingTypeService.findEventMeetingTypeById(any())).thenReturn(eventMeetingType);
-        when(virtualAndDayEventStrategy.createEvent(any(), any(), any(), any(), any())).thenReturn(event);
+        when(virtualAndDayEventStrategy.createEvent(any(), any(), any(), any(), any(),any())).thenReturn(event);
         when(eventMapper.toResponse(event)).thenReturn(response);
 
-        EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages);
+        EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages,sectionImages);
 
         verify(eventValidator).validateRequiredGroup(eventRequest);
         verify(eventValidator).validateVirtualSingleDayGroup(eventRequest);
-        verify(virtualAndDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType);
+        verify(virtualAndDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType,sectionImages);
         assertThat(result).isEqualTo(response);
     }
 
@@ -162,14 +168,14 @@ class EventServiceImplTest {
 
         when(eventTypeService.findById(any())).thenReturn(eventType);
         when(eventMeetingTypeService.findEventMeetingTypeById(any())).thenReturn(eventMeetingType);
-        when(virtualAndMultiDayEventStrategy.createEvent(any(), any(), any(), any(), any())).thenReturn(event);
+        when(virtualAndMultiDayEventStrategy.createEvent(any(), any(), any(), any(), any(),any())).thenReturn(event);
         when(eventMapper.toResponse(event)).thenReturn(response);
 
-        EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages);
+        EventResponse result = eventService.createEvent(eventRequest, flyer, eventImages,sectionImages);
 
         verify(eventValidator).validateRequiredGroup(eventRequest);
         verify(eventValidator).validateVirtualMultiDayGroup(eventRequest);
-        verify(virtualAndMultiDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType);
+        verify(virtualAndMultiDayEventStrategy).createEvent(eventRequest, flyer, eventImages, eventType, eventMeetingType,sectionImages);
         assertThat(result).isEqualTo(response);
     }
 
@@ -178,6 +184,6 @@ class EventServiceImplTest {
         List<MultipartFile> tooManyImages = List.of(flyer, flyer, flyer, flyer, flyer, flyer, flyer);
 
         assertThrows(ValidationException.class, () ->
-                eventService.createEvent(eventRequest, flyer, tooManyImages));
+                eventService.createEvent(eventRequest, flyer, tooManyImages,sectionImages));
     }
 }
