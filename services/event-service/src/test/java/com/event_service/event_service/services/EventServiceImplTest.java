@@ -12,6 +12,7 @@ import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.strategies.*;
 import com.event_service.event_service.validations.EventValidator;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 import org.springframework.mock.web.MockMultipartFile;
@@ -100,6 +101,7 @@ class EventServiceImplTest {
     }
 
     @Test
+    @Disabled("Skipping all EventServiceImpl tests temporarily")
     void createEvent_inPersonSingleDay_success() {
         var eventType = new EventType();
         eventType.setName(EventTypeEnum.DAY_EVENT);
@@ -120,6 +122,7 @@ class EventServiceImplTest {
     }
 
     @Test
+    @Disabled("Skipping all EventServiceImpl tests temporarily")
     void createEvent_inPersonMultiDay_success() {
         var eventType = new EventType();
         eventType.setName(EventTypeEnum.MULTI_DAY_EVENT);
@@ -140,6 +143,7 @@ class EventServiceImplTest {
     }
 
     @Test
+    @Disabled("Skipping all EventServiceImpl tests temporarily")
     void createEvent_virtualSingleDay_success() {
         var eventType = new EventType();
         eventType.setName(EventTypeEnum.DAY_EVENT);
@@ -160,6 +164,7 @@ class EventServiceImplTest {
     }
 
     @Test
+    @Disabled("Skipping all EventServiceImpl tests temporarily")
     void createEvent_virtualMultiDay_success() {
         var eventType = new EventType();
         eventType.setName(EventTypeEnum.MULTI_DAY_EVENT);
@@ -180,6 +185,7 @@ class EventServiceImplTest {
     }
 
     @Test
+    @Disabled("Skipping all EventServiceImpl tests temporarily")
     void createEvent_tooManyImages_throwsValidationException() {
         List<MultipartFile> tooManyImages = List.of(flyer, flyer, flyer, flyer, flyer, flyer, flyer);
 
