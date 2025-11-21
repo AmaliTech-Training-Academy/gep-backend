@@ -7,6 +7,7 @@ import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 public record EventRequest(
         @NotBlank(message = "Title is required", groups = {RequiredFieldsGroup.class})
@@ -109,6 +110,8 @@ public record EventRequest(
 
         @Valid
         @NotNull(message = "Event options are required")
-        EventOptionsRequest eventOptionsRequest
+        EventOptionsRequest eventOptionsRequest,
+
+        List<EventSectionRequest> eventSectionRequest
 ) {}
 
