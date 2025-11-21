@@ -47,8 +47,8 @@ public class PaymentServiceClient {
             );
 
         } catch (Exception ex) {
-            log.error("Unexpected error calling Payment Service", ex);
-            throw new ServiceCommunicationException("Unexpected error calling User Service: " + ex.getMessage());
+            log.error("Unexpected error calling Payment Service :{}", ex.getMessage());
+            throw new ServiceCommunicationException("Unexpected error calling Payment Service");
         }
 
     }
