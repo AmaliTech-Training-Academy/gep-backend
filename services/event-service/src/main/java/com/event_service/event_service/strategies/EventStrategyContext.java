@@ -22,13 +22,16 @@ public class EventStrategyContext {
             MultipartFile image,
             List<MultipartFile> eventImages,
             EventType eventType,
-            EventMeetingType eventMeetingType
-    ) {
+            EventMeetingType eventMeetingType,
+            List<MultipartFile> sectionImages
+
+            ) {
         return eventStrategy.createEvent(eventRequest,
                 image,
                 eventImages,
                 eventType,
-                eventMeetingType
+                eventMeetingType,
+                sectionImages
         );
     }
 }
