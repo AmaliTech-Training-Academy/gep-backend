@@ -86,6 +86,10 @@ public class Event {
     @Builder.Default
     private Set<EventImages> eventImages = new HashSet<>();
 
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<EventSection> sections = new ArrayList<>();
+
     @ManyToOne(cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     @JoinColumn(name = "event_type_id")
     private EventType eventType;
@@ -105,6 +109,11 @@ public class Event {
     public void addImage(EventImages eventImage) {
         this.eventImages.add(eventImage);
         eventImage.setEvent(this);
+    }
+
+    public void addSection(EventSection section) {
+        this.sections.add(section);
+        section.setEvent(this);
     }
 
     @CreatedDate
