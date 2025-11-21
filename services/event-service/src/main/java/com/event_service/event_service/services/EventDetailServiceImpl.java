@@ -24,6 +24,7 @@ public class EventDetailServiceImpl implements EventDetailService {
     private final TicketTypeRepository ticketTypeRepository;
     private final EventImagesRepository eventImagesRepository;
     private final EventOptionsRepository eventOptionsRepository;
+    private final EventDetailMapper eventDetailMapper;
 
     @Override
     public EventDetailResponse getEventDetailById(Long id) {
@@ -34,6 +35,6 @@ public class EventDetailServiceImpl implements EventDetailService {
         List<TicketTypeResponse> ticketTypeResponses = ticketTypes.stream().map(TicketTypeMapper::toTicketTypeResponse).toList();
         Long capacity = eventOptionsRepository.findCapacityByEvent(event);
 
-        return EventDetailMapper.toEventDetailResponse(event,eventImagesUrl,ticketTypeResponses,capacity);
+        return eventDetailMapper.toEventDetailResponse(event,eventImagesUrl,ticketTypeResponses,capacity);
     }
 }
