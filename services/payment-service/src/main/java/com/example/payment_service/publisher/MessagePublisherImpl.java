@@ -22,6 +22,9 @@ public class MessagePublisherImpl implements MessagePublisher{
     @Value("${sqs.payment-status-queue}")
     private String paymentStatusQueue;
 
+    @Value("${sqs.webhook-event-queue}")
+    private String webhookEventQueue;
+
     @Override
     public void publishPaymentStatusToQueue(PaymentStatusEvent statusEvent) {
         try{
@@ -41,6 +44,16 @@ public class MessagePublisherImpl implements MessagePublisher{
             sqsClient.sendMessage(builder -> builder.queueUrl(paymentCompletedEventQueueUrl).messageBody(messageBody));
         } catch (Exception e) {
             log.error("Error sending payment successful event to SQS: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void publishWebhookEventToQueue(String payload) {
+        try{
+            log.info("Sending webhook event to SQS");
+            sqsClient.sendMessage(builder -> builder.queueUrl(webhookEventQueue).messageBody(payload));
+        }catch (Exception e){
+            log.error("Error sending webhook event to SQS: {}", e.getMessage());
         }
     }
 }

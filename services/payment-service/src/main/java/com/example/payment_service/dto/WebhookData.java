@@ -18,7 +18,7 @@ public record WebhookData(
         String channel,
         String currency,
         String ip_address,
-        Map<String, Object> metadata,
+        String metadata,
         Integer fees,
         Object fees_breakdown,
         WebhookAuthorization authorization,

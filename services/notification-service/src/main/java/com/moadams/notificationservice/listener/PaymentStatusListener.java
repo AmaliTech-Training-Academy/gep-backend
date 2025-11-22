@@ -15,7 +15,7 @@ public class PaymentStatusListener {
 
     @SqsListener("${sqs.payment-status-queue}")
     public void listenPaymentStatus(PaymentStatusEvent statusEvent){
-        log.info("Payment Status Event Received:");
+        log.info("Payment Status Event Received: {}", statusEvent);
         emailService.sendPaymentStatusNotificationMail(statusEvent);
     }
 }
