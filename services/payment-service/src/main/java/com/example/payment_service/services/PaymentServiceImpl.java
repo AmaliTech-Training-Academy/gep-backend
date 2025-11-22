@@ -1,5 +1,7 @@
 package com.example.payment_service.services;
 
+import com.example.common_libraries.dto.EventRegistrationResponse;
+import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.example.payment_service.dto.TransactionResponse;
 import com.example.payment_service.models.PaymentRequestObject;
 import com.example.payment_service.models.Transaction;
@@ -13,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 
 @Service
@@ -48,5 +52,24 @@ public class PaymentServiceImpl implements PaymentService{
                     .transactionTime(transaction.getCreatedAt())
                     .build();
         });
+    }
+
+    @Override
+    public EventRegistrationResponse getRegistrationResponse(String reference) {
+        if(reference == null || reference.isBlank()) {
+            throw new IllegalArgumentException("Reference cannot be null or empty");
+        }
+
+        Transaction transaction = transactionRepository.findByReference(reference).orElseThrow(()-> new ResourceNotFoundException("Transaction not found"));
+        PaymentRequestObject paymentRequestObject = Optional.ofNullable(transaction.getPaymentRequestObject()).orElseThrow(()-> new ResourceNotFoundException("Could not find event details for this payment"));
+
+        return EventRegistrationResponse
+                .builder()
+                .id(paymentRequestObject.getEventId())
+                .eventTitle(paymentRequestObject.getEventTitle())
+                .location(paymentRequestObject.getLocation())
+                .organizer(paymentRequestObject.getOrganizer())
+                .startDate(paymentRequestObject.getStartDate())
+                .build();
     }
 }

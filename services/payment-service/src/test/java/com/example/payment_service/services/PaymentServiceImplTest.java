@@ -1,3 +1,4 @@
+
 package com.example.payment_service.services;
 
 import com.example.payment_service.dto.TransactionResponse;
@@ -5,6 +6,7 @@ import com.example.payment_service.models.PaymentRequestObject;
 import com.example.payment_service.models.Transaction;
 import com.example.payment_service.models.TransactionStatus;
 import com.example.payment_service.repos.TransactionRepository;
+import com.example.payment_service.specification.TransactionSpecification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -26,6 +28,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -80,7 +83,7 @@ class PaymentServiceImplTest {
         // Setup PaymentRequestObject 3 - Null payment request object (edge case)
         paymentRequestObject3 = null;
 
-        // Setup Transaction 1 - SUCCESSFUL with complete data
+        // Setup Transaction 1 - SUCCESS with complete data
         transaction1 = Transaction.builder()
                 .id(1L)
                 .accessToken("access_token_1")
@@ -159,7 +162,7 @@ class PaymentServiceImplTest {
             assertEquals("TechCorp", response1.eventOrganizer());
             assertEquals("john.doe@example.com", response1.attendeeEmail());
             assertEquals(new BigDecimal("100.50"), response1.amount());
-            assertEquals("N/A", response1.paymentMethod());
+            assertNull(response1.paymentMethod());
             assertEquals(TransactionStatus.SUCCESS, response1.status());
             assertNotNull(response1.transactionTime());
 
@@ -249,8 +252,8 @@ class PaymentServiceImplTest {
         }
 
         @Test
-        @DisplayName("should filter transactions by status SUCCESSFUL")
-        void shouldFilterTransactionsByStatusSuccessful() {
+        @DisplayName("should filter transactions by status SUCCESS")
+        void shouldFilterTransactionsByStatusSUCCESS() {
             // Arrange
             List<Transaction> transactions = Collections.singletonList(transaction1);
             Page<Transaction> transactionPage = new PageImpl<>(transactions, PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")), 1);
@@ -618,7 +621,7 @@ class PaymentServiceImplTest {
             // Assert
             assertNotNull(result);
             result.getContent().forEach(response ->
-                    assertEquals("N/A", response.paymentMethod())
+                    assertNull(response.paymentMethod())
             );
         }
 
@@ -645,7 +648,7 @@ class PaymentServiceImplTest {
             assertEquals(transaction1.getPaymentRequestObject().getOrganizer(), response.eventOrganizer());
             assertEquals(transaction1.getPaymentRequestObject().getEmail(), response.attendeeEmail());
             assertEquals(transaction1.getAmount(), response.amount());
-            assertEquals("N/A", response.paymentMethod());
+            assertNull( response.paymentMethod());
             assertEquals(transaction1.getStatus(), response.status());
             assertEquals(transaction1.getCreatedAt(), response.transactionTime());
         }

@@ -1,6 +1,7 @@
 package com.example.payment_service.controller;
 
 import com.example.common_libraries.dto.CustomApiResponse;
+import com.example.common_libraries.dto.EventRegistrationResponse;
 import com.example.common_libraries.dto.PaystackResponse;
 import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.payment_service.dto.TransactionResponse;
@@ -20,6 +21,11 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentController {
     private final PaymentService paymentService;
     private final TransactionService transactionService;
+
+    @GetMapping("/success")
+    public ResponseEntity<EventRegistrationResponse> getEventRegistrationResponse(@RequestParam("reference") String reference){
+        return ResponseEntity.ok(paymentService.getRegistrationResponse(reference));
+    }
 
     @PostMapping
     public ResponseEntity<PaystackResponse> payment(@RequestBody ProcessPaymentEvent paymentRequest) {
