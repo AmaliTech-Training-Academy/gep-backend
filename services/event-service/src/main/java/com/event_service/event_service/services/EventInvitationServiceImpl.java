@@ -400,6 +400,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     private EventInvitationEvent createInvitationEvent(EventInvitee invitation, String inviteLink) {
         return new EventInvitationEvent(
                 invitation.getInvitation().getInvitationTitle(),
+                invitation.getInvitation().getEvent().getTitle(),
                 invitation.getInviteeName(),
                 invitation.getInviteeEmail(),
                 inviteLink,

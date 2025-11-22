@@ -77,13 +77,13 @@ public class EmailService implements NotificationService {
         try{
             Context context = new Context();
             context.setVariable("inviteeName", event.inviteeName());
-            context.setVariable("invitationTitle", event.eventTitle());
+            context.setVariable("invitationTitle", event.eventName());
             context.setVariable("invitationLink", event.inviteLink());
             context.setVariable("role", event.role());
 
             String template_name = determineTemplateForRole(event.role());
             String htmlContent = templateEngine.process(template_name, context);
-            sendEmail(htmlContent, event.inviteeEmail(), "You have been invited");
+            sendEmail(htmlContent, event.inviteeEmail(), event.eventTitle());
 
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send event invitation email");
