@@ -20,8 +20,8 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<CustomApiResponse<UserCreationResponse>> register(@Valid @RequestBody UserRegistrationRequest registrationRequest){
-        UserCreationResponse creationResponse = authService.registerNewUser(registrationRequest);
+    public ResponseEntity<CustomApiResponse<AuthResponse>> register(@Valid @RequestBody UserRegistrationRequest registrationRequest, HttpServletResponse response){
+        AuthResponse creationResponse = authService.registerNewUser(registrationRequest, response);
         return ResponseEntity.ok(CustomApiResponse.success("User registered successfully", creationResponse));
     }
 

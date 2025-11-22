@@ -65,13 +65,14 @@ public class AuthServiceImpl implements AuthService {
     private long refreshTokenExpiration;
 
     @Transactional
-    public UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest) {
+    public AuthResponse registerNewUser(UserRegistrationRequest registrationRequest, HttpServletResponse response) {
             validateRequest(registrationRequest);
-            User savedUser = createAndSaveUser(registrationRequest, UserRole.ORGANISER);
+            User user = createAndSaveUser(registrationRequest, UserRole.ORGANISER);
 
-            createUserRelatedEntities(savedUser);
-            sendRegistrationMessageToQueue(savedUser);
-            return new UserCreationResponse(savedUser.getId(), savedUser.getFullName());
+            createUserRelatedEntities(user);
+            sendRegistrationMessageToQueue(user);
+            setAuthCookies(response, user);
+            return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
     }
 
     @Override
