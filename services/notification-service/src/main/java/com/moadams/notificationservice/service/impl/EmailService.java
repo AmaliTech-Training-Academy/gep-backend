@@ -1,10 +1,7 @@
 package com.moadams.notificationservice.service.impl;
 
-import com.example.common_libraries.dto.queue_events.EventCreationNotificationMessage;
-import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
-import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
+import com.example.common_libraries.dto.queue_events.*;
 import com.example.common_libraries.dto.TicketResponse;
-import com.example.common_libraries.dto.queue_events.UserInvitedEvent;
 import com.moadams.notificationservice.service.NotificationService;
 import com.moadams.notificationservice.utils.ICSGenerator;
 import jakarta.mail.MessagingException;
@@ -24,6 +21,8 @@ import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
 
@@ -190,6 +189,29 @@ public class EmailService implements NotificationService {
         }
     }
 
+    public void sendWithdrawalNotification(WithdrawalNotificationEvent event) {
+        try{
+            Context context = new Context();
+            context.setVariable("fullName", event.fullName());
+            context.setVariable("amount", event.amountWithdrawn());
+            context.setVariable("paymentMethod", event.paymentMethod());
+            context.setVariable("completedDate", formatLocalDateTime(event.withdrawalDate()));
+            context.setVariable("provider", event.provider());
+            context.setVariable("accountNumber", event.accountNumber());
+
+            String htmlContent = templateEngine.process("withdrawal-notification", context);
+            sendEmail(htmlContent, event.email(), "Withdrawal Completed");
+
+        }catch (MessagingException | UnsupportedEncodingException e){
+            log.error("Failed to send event creation email");
+        }
+    }
+
+    private String formatLocalDateTime(LocalDateTime dateTime){
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a");
+        return dateTime.format(formatter);
+    }
 
     private void sendEmailWithQRCodes(String htmlContent, String recipientEmail,
                                       String subject, List<TicketResponse> tickets)
