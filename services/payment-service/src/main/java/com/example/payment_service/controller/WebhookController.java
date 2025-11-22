@@ -58,10 +58,14 @@ public class WebhookController {
             }
             ObjectMapper mapper = new ObjectMapper();
             PaystackWebhook webhook = mapper.readValue(rawBody, PaystackWebhook.class);
+
             if ("charge.success".equals(webhook.event())) {
                 logger.info("Payment successful for reference {}", webhook.data().reference());
+
                 Transaction transaction = transactionService.findByReference(webhook.data().reference());
                 transaction.setStatus(TransactionStatus.SUCCESSFUL);
+                transaction.setPaymentMethod(webhook.data().channel());
+
                 // fetch payment request object
                 PaymentRequestObject paymentRequestObject =
                         paymentRequestObjectRepository.findByTransaction(transaction);
@@ -97,9 +101,10 @@ public class WebhookController {
             }else {
                 Transaction transaction = transactionService.findByReference(webhook.data().reference());
                 transaction.setStatus(TransactionStatus.FAILED);
+                transaction.setPaymentMethod(webhook.data().channel());
                 transactionRepository.save(transaction);
 
-                // delete stall paymentRequest object
+                // send a payment failed event to the notification service
                 paymentRequestObjectRepository.deleteByTransaction(transaction);
                 log.info("Payment failed for reference {}", webhook.data().reference());
                 log.info("Payment request object deleted for reference {}", webhook.data().reference());

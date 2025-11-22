@@ -99,7 +99,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             //generate ticket and send to attendee email
             List<Ticket> tickets = generateTicket(ticketType,event,quantity);
             TicketEventDetailResponse eventDetailResponse = eventDetailMapper.toTicketEventDetails(event);
-            List<TicketResponse> ticketResponses = tickets.stream().map(ticket -> ticketPurchasedEventMapper.toTicketResponse(ticket)).toList();
+            List<TicketResponse> ticketResponses = tickets.stream().map(ticketPurchasedEventMapper::toTicketResponse).toList();
 
             // Publish to queue for sending tickets to attendees
             TicketPurchasedEvent ticketPurchasedEvent = ticketPurchasedEventMapper
@@ -285,7 +285,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
 
         List<TicketResponse> tickets = generateTicket(ticketType,event,quantity)
                 .stream()
-                .map(ticket -> ticketPurchasedEventMapper.toTicketResponse(ticket)).toList();
+                .map(ticketPurchasedEventMapper::toTicketResponse).toList();
 
         // Publish to queue for sending tickets to attendees
         TicketPurchasedEvent ticketPurchasedEvent = ticketPurchasedEventMapper

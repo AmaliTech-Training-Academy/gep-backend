@@ -48,6 +48,7 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction = Transaction.builder()
                 .accessToken(paystackTransaction.data().accessCode())
                 .reference(paystackTransaction.data().reference())
+                .amount(totalTicketPrice)
                 .authorizationUrl(paystackTransaction.data().authorizationUrl())
                 .email(paymentRequest.email())
                 .status(TransactionStatus.PENDING)
