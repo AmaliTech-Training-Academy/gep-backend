@@ -388,9 +388,9 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         if(role == InviteeRole.ORGANISER || role == InviteeRole.CO_ORGANIZER) {
             UserCreationResponse user = userServiceClient.checkUserExists(email);
             if(user != null){
-                return String.format("%s/event-invitations/existing-user/accept?token=%s", frontendBaseUrl, token);
+                return String.format("%s/auth/event-invitations/existing-user/accept?token=%s", frontendBaseUrl, token);
             }
-            return String.format("%s/event-invitations/accept?token=%s", frontendBaseUrl, token);
+            return String.format("%s/auth/event-invitations/accept?token=%s", frontendBaseUrl, token);
         } else {
             return String.format("%s/app/event/%s/", frontendBaseUrl, token);
         }
