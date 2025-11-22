@@ -83,5 +83,5 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     );
 
 
-
+    List<Event> getEventsByUserId(Long id);
 }
