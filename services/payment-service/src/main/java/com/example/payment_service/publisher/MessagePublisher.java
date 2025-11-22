@@ -5,6 +5,6 @@ import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 
 public interface MessagePublisher {
     void publishPaymentStatusToQueue(PaymentStatusEvent statusEvent);
-
     void publishPaymentSuccessfulEventToQueue(ProcessPaymentEvent event);
+    void publishWebhookEventToQueue(String payload);
 }
