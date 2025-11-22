@@ -7,6 +7,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -27,6 +28,10 @@ public class Transaction {
     @Column(nullable = false)
     private String accessToken;
 
+    private BigDecimal amount;
+
+    private String paymentMethod;
+
     @Column(nullable = false)
     private String reference;
 
@@ -39,6 +44,9 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TransactionStatus status;
+
+    @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL)
+    private PaymentRequestObject paymentRequestObject;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

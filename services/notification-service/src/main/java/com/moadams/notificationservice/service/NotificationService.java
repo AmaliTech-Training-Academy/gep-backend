@@ -1,10 +1,7 @@
 package com.moadams.notificationservice.service;
 
 
-import com.example.common_libraries.dto.queue_events.EventCreationNotificationMessage;
-import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
-import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
-import com.example.common_libraries.dto.queue_events.UserInvitedEvent;
+import com.example.common_libraries.dto.queue_events.*;
 
 public interface NotificationService {
     void sendWelcomeEmail(String recipientEmail, String recipientName);
@@ -14,4 +11,5 @@ public interface NotificationService {
     void sendEventInvitationMail(EventInvitationEvent event);
     void sendUserInvitationEmail(UserInvitedEvent event);
     void sendEventCreationNotificationMail(EventCreationNotificationMessage event);
+    void sendPaymentStatusNotificationMail(PaymentStatusEvent statusEvent);
 }

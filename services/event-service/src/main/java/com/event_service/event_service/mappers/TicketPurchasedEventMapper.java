@@ -4,16 +4,16 @@ import com.event_service.event_service.models.Ticket;
 import com.example.common_libraries.dto.TicketEventDetailResponse;
 import com.example.common_libraries.dto.TicketResponse;
 import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
+import org.springframework.stereotype.Component;
 
 
 import java.util.List;
 
+@Component
 public class TicketPurchasedEventMapper {
-    private TicketPurchasedEventMapper() {
-        throw new IllegalStateException("Utility class");
-    }
+    // Mapper is annotated as a spring bean, so it can be used in sqs listener without throwing errors
 
-    public static TicketPurchasedEvent toTicketPurchasedEvent(String attendeeName, String attendeeEmail, List<TicketResponse> tickets, TicketEventDetailResponse eventDetails){
+    public TicketPurchasedEvent toTicketPurchasedEvent(String attendeeName, String attendeeEmail, List<TicketResponse> tickets, TicketEventDetailResponse eventDetails){
         return TicketPurchasedEvent
                 .builder()
                 .attendeeName(attendeeName)
@@ -23,7 +23,7 @@ public class TicketPurchasedEventMapper {
                 .build();
     }
 
-    public static TicketResponse toTicketResponse(Ticket ticket){
+    public TicketResponse toTicketResponse(Ticket ticket){
         return TicketResponse
                 .builder()
                 .id(ticket.getId())

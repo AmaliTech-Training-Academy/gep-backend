@@ -19,6 +19,7 @@ import org.thymeleaf.context.Context;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -103,6 +104,39 @@ public class EmailService implements NotificationService {
 
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send event creation email");
+        }
+    }
+
+    @Override
+    public void sendPaymentStatusNotificationMail(PaymentStatusEvent statusEvent) {
+        try{
+            log.info("Sending payment status email to {}", statusEvent.email());
+
+            BigDecimal amount = statusEvent.amount();
+            String formattedAmount = String.format("%.2f", amount);
+            String m = "Your payment of ";
+
+            String message = switch (statusEvent.status()) {
+                case "SUCCESS" -> m + formattedAmount + " has been successful.";
+                case "FAILED"  -> m + formattedAmount + " has failed.";
+                case "PENDING" -> m + formattedAmount + " is initiated.";
+                default        -> m + formattedAmount + " has been cancelled.";
+            };
+
+
+            Context context = new Context();
+            context.setVariable("transactionId", statusEvent.transactionId());
+            context.setVariable("fullName", statusEvent.fullName());
+            context.setVariable("paymentMethod", statusEvent.paymentMethod());
+            context.setVariable("status", statusEvent.status());
+            context.setVariable("amount", statusEvent.amount());
+            context.setVariable("timestamp", statusEvent.timestamp());
+            context.setVariable("message", message);
+
+            String htmlContent = templateEngine.process("payment-status", context);
+            sendEmail(htmlContent, statusEvent.email(), "Payment Status");
+        }catch (MessagingException | UnsupportedEncodingException e){
+            log.error("Failed to send payment status email: {}", e.getMessage());
         }
     }
 

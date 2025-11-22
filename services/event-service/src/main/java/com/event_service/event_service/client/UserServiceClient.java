@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -22,6 +21,7 @@ import java.util.List;
 public class UserServiceClient {
 
     private final WebClient webClient;
+    private static final String EXCEPTION_MESSAGE = "Unexpected error calling User Service:";
 
     public UserServiceClient(WebClient.Builder builder, @Value("${user.service.url}") String eventsServiceUrl) {
         this.webClient = builder.baseUrl(eventsServiceUrl).build();
@@ -55,8 +55,8 @@ public class UserServiceClient {
             );
 
         } catch (Exception ex) {
-            log.error("Unexpected error calling User Service", ex);
-            throw new ServiceCommunicationException("Unexpected error calling User Service: " + ex.getMessage());
+            log.error("Unexpected error calling User Service: {}", ex.getMessage());
+            throw new ServiceCommunicationException(EXCEPTION_MESSAGE);
         }
     }
 
@@ -84,9 +84,9 @@ public class UserServiceClient {
             throw new ServiceCommunicationException
                     ("Failed to create user in Auth Service: " + e.getResponseBodyAsString());
         } catch (Exception e) {
-            log.error("Unexpected error calling Auth Service", e);
+            log.error("Unexpected error calling Auth Service: {}", e.getMessage());
             throw new ServiceCommunicationException
-                    ("Failed to communicate with Auth Service: " + e.getMessage());
+                    ("Failed to communicate with Auth Service:");
         }
 
     }
@@ -118,8 +118,8 @@ public class UserServiceClient {
             );
 
         } catch (Exception ex) {
-            log.error("Unexpected error calling User Service", ex);
-            throw new ServiceCommunicationException("Unexpected error calling User Service: " + ex.getMessage());
+            log.error(EXCEPTION_MESSAGE+ ": {}", ex.getMessage());
+            throw new ServiceCommunicationException("Unexpected error calling User Service");
         }
     }
 
@@ -151,8 +151,8 @@ public class UserServiceClient {
             );
 
         } catch (Exception ex) {
-            log.error("Unexpected error calling Auth Service for notification settings", ex);
-            throw new ServiceCommunicationException("Unexpected error calling Auth Service: " + ex.getMessage());
+            log.error("Unexpected error calling Auth Service for notification settings: {}", ex.getMessage());
+            throw new ServiceCommunicationException("Unexpected error calling Auth Service");
         }
     }
 
@@ -180,8 +180,8 @@ public class UserServiceClient {
             );
 
         } catch (Exception ex) {
-            log.error("Unexpected error calling User Service", ex);
-            throw new ServiceCommunicationException("Unexpected error calling User Service: " + ex.getMessage());
+            log.error(EXCEPTION_MESSAGE+ ": {}", ex.getMessage());
+            throw new ServiceCommunicationException("Unexpected error calling User Service");
         }
     }
 
@@ -214,8 +214,8 @@ public class UserServiceClient {
             );
 
         } catch (Exception ex) {
-            log.error("Unexpected error calling User Service", ex);
-            throw new ServiceCommunicationException("Unexpected error calling User Service: " + ex.getMessage());
+            log.error(EXCEPTION_MESSAGE+ " : {}", ex.getMessage());
+            throw new ServiceCommunicationException("Unexpected error calling User Service");
         }
     }
 }

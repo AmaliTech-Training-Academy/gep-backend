@@ -55,6 +55,8 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     private final EventMapper eventMapper;
     private final SecurityUtils securityUtils;
     private final PaymentServiceClient paymentServiceClient;
+    private final EventDetailMapper eventDetailMapper;
+    private final TicketPurchasedEventMapper ticketPurchasedEventMapper;
 
     @Value("${sqs.ticket-purchased-event-queue-url}")
     private String ticketPurchasedEventQueueUrl;
@@ -96,11 +98,11 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             quantity = 1L; // One ticket for free ticket types
             //generate ticket and send to attendee email
             List<Ticket> tickets = generateTicket(ticketType,event,quantity);
-            TicketEventDetailResponse eventDetailResponse = EventDetailMapper.toTicketEventDetails(event);
-            List<TicketResponse> ticketResponses = tickets.stream().map(TicketPurchasedEventMapper::toTicketResponse).toList();
+            TicketEventDetailResponse eventDetailResponse = eventDetailMapper.toTicketEventDetails(event);
+            List<TicketResponse> ticketResponses = tickets.stream().map(ticketPurchasedEventMapper::toTicketResponse).toList();
 
             // Publish to queue for sending tickets to attendees
-            TicketPurchasedEvent ticketPurchasedEvent = TicketPurchasedEventMapper
+            TicketPurchasedEvent ticketPurchasedEvent = ticketPurchasedEventMapper
                     .toTicketPurchasedEvent(
                             registrationRequest.fullName(),
                             registrationRequest.email(),
@@ -246,6 +248,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
 
 
     // SQS Listener to handle payment success messages from payment service
+    @Transactional // This ensures there is an active hibernate session for lazy initialization fields
     @SqsListener("${sqs.payment-completed-event-queue-url}")
     public void paymentCompletedListener(ProcessPaymentEvent message){
         // Generate tickets and send to attendee via email
@@ -271,7 +274,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
 
         eventRegistrationRepository.save(registration);
 
-        TicketEventDetailResponse eventDetailResponse = EventDetailMapper.toTicketEventDetails(event);
+        TicketEventDetailResponse eventDetailResponse = eventDetailMapper.toTicketEventDetails(event);
         Long quantity;
 
         if(event.getEventMeetingType().getName() == EventMeetingTypeEnum.VIRTUAL ){
@@ -282,10 +285,10 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
 
         List<TicketResponse> tickets = generateTicket(ticketType,event,quantity)
                 .stream()
-                .map(TicketPurchasedEventMapper::toTicketResponse).toList();
+                .map(ticketPurchasedEventMapper::toTicketResponse).toList();
 
         // Publish to queue for sending tickets to attendees
-        TicketPurchasedEvent ticketPurchasedEvent = TicketPurchasedEventMapper
+        TicketPurchasedEvent ticketPurchasedEvent = ticketPurchasedEventMapper
                 .toTicketPurchasedEvent(
                         registration.getFullName(),
                         registration.getEmail(),
