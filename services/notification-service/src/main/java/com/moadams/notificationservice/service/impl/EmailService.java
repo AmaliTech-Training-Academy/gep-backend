@@ -22,6 +22,8 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
 
@@ -76,13 +78,13 @@ public class EmailService implements NotificationService {
         try{
             Context context = new Context();
             context.setVariable("inviteeName", event.inviteeName());
-            context.setVariable("invitationTitle", event.eventTitle());
+            context.setVariable("invitationTitle", event.eventName());
             context.setVariable("invitationLink", event.inviteLink());
             context.setVariable("role", event.role());
 
             String template_name = determineTemplateForRole(event.role());
             String htmlContent = templateEngine.process(template_name, context);
-            sendEmail(htmlContent, event.inviteeEmail(), "You have been invited");
+            sendEmail(htmlContent, event.inviteeEmail(), event.eventTitle());
 
         }catch (MessagingException | UnsupportedEncodingException e){
             log.error("Failed to send event invitation email");
@@ -221,6 +223,29 @@ public class EmailService implements NotificationService {
         }
     }
 
+    public void sendWithdrawalNotification(WithdrawalNotificationEvent event) {
+        try{
+            Context context = new Context();
+            context.setVariable("fullName", event.fullName());
+            context.setVariable("amount", event.amountWithdrawn());
+            context.setVariable("paymentMethod", event.paymentMethod());
+            context.setVariable("completedDate", formatLocalDateTime(event.withdrawalDate()));
+            context.setVariable("provider", event.provider());
+            context.setVariable("accountNumber", event.accountNumber());
+
+            String htmlContent = templateEngine.process("withdrawal-notification", context);
+            sendEmail(htmlContent, event.email(), "Withdrawal Completed");
+
+        }catch (MessagingException | UnsupportedEncodingException e){
+            log.error("Failed to send event creation email");
+        }
+    }
+
+    private String formatLocalDateTime(LocalDateTime dateTime){
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a");
+        return dateTime.format(formatter);
+    }
 
     private void sendEmailWithQRCodes(String htmlContent, String recipientEmail,
                                       String subject, List<TicketResponse> tickets)

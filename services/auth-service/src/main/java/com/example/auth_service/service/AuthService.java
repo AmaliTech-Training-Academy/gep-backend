@@ -8,7 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface AuthService {
     @Transactional
-    UserCreationResponse registerNewUser(UserRegistrationRequest registrationRequest);
+    AuthResponse registerNewUser(UserRegistrationRequest registrationRequest, HttpServletResponse response);
 
     UserCreationResponse registerInvitee(InviteeAccountCreationRequest inviteeRequest);
 
