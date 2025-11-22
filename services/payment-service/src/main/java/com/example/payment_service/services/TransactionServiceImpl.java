@@ -1,5 +1,6 @@
 package com.example.payment_service.services;
 
+import com.example.common_libraries.dto.queue_events.PaymentStatusEvent;
 import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.payment_service.dto.PaystackRequest;
 import com.example.payment_service.dto.PaystackTransaction;
@@ -7,6 +8,7 @@ import com.example.payment_service.dto.TransactionRequest;
 import com.example.payment_service.models.PaymentRequestObject;
 import com.example.payment_service.models.Transaction;
 import com.example.payment_service.models.TransactionStatus;
+import com.example.payment_service.publisher.MessagePublisher;
 import com.example.payment_service.repos.PaymentRequestObjectRepository;
 import com.example.payment_service.repos.TransactionRepository;
 import com.example.common_libraries.exception.ResourceNotFoundException;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -26,10 +29,12 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final ExternalAPIService externalAPIService;
     private final PaymentRequestObjectRepository paymentRequestObjectRepository;
+    private final MessagePublisher messagePublisher;
 
     @Override
     @Transactional
     public Transaction createTransaction(ProcessPaymentEvent paymentRequest) {
+
         BigDecimal totalTicketPrice = BigDecimal.valueOf(paymentRequest.amount()*paymentRequest.numberOfTickets());
         BigDecimal amountInSmallestUnit = totalTicketPrice.multiply(new BigDecimal("100"));
         Integer amountToSend = amountInSmallestUnit.setScale(0, RoundingMode.HALF_UP).intValue();
@@ -70,6 +75,20 @@ public class TransactionServiceImpl implements TransactionService {
                 .startDate(paymentRequest.eventRegistrationResponse().startDate())
                 .build();
 
+        // Send payment initiated message to queue
+        PaymentStatusEvent statusEvent = PaymentStatusEvent
+                .builder()
+                .transactionId(savedTransaction.getReference())
+                .email(savedTransaction.getEmail())
+                .fullName(paymentRequest.fullName())
+                .paymentMethod("N/A")
+                .status(TransactionStatus.PENDING.name())
+                .amount(savedTransaction.getAmount())
+                .timestamp(Instant.now())
+                .build();
+
+        messagePublisher.publishPaymentStatusToQueue(statusEvent);
+
         paymentRequestObjectRepository.save(paymentRequestObject);
 
         return savedTransaction;
@@ -78,7 +97,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public void updateTransaction(Long id, TransactionRequest transactionRequest) {
         Transaction transaction = getTransaction(id);
-        transaction.setStatus(TransactionStatus.SUCCESSFUL);
+        transaction.setStatus(TransactionStatus.SUCCESS);
         transactionRepository.save(transaction);
     }
 

@@ -88,7 +88,7 @@ class PaymentServiceImplTest {
                 .reference("TXN-001")
                 .authorizationUrl("https://paystack.com/auth/1")
                 .email("john.doe@example.com")
-                .status(TransactionStatus.SUCCESSFUL)
+                .status(TransactionStatus.SUCCESS)
                 .paymentRequestObject(paymentRequestObject1)
                 .createdAt(now.minus(1, ChronoUnit.HOURS))
                 .updatedAt(now.minus(1, ChronoUnit.HOURS))
@@ -160,7 +160,7 @@ class PaymentServiceImplTest {
             assertEquals("john.doe@example.com", response1.attendeeEmail());
             assertEquals(new BigDecimal("100.50"), response1.amount());
             assertEquals("N/A", response1.paymentMethod());
-            assertEquals(TransactionStatus.SUCCESSFUL, response1.status());
+            assertEquals(TransactionStatus.SUCCESS, response1.status());
             assertNotNull(response1.transactionTime());
 
             // Verify repository call
@@ -259,12 +259,12 @@ class PaymentServiceImplTest {
                     .thenReturn(transactionPage);
 
             // Act
-            Page<TransactionResponse> result = paymentService.getAllTransactions(0, null, TransactionStatus.SUCCESSFUL);
+            Page<TransactionResponse> result = paymentService.getAllTransactions(0, null, TransactionStatus.SUCCESS);
 
             // Assert
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
-            assertEquals(TransactionStatus.SUCCESSFUL, result.getContent().get(0).status());
+            assertEquals(TransactionStatus.SUCCESS, result.getContent().get(0).status());
 
             verify(transactionRepository).findAll(any(Specification.class), any(Pageable.class));
         }
@@ -319,13 +319,13 @@ class PaymentServiceImplTest {
                     .thenReturn(transactionPage);
 
             // Act
-            Page<TransactionResponse> result = paymentService.getAllTransactions(0, keyword, TransactionStatus.SUCCESSFUL);
+            Page<TransactionResponse> result = paymentService.getAllTransactions(0, keyword, TransactionStatus.SUCCESS);
 
             // Assert
             assertNotNull(result);
             assertEquals(1, result.getTotalElements());
             assertEquals("TXN-001", result.getContent().get(0).transactionId());
-            assertEquals(TransactionStatus.SUCCESSFUL, result.getContent().get(0).status());
+            assertEquals(TransactionStatus.SUCCESS, result.getContent().get(0).status());
         }
 
         @Test
