@@ -43,7 +43,8 @@ public class PaymentRequestObject {
 
     private Instant startDate;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne
+    @JoinColumn(name = "transaction_id", referencedColumnName = "id")
     private Transaction transaction;
 
     // Timestamps

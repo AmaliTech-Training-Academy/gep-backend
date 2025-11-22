@@ -1,15 +1,16 @@
 package com.example.payment_service.controller;
 
 import com.example.common_libraries.dto.EventRegistrationResponse;
+import com.example.common_libraries.dto.queue_events.PaymentStatusEvent;
 import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.payment_service.models.PaymentRequestObject;
+import com.example.payment_service.publisher.MessagePublisher;
 import com.example.payment_service.repos.PaymentRequestObjectRepository;
 import com.example.payment_service.repos.TransactionRepository;
 import com.example.payment_service.dto.PaystackWebhook;
 import com.example.payment_service.models.Transaction;
 import com.example.payment_service.models.TransactionStatus;
 import com.example.payment_service.services.TransactionService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,30 +20,26 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import software.amazon.awssdk.services.sqs.SqsClient;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 
 @Slf4j
 @RestController
-@RequestMapping("/webhook")
+@RequestMapping("/api/v1/webhook")
 @RequiredArgsConstructor
 public class WebhookController {
 
     private static final Logger logger = LoggerFactory.getLogger(WebhookController.class);
     private final TransactionService transactionService;
     private final TransactionRepository transactionRepository;
-    private final ObjectMapper objectMapper;
-    private final SqsClient sqsClient;
     private final PaymentRequestObjectRepository paymentRequestObjectRepository;
+    private final MessagePublisher messagePublisher;
 
     @Value("${paystack.secret}")
     private String paystackSecret;
-
-    @Value("${sqs.payment-completed-event-queue-url}")
-    private String paymentCompletedEventQueueUrl;
 
 
     @PostMapping
@@ -58,10 +55,14 @@ public class WebhookController {
             }
             ObjectMapper mapper = new ObjectMapper();
             PaystackWebhook webhook = mapper.readValue(rawBody, PaystackWebhook.class);
+
             if ("charge.success".equals(webhook.event())) {
                 logger.info("Payment successful for reference {}", webhook.data().reference());
+
                 Transaction transaction = transactionService.findByReference(webhook.data().reference());
-                transaction.setStatus(TransactionStatus.SUCCESSFUL);
+                transaction.setStatus(TransactionStatus.SUCCESS);
+                transaction.setPaymentMethod(webhook.data().channel());
+
                 // fetch payment request object
                 PaymentRequestObject paymentRequestObject =
                         paymentRequestObjectRepository.findByTransaction(transaction);
@@ -89,37 +90,53 @@ public class WebhookController {
                                     .eventRegistrationResponse(eventRegistrationResponse)
                                     .build();
 
+                    // Publish payment successful event to the notification service
+                    PaymentStatusEvent statusEvent = PaymentStatusEvent
+                            .builder()
+                            .transactionId(transaction.getReference())
+                            .email(transaction.getEmail())
+                            .fullName(paymentRequestObject.getFullName())
+                            .paymentMethod(transaction.getPaymentMethod())
+                            .status(TransactionStatus.SUCCESS.name())
+                            .amount(transaction.getAmount())
+                            .timestamp(Instant.now())
+                            .build();
+
+                    messagePublisher.publishPaymentStatusToQueue(statusEvent);
                     // On successful payment send SQS message to the event service to generate tickets
-                    publishPaymentSuccessfulEventToQueue(processPaymentEvent);
+                    messagePublisher.publishPaymentSuccessfulEventToQueue(processPaymentEvent);
                 }
 
                 transactionRepository.save(transaction);
             }else {
                 Transaction transaction = transactionService.findByReference(webhook.data().reference());
                 transaction.setStatus(TransactionStatus.FAILED);
+                transaction.setPaymentMethod(webhook.data().channel());
                 transactionRepository.save(transaction);
 
-                // delete stall paymentRequest object
-                paymentRequestObjectRepository.deleteByTransaction(transaction);
+                // send a payment failed event to the notification service
+                PaymentStatusEvent statusEvent = PaymentStatusEvent
+                        .builder()
+                        .transactionId(transaction.getReference())
+                        .email(transaction.getEmail())
+                        .fullName(transaction.getPaymentRequestObject().getFullName())
+                        .paymentMethod(webhook.data().channel())
+                        .status(TransactionStatus.FAILED.name())
+                        .amount(transaction.getAmount())
+                        .timestamp(Instant.now())
+                        .build();
+
+                messagePublisher.publishPaymentStatusToQueue(statusEvent);
                 log.info("Payment failed for reference {}", webhook.data().reference());
-                log.info("Payment request object deleted for reference {}", webhook.data().reference());
             }
             return ResponseEntity.ok("Processed");
         } catch (Exception e) {
-            logger.error("Error processing webhook", e);
+            logger.error("Error processing webhook: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error");
         }
     }
 
-    private void publishPaymentSuccessfulEventToQueue(ProcessPaymentEvent event) {
-        try{
-            log.info("Sending payment successful event to SQS");
-            String messageBody = objectMapper.writeValueAsString(event);
-            sqsClient.sendMessage(builder -> builder.queueUrl(paymentCompletedEventQueueUrl).messageBody(messageBody));
-        } catch (Exception e) {
-            log.error("Error sending payment successful event to SQS: {}", e.getMessage());
-        }
-    }
+
 
     private String hmacSha512(String data, String secret) throws Exception {
         Mac sha512_HMAC = Mac.getInstance("HmacSHA512");
