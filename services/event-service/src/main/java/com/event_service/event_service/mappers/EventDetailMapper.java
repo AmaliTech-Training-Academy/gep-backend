@@ -5,15 +5,15 @@ import com.event_service.event_service.dto.TicketTypeResponse;
 import com.event_service.event_service.models.Event;
 import com.event_service.event_service.models.TicketType;
 import com.example.common_libraries.dto.TicketEventDetailResponse;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Component
 public class EventDetailMapper {
-    private EventDetailMapper() {
-        throw new IllegalStateException("Utility class");
-    }
+    // Mapper is annotated as a spring bean, so it can be used in sqs listener without throwing errors
 
-    public static EventDetailResponse toEventDetailResponse(Event event, List<String> eventImagesUrl, List<TicketTypeResponse> ticketTypeResponses, Long capacity) {
+    public EventDetailResponse toEventDetailResponse(Event event, List<String> eventImagesUrl, List<TicketTypeResponse> ticketTypeResponses, Long capacity) {
         return EventDetailResponse
                 .builder()
                 .id(event.getId())
@@ -30,7 +30,7 @@ public class EventDetailMapper {
                 .build();
     }
 
-    public static TicketEventDetailResponse toTicketEventDetails(Event event) {
+    public TicketEventDetailResponse toTicketEventDetails(Event event) {
         return TicketEventDetailResponse
                 .builder()
                 .id(event.getId())
