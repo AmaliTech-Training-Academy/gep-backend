@@ -56,6 +56,13 @@ public class WebhookController {
             ObjectMapper mapper = new ObjectMapper();
             PaystackWebhook webhook = mapper.readValue(rawBody, PaystackWebhook.class);
 
+            if(webhook.data() != null){
+                Transaction transaction = transactionService.findByReference(webhook.data().reference());
+                if( transaction != null && transaction.getStatus() == TransactionStatus.SUCCESS){
+                    return ResponseEntity.ok("Processed");
+                }
+            }
+
             if ("charge.success".equals(webhook.event())) {
                 logger.info("Payment successful for reference {}", webhook.data().reference());
 
