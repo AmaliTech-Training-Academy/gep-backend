@@ -13,6 +13,7 @@ import com.event_service.event_service.repositories.EventOptionsRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.repositories.TicketTypeRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,6 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EventDetailServiceImpl implements EventDetailService {
@@ -35,12 +37,9 @@ public class EventDetailServiceImpl implements EventDetailService {
         Event event = eventRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
         List<TicketType> ticketTypes = ticketTypeRepository.findAllByEvent(event);
-        List<String> eventImagesUrl = Optional.ofNullable(event.getEventImages())
-                .orElseGet(Set::of)
-                .stream()
-                .map(EventImages::getImage)
-                .filter(Objects::nonNull)
-                .toList();
+        List<String> eventImagesUrl = event.getEventImages().stream().map(EventImages::getImage).toList();
+        log.info("Event Images: {}",event.getEventImages());
+        log.info("Event Images Url: {}",eventImagesUrl);
         List<TicketTypeResponse> ticketTypeResponses = ticketTypes.stream().map(TicketTypeMapper::toTicketTypeResponse).toList();
         Long capacity = eventOptionsRepository.findCapacityByEvent(event);
 
