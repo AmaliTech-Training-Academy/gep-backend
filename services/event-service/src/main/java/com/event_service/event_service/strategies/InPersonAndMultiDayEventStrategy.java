@@ -86,19 +86,24 @@ public class InPersonAndMultiDayEventStrategy implements EventStrategy {
                 .userId(authenticatedUser.id())
                 .location(eventRequest.location())
                 .build();
-        attachEventImages(eventImages, event);
 
         createVenueSections(sections, sectionImagesList, event);
 
+        attachEventImages(eventImages, event);
 
         createFreeTicket(eventRequest, event);
 
         createPaidTicket(eventRequest, event);
+
+
         return eventRepository.save(event);
     }
 
+
+
     private void createVenueSections(List<EventSectionRequest> sections, List<MultipartFile> sectionImagesList, Event event) {
         for (int i = 0; i < sections.size(); i++) {
+
             EventSectionRequest req = sections.get(i);
             MultipartFile img = sectionImagesList.get(i);
 
@@ -111,19 +116,32 @@ public class InPersonAndMultiDayEventStrategy implements EventStrategy {
                     .description(req.description())
                     .color(req.color())
                     .imageUrl(imageUrl)
-                    .event(event)
                     .build();
 
+            TicketType ticket = TicketType.builder()
+                    .eventSection(section)
+                    .description(req.price().compareTo(BigDecimal.ZERO) == 0 ? "Free Ticket" : "General Admission")
+                    .price(req.price().doubleValue())
+                    .quantity(req.capacity())
+                    .soldCount(0L)
+                    .isActive(true)
+                    .isPaid(req.price().compareTo(BigDecimal.ZERO) > 0)
+                    .type(req.price().compareTo(BigDecimal.ZERO) == 0 ? "FREE" : req.name())
+                    .quantityPerAttendee(1)
+                    .build();
+
+            section.setTicketType(ticket);
+
             event.addSection(section);
+
+            event.addTicketType(ticket);
         }
     }
 
 
     private static void createFreeTicket(EventRequest eventRequest, Event savedEvent) {
         if (eventRequest.eventOptionsRequest().ticketPrice().compareTo(BigDecimal.ZERO) == 0) {
-
             TicketType freeTicket = TicketType.builder()
-                    .event(savedEvent)
                     .description("Free Ticket")
                     .price(0.0)
                     .quantity(eventRequest.eventOptionsRequest().capacity())
