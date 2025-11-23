@@ -45,6 +45,9 @@ public class EventSection {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
+    @OneToOne(mappedBy = "eventSection", cascade = CascadeType.ALL, orphanRemoval = true)
+    private TicketType ticketType;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
