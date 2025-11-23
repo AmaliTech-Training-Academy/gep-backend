@@ -32,7 +32,8 @@ public class VirtualAndMultiDayEventStrategy implements  EventStrategy {
                              MultipartFile image,
                              List<MultipartFile> eventImages,
                              EventType eventType,
-                             EventMeetingType eventMeetingType
+                             EventMeetingType eventMeetingType,
+                             List<MultipartFile> sectionImages
     ) {
         EventOptions eventOptions = EventOptions.builder()
                 .ticketPrice(eventRequest.eventOptionsRequest().ticketPrice())

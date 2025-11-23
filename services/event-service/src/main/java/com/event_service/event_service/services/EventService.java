@@ -10,7 +10,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface EventService {
-    EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages);
+    EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages,        List<MultipartFile> sectionImages
+    );
     PagedExploreEventResponse listEvents(
             int pageNumber,
             int pageSize,

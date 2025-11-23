@@ -90,7 +90,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @Transactional
     @PreAuthorize("hasRole('ORGANISER')")
-    public EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages) {
+    public EventResponse createEvent(EventRequest eventRequest, MultipartFile image, List<MultipartFile> eventImages, List<MultipartFile> sectionImages) {
         eventValidator.validateRequiredGroup(eventRequest);
         fileValidator.validate(image);
 
@@ -113,28 +113,28 @@ public class EventServiceImpl implements EventService {
                 && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.IN_PERSON.name())) {
             eventValidator.validateInPersonSingleDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(inPersonAndDayEventStrategy);
-            event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
+            event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType,sectionImages);
         }
 
         if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
                 && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.IN_PERSON.name())) {
             eventValidator.validateInPersonMultiDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(inPersonAndMultiDayEventStrategy);
-            event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
+            event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType,sectionImages);
         }
 
         if(eventType.getName().name().equals(EventTypeEnum.DAY_EVENT.name())
                 && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.VIRTUAL.name())) {
             eventValidator.validateVirtualSingleDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(virtualAndDayEventStrategy);
-            event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
+            event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType,sectionImages);
         }
 
         if(eventType.getName().name().equals(EventTypeEnum.MULTI_DAY_EVENT.name())
                 && eventMeetingType.getName().name().equals(EventMeetingTypeEnum.VIRTUAL.name())) {
             eventValidator.validateVirtualMultiDayGroup(eventRequest);
             eventStrategyContext.setEventStrategy(virtualAndMultiDayEventStrategy);
-            event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType);
+            event = eventStrategyContext.executeStrategy(eventRequest, image, eventImages,eventType, eventMeetingType,sectionImages);
         }
 
         publishEventToEventStatQueue(authenticatedUser.id());

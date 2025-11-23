@@ -47,6 +47,10 @@ public class TicketType {
     @JsonIgnore
     private List<Ticket> tickets;
 
+    @OneToOne
+    @JoinColumn(name = "event_section_id", unique = true)
+    private EventSection eventSection;
+
     @CreatedDate
     @Column(name = "created_at", nullable =false, updatable = false)
     private LocalDateTime createdAt;

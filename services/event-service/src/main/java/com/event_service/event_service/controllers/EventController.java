@@ -42,11 +42,13 @@ public class EventController {
     public ResponseEntity<EventResponse> createEvent(
             @RequestPart("event") String eventRequestJSON,
             @RequestPart(value = "image") MultipartFile image,
-            @RequestPart(value = "eventImages", required = false) List<MultipartFile> eventImages
+            @RequestPart(value = "eventImages", required = false) List<MultipartFile> eventImages,
+            @RequestPart(value = "sectionImages", required = false)
+            List<MultipartFile> sectionImages
     ) throws JsonProcessingException {
         try {
             EventRequest eventRequest = objectMapper.readValue(eventRequestJSON, EventRequest.class);
-            return ResponseEntity.ok(eventService.createEvent(eventRequest,image,eventImages));
+            return ResponseEntity.ok(eventService.createEvent(eventRequest,image,eventImages,sectionImages));
         }catch (Exception e){
             log.error("Error parsing event request JSON {}", e.getMessage());
             throw e;

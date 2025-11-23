@@ -1,6 +1,7 @@
 package com.event_service.event_service.strategies;
 
 import com.event_service.event_service.dto.EventRequest;
+import com.event_service.event_service.dto.EventSectionRequest;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.utils.TimeZoneUtils;
@@ -32,7 +33,23 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
                              MultipartFile image,
                              List<MultipartFile> eventImages,
                              EventType eventType,
-                             EventMeetingType eventMeetingType) {
+                             EventMeetingType eventMeetingType,
+                             List<MultipartFile> sectionImages
+                             ) {
+
+        List<EventSectionRequest> sections =
+                eventRequest.eventSectionRequest() != null
+                        ? eventRequest.eventSectionRequest()
+                        : List.of();
+
+        List<MultipartFile> sectionImagesList =
+                sectionImages != null
+                        ? sectionImages
+                        : List.of();
+
+        if (sections.size() != sectionImagesList.size()) {
+            throw new IllegalArgumentException("Section count and image count must match.");
+        }
 
         EventOptions eventOptions = EventOptions.builder()
                 .ticketPrice(eventRequest.eventOptionsRequest().ticketPrice())
@@ -66,6 +83,8 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
                 .userId(authenticatedUser.id())
                 .build();
 
+        createVenueSections(sections, sectionImagesList, event);
+
         attachEventImages(eventImages, event);
 
         createFreeTicket(eventRequest, event);
@@ -74,6 +93,48 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
 
 
         return eventRepository.save(event);
+    }
+
+
+    private void createVenueSections(List<EventSectionRequest> sections, List<MultipartFile> sectionImagesList, Event event) {
+        for (int i = 0; i < sections.size(); i++) {
+
+            EventSectionRequest req = sections.get(i);
+            MultipartFile img = sectionImagesList.get(i);
+
+            String imageUrl = s3Service.uploadImage(img);
+
+            EventSection section = EventSection.builder()
+                    .name(req.name())
+                    .capacity(req.capacity().intValue())
+                    .price(req.price())
+                    .description(req.description())
+                    .color(req.color())
+                    .imageUrl(imageUrl)
+                    .build();
+
+            TicketType ticket = TicketType.builder()
+                    .eventSection(section)
+                    .description(req.price().compareTo(BigDecimal.ZERO) == 0 ? "Free Ticket" : "General Admission")
+                    .price(req.price().doubleValue())
+                    .quantity(req.capacity())
+                    .soldCount(0L)
+                    .isActive(true)
+                    .isPaid(req.price().compareTo(BigDecimal.ZERO) > 0)
+                    .type(req.price().compareTo(BigDecimal.ZERO) == 0 ? "FREE" : req.name())
+                    .quantityPerAttendee(1)
+                    .build();
+
+            // 3. Set bidirectional links for Section <-> Ticket
+            section.setTicketType(ticket);
+
+            // 4. Set bidirectional link for Event <-> Section (Cascades Section)
+            event.addSection(section);
+
+            // 5. CRITICAL FIX: Set bidirectional link for Event <-> Ticket (Cascades Ticket)
+            // This is required because ticket_type.event_id is NOT NULL in the database.
+            event.addTicketType(ticket); // <-- This calls ticket.setEvent(event)
+        }
     }
 
     private static void createFreeTicket(EventRequest eventRequest, Event savedEvent) {
@@ -97,6 +158,7 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
     private static void createPaidTicket(EventRequest eventRequest, Event savedEvent) {
         if (eventRequest.eventOptionsRequest().ticketPrice().compareTo(BigDecimal.ZERO) > 0) {
             TicketType paidTicket = TicketType.builder()
+                    .event(savedEvent)
                     .description("General Admission")
                     .price(eventRequest.eventOptionsRequest().ticketPrice().doubleValue())
                     .quantity(eventRequest.eventOptionsRequest().capacity())
