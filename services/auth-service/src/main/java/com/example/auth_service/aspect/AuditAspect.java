@@ -2,6 +2,7 @@ package com.example.auth_service.aspect;
 
 import com.example.auth_service.dto.request.AuditLogRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
+import com.example.auth_service.enums.AuditStatus;
 import com.example.auth_service.service.AuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,8 @@ public class AuditAspect {
         AuditLogRequest auditLogRequest = new AuditLogRequest(
                 userLoginRequest.email(),
                 ipAddress,
-                timestamp
+                timestamp,
+                AuditStatus.SUCCESS
         );
         auditService.save(auditLogRequest);
     }
@@ -41,7 +43,8 @@ public class AuditAspect {
         AuditLogRequest auditLogRequest = new AuditLogRequest(
                 userLoginRequest.email(),
                 ipAddress,
-                timestamp
+                timestamp,
+                AuditStatus.FAILED
         );
         auditService.save(auditLogRequest);
     }

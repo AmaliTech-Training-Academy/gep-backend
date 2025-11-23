@@ -3,12 +3,14 @@ package com.example.auth_service.service.impl;
 import com.example.auth_service.dto.request.AuditLogData;
 import com.example.auth_service.dto.request.AuditLogRequest;
 import com.example.auth_service.dto.response.AuditResponse;
+import com.example.auth_service.dto.response.EnrichedAuditResponse;
 import com.example.auth_service.dto.response.PagedAuditResponse;
 import com.example.auth_service.mapper.AuditMapper;
 import com.example.auth_service.model.AuditLogJSONB;
 import com.example.auth_service.repository.AuditLogJSONBRepository;
 import com.example.auth_service.service.AuditService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -30,7 +32,8 @@ public class AuditServiceImpl implements AuditService {
         AuditLogData auditLogData = new AuditLogData(
                 auditLogRequest.email(),
                 auditLogRequest.ipAddress(),
-                auditLogRequest.timestamp()
+                auditLogRequest.timestamp(),
+                auditLogRequest.auditStatus()
         );
         AuditLogJSONB auditLogJSONB = AuditLogJSONB
                 .builder()
@@ -40,16 +43,20 @@ public class AuditServiceImpl implements AuditService {
     }
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public PagedAuditResponse findAll(int pageNumber, int pageSize, String[] sortBy) {
-        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, sortBy));
-        List<AuditResponse> auditResponseList = auditLogJSONBRepository.findAll(pageable).stream()
-                .map(auditMapper::toAuditResponse)
-                .collect(Collectors.toList());
-        return  new PagedAuditResponse(
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                auditResponseList
+    public PagedAuditResponse<EnrichedAuditResponse> getEnrichedAuditLogs(Pageable pageable) {
+
+        Page<AuditLogJSONB> page = auditLogJSONBRepository.findAll(pageable);
+
+        List<EnrichedAuditResponse> enrichedList = page.getContent().stream()
+                .map(auditMapper::toEnrichedAuditResponse)
+                .toList();
+
+        return new PagedAuditResponse<>(
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
+                enrichedList
         );
     }
 }
