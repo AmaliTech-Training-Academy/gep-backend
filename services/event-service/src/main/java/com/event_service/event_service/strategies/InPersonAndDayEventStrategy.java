@@ -98,6 +98,7 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
 
     private void createVenueSections(List<EventSectionRequest> sections, List<MultipartFile> sectionImagesList, Event event) {
         for (int i = 0; i < sections.size(); i++) {
+
             EventSectionRequest req = sections.get(i);
             MultipartFile img = sectionImagesList.get(i);
 
@@ -110,10 +111,29 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
                     .description(req.description())
                     .color(req.color())
                     .imageUrl(imageUrl)
-                    .event(event)
                     .build();
 
+            TicketType ticket = TicketType.builder()
+                    .eventSection(section)
+                    .description(req.price().compareTo(BigDecimal.ZERO) == 0 ? "Free Ticket" : "General Admission")
+                    .price(req.price().doubleValue())
+                    .quantity(req.capacity())
+                    .soldCount(0L)
+                    .isActive(true)
+                    .isPaid(req.price().compareTo(BigDecimal.ZERO) > 0)
+                    .type(req.price().compareTo(BigDecimal.ZERO) == 0 ? "FREE" : req.name())
+                    .quantityPerAttendee(1)
+                    .build();
+
+            // 3. Set bidirectional links for Section <-> Ticket
+            section.setTicketType(ticket);
+
+            // 4. Set bidirectional link for Event <-> Section (Cascades Section)
             event.addSection(section);
+
+            // 5. CRITICAL FIX: Set bidirectional link for Event <-> Ticket (Cascades Ticket)
+            // This is required because ticket_type.event_id is NOT NULL in the database.
+            event.addTicketType(ticket); // <-- This calls ticket.setEvent(event)
         }
     }
 
@@ -138,6 +158,7 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
     private static void createPaidTicket(EventRequest eventRequest, Event savedEvent) {
         if (eventRequest.eventOptionsRequest().ticketPrice().compareTo(BigDecimal.ZERO) > 0) {
             TicketType paidTicket = TicketType.builder()
+                    .event(savedEvent)
                     .description("General Admission")
                     .price(eventRequest.eventOptionsRequest().ticketPrice().doubleValue())
                     .quantity(eventRequest.eventOptionsRequest().capacity())
