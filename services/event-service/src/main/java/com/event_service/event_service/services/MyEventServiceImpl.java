@@ -76,8 +76,15 @@ public class MyEventServiceImpl implements MyEventService {
         }
         AppUser currentUser = securityUtils.getCurrentUser();
 
-        Event event = eventRepository.findByIdAndUserId(eventId, currentUser.id())
-                .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        // Allow access to event organizer and event admins only
+        Event event;
+        if(currentUser.role().equals("ADMIN")){
+            event = eventRepository.findById(eventId)
+                    .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }else{
+            event = eventRepository.findByIdAndUserId(eventId, currentUser.id())
+                    .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }
 
         Long totalAttendees = (long) event.getEventRegistrations().size();
         Double totalTicketSales = ticketRepository.findTotalTicketSalesForEvent(event);
