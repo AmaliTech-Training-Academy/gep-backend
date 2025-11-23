@@ -2,6 +2,7 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.EventDetailResponse;
 import com.event_service.event_service.dto.TicketTypeResponse;
+import com.event_service.event_service.models.EventImages;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.event_service.event_service.mappers.EventDetailMapper;
 import com.event_service.event_service.mappers.TicketTypeMapper;
@@ -15,6 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +35,12 @@ public class EventDetailServiceImpl implements EventDetailService {
         Event event = eventRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
         List<TicketType> ticketTypes = ticketTypeRepository.findAllByEvent(event);
-        List<String> eventImagesUrl = eventImagesRepository.findImageUrlsByEvent(event);
+        List<String> eventImagesUrl = Optional.ofNullable(event.getEventImages())
+                .orElseGet(Set::of)
+                .stream()
+                .map(EventImages::getImage)
+                .filter(Objects::nonNull)
+                .toList();
         List<TicketTypeResponse> ticketTypeResponses = ticketTypes.stream().map(TicketTypeMapper::toTicketTypeResponse).toList();
         Long capacity = eventOptionsRepository.findCapacityByEvent(event);
 
