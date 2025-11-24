@@ -2,6 +2,7 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.response.EnrichedAuditResponse;
 import com.example.auth_service.dto.response.PagedAuditResponse;
+import com.example.auth_service.enums.AuditStatus;
 import com.example.auth_service.service.AuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -21,12 +22,17 @@ public class AuditController {
     private final AuditService auditService;
 
     @GetMapping
-    public PagedAuditResponse<EnrichedAuditResponse> getAuditLogs(
-            @RequestParam(defaultValue = "0") int pageNumber,
-            @RequestParam(defaultValue = "10") int pageSize
+    public ResponseEntity<PagedAuditResponse<EnrichedAuditResponse>> getAuditLogs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String fullName,
+            @RequestParam(required = false) AuditStatus status,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String direction
     ) {
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        return auditService.getEnrichedAuditLogs(pageable);
+        return ResponseEntity.ok(auditService.getEnrichedAuditLogs(
+                page, size, fullName, status, sortBy, direction
+        ));
     }
 }
 
