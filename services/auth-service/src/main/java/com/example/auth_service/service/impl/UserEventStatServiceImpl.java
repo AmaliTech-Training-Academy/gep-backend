@@ -21,7 +21,7 @@ public class UserEventStatServiceImpl implements UserEventStatService {
             log.warn("User event stats not found for user with id: {}", userId);
             return;
         }
-        userEventStats.setTotalEventsAttended(userEventStats.getTotalEventsAttended() + 1);
+        userEventStats.setTotalEventsCreated(userEventStats.getTotalEventsCreated() + 1);
         userEventStatsRepository.save(userEventStats);
     }
 }
