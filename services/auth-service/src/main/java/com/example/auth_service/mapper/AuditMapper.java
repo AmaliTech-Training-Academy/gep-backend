@@ -15,7 +15,7 @@ public class AuditMapper {
     }
 
     public EnrichedAuditResponse toEnrichedAuditResponse(AuditLogJSONB auditLog) {
-        var data = auditLog.getAuditLogDataJson(); // your AuditLogData
+        var data = auditLog.getAuditLogDataJson();
 
         EnrichedAuditResponse.EnrichedAuditResponseBuilder builder = EnrichedAuditResponse.builder()
                 .id(auditLog.getId())
