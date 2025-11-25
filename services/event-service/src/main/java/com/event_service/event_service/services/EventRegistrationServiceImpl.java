@@ -167,7 +167,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
                 .id(event.getId())
                 .eventTitle(eventResponse.title())
                 .location(location)
-                .organizer("Event Organizer")
+                .organizer(event.getCreatedBy())
                 .startDate(eventResponse.startTime())
                 .build();
     }
