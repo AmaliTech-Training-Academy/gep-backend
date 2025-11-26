@@ -61,13 +61,21 @@ public class JWTUtil {
         return generateToken(user.getEmail(), jwtAccessExpirationMs, claims);
     }
 
-    public String generateAccessToken(String email){
-        return generateToken(email, jwtAccessExpirationMs);
+    public String generateAccessToken(String email, String role, Long userId, String fullName){
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role);
+        claims.put("userId", userId);
+        claims.put("fullName", fullName);
+        return generateToken(email, jwtAccessExpirationMs, claims);
     }
 
 
-    public String generateRefreshToken(String email){
-        return generateToken(email, jwtRefreshExpirationMs);
+    public String generateRefreshToken(String email, String role, Long userId, String fullName){
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        claims.put("role", role);
+        claims.put("fullName", fullName);
+        return generateToken(email, jwtRefreshExpirationMs, claims);
     }
 
     public String generateRefreshToken(JwtUserDetails user){
