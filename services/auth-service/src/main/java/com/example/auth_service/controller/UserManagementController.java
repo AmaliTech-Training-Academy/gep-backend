@@ -69,7 +69,7 @@ public class UserManagementController {
 
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER','CO_ORGANIZER')")
     public ResponseEntity<CustomApiResponse<UserResponse>> getUserById(@PathVariable Long userId){
         CustomApiResponse<UserResponse> response = CustomApiResponse.success(userService.getUserById(userId));
         return ResponseEntity.ok(response);
@@ -77,7 +77,7 @@ public class UserManagementController {
 
 
     @PutMapping(path = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER','CO_ORGANIZER')")
     public ResponseEntity<CustomApiResponse<UserResponse>> updateUser(
             @PathVariable Long userId,
             @RequestPart(value = "userUpdateRequest", required = false) String userUpdateRequestJson,
@@ -115,7 +115,7 @@ public class UserManagementController {
     }
 
     @GetMapping("/hosts")
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER','CO_ORGANIZER')")
     public ResponseEntity<List<HostsResponse>> getEventHosts(@RequestParam List<Long> hostIds){
         return ResponseEntity.status(HttpStatus.OK).body(userService.getEventHosts(hostIds));
     }
