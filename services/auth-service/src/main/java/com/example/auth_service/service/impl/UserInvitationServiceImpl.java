@@ -16,6 +16,7 @@ import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.AuthUser;
 import com.example.auth_service.service.AuthService;
 import com.example.auth_service.service.UserInvitationService;
+import com.example.auth_service.utils.AuthUserUtil;
 import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.common_libraries.dto.queue_events.UserInvitedEvent;
 import com.example.common_libraries.enums.InvitationStatus;
@@ -24,6 +25,7 @@ import com.example.common_libraries.exception.DuplicateResourceException;
 import com.example.common_libraries.exception.InactiveAccountException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,6 +51,7 @@ public class UserInvitationServiceImpl implements UserInvitationService {
     private final ObjectMapper objectMapper;
     private static final long INVITATION_EXPIRATION_DAYS = 2;
     private final AuthServiceImpl authServiceImpl;
+    private final AuthUserUtil authUserUtil;
 
     @Value("${sqs.user-invitation-queue}")
     private String userInvitationQueue;
@@ -148,7 +151,7 @@ public class UserInvitationServiceImpl implements UserInvitationService {
 
     @Override
     @Transactional
-    public AuthResponse acceptInvitation(InvitationAcceptanceRequest request) {
+    public AuthResponse acceptInvitation(InvitationAcceptanceRequest request, HttpServletResponse response) {
            UserInvitee invitation = getValidUserInvitationByToken(request.invitationToken());
            invitation.setStatus(InviteStatus.ACCEPTED);
            userInviteeRepository.save(invitation);
@@ -156,6 +159,7 @@ public class UserInvitationServiceImpl implements UserInvitationService {
            authServiceImpl.validateRequest(registrationData);
            User savedUser = authServiceImpl.createAndSaveUser(registrationData, invitation.getRole());
            authServiceImpl.createUserRelatedEntities(savedUser);
+           authUserUtil.setAuthCookies(response, savedUser);
             return new AuthResponse(savedUser.getId(),savedUser.getEmail(), savedUser.getFullName(), savedUser.getProfile().getProfileImageUrl(), savedUser.getRole());
     }
 
