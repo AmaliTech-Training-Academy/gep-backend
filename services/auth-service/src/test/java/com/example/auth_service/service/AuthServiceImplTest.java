@@ -4,6 +4,7 @@ import com.example.auth_service.dto.request.OtpVerificationRequest;
 import com.example.auth_service.dto.request.UserLoginRequest;
 import com.example.auth_service.enums.UserRole;
 import com.example.auth_service.model.Profile;
+import com.example.auth_service.utils.AuthUserUtil;
 import com.example.common_libraries.exception.InactiveAccountException;
 import com.example.auth_service.model.User;
 import com.example.auth_service.repository.UserRepository;
@@ -46,9 +47,26 @@ public class AuthServiceImplTest {
     @InjectMocks
     private AuthServiceImpl authService;
 
+    @Mock
+    private AuthUserUtil authUserUtil;
+
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        Mockito.doAnswer(invocation -> {
+            HttpServletResponse resp = invocation.getArgument(0);
+            User user = invocation.getArgument(1);
+            try {
+                jwtUtil.generateAccessToken(user);
+            } catch (Exception ignored) {}
+            try {
+                jwtUtil.generateRefreshToken(user);
+            } catch (Exception ignored) {}
+            resp.addHeader("Set-Cookie", "access=mocked");
+            resp.addHeader("Set-Cookie", "refresh=mocked");
+            return null;
+        }).when(authUserUtil).setAuthCookies(any(HttpServletResponse.class), any(User.class));
     }
 
     // --- LOGIN TESTS ---
@@ -167,7 +185,7 @@ public class AuthServiceImplTest {
         );
 
         assertEquals("Invalid or expired OTP", ex.getMessage());
-        verify(jwtUtil, never()).generateAccessToken(anyString());
+        verify(jwtUtil, never()).generateAccessToken(any());
         verify(response, never()).addHeader(anyString(), anyString());
     }
 
@@ -185,7 +203,7 @@ public class AuthServiceImplTest {
         );
 
         assertEquals("User not found", ex.getMessage());
-        verify(jwtUtil, never()).generateAccessToken(anyString());
+        verify(jwtUtil, never()).generateAccessToken(any());
         verify(response, never()).addHeader(anyString(), anyString());
     }
 
@@ -205,7 +223,7 @@ public class AuthServiceImplTest {
         );
 
         assertEquals("User account is inactive", ex.getMessage());
-        verify(jwtUtil, never()).generateAccessToken(anyString());
+        verify(jwtUtil, never()).generateAccessToken(any());
         verify(response, never()).addHeader(anyString(), anyString());
     }
 
@@ -224,7 +242,6 @@ public class AuthServiceImplTest {
 
         when(jwtUtil.extractUsername(oldRefreshToken)).thenReturn(email);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
-//      when(jwtUtil.validateToken(oldRefreshToken)).thenReturn(true);
         when(jwtUtil.generateAccessToken(user)).thenReturn(newAccessToken);
         when(jwtUtil.generateRefreshToken(user)).thenReturn(newRefreshToken);
 
@@ -282,7 +299,6 @@ public class AuthServiceImplTest {
     void testLogout_Successful() {
         authService.logout(response);
 
-        // Verify that cookies are cleared (addHeader called twice for both cookies)
         verify(response, times(2)).addHeader(eq("Set-Cookie"), anyString());
     }
 
@@ -403,8 +419,8 @@ public class AuthServiceImplTest {
 
             assertEquals("User account is inactive", exception.getMessage());
             verify(otpService, times(1)).verifyOtp(email, otp);
-            verify(jwtUtil, never()).generateAccessToken(anyString());
-            verify(jwtUtil, never()).generateRefreshToken(anyString());
+            verify(jwtUtil, never()).generateAccessToken(any());
+            verify(jwtUtil, never()).generateRefreshToken(any());
             verify(response, never()).addHeader(anyString(), anyString());
         }
 
@@ -427,8 +443,8 @@ public class AuthServiceImplTest {
             assertThrows(InactiveAccountException.class,
                     () -> authService.verifyOtp(new OtpVerificationRequest(email, validOtp), response));
 
-            verify(jwtUtil, never()).generateAccessToken(email);
-            verify(jwtUtil, never()).generateRefreshToken(email);
+            verify(jwtUtil, never()).generateAccessToken(any());
+            verify(jwtUtil, never()).generateRefreshToken(any());
         }
 
         @Test
@@ -483,9 +499,9 @@ public class AuthServiceImplTest {
 
             assertEquals("User account is inactive", exception.getMessage());
             verify(jwtUtil, times(1)).extractUsername(refreshToken);
-            verify(jwtUtil, never()).validateToken(anyString());
-            verify(jwtUtil, never()).generateAccessToken(anyString());
-            verify(jwtUtil, never()).generateRefreshToken(anyString());
+            verify(jwtUtil, never()).validateToken(refreshToken);
+            verify(jwtUtil, never()).generateAccessToken(any());
+            verify(jwtUtil, never()).generateRefreshToken(any());
             verify(response, never()).addHeader(anyString(), anyString());
         }
 
@@ -532,8 +548,8 @@ public class AuthServiceImplTest {
             assertThrows(InactiveAccountException.class,
                     () -> authService.refreshAccessToken(refreshToken, response));
 
-            verify(jwtUtil, never()).generateAccessToken(anyString());
-            verify(jwtUtil, never()).generateRefreshToken(anyString());
+            verify(jwtUtil, never()).generateAccessToken(any());
+            verify(jwtUtil, never()).generateRefreshToken(any());
         }
     }
 
@@ -638,8 +654,8 @@ public class AuthServiceImplTest {
 
             // Verify no tokens or cookies were ever issued
             verify(response, never()).addHeader(anyString(), anyString());
-            verify(jwtUtil, never()).generateAccessToken(anyString());
-            verify(jwtUtil, never()).generateRefreshToken(anyString());
+            verify(jwtUtil, never()).generateAccessToken(any());
+            verify(jwtUtil, never()).generateRefreshToken(any());
         }
     }
 
@@ -720,8 +736,8 @@ public class AuthServiceImplTest {
 
             // Verify no authentication artifacts were created
             verify(otpService, never()).requestLoginOtp(email);
-            verify(jwtUtil, never()).generateAccessToken(email);
-            verify(jwtUtil, never()).generateRefreshToken(email);
+            verify(jwtUtil, never()).generateAccessToken(any());
+            verify(jwtUtil, never()).generateRefreshToken(any());
             verify(response, never()).addHeader(eq("Set-Cookie"), anyString());
         }
     }

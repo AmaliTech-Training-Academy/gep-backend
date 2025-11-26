@@ -7,6 +7,7 @@ import com.example.auth_service.dto.response.InviteeDetailsResponse;
 import com.example.auth_service.service.UserInvitationService;
 import com.example.common_libraries.dto.CustomApiResponse;
 import com.example.common_libraries.dto.UserCreationResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,9 +29,9 @@ public class UserInvitationController {
     }
 
     @PostMapping("/accept-invitation")
-    public ResponseEntity<CustomApiResponse<AuthResponse>> acceptInvitation(@Valid  @RequestBody InvitationAcceptanceRequest request){
-        AuthResponse response = userInvitationService.acceptInvitation(request);
-        return ResponseEntity.ok(CustomApiResponse.success("Invitation accepted successfully", response));
+    public ResponseEntity<CustomApiResponse<AuthResponse>> acceptInvitation(@Valid  @RequestBody InvitationAcceptanceRequest request, HttpServletResponse response){
+        AuthResponse acceptanceResponse = userInvitationService.acceptInvitation(request,response);
+        return ResponseEntity.ok(CustomApiResponse.success("Invitation accepted successfully", acceptanceResponse));
     }
 
     @PostMapping("/invite-user")

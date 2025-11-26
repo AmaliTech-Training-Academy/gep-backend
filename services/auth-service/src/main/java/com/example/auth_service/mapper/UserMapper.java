@@ -67,7 +67,7 @@ public class UserMapper {
     }
 
     public static UserCreationResponse toUserCreationResponse(User user){
-        return new UserCreationResponse(user.getId(), user.getEmail());
+        return new UserCreationResponse(user.getId(), user.getFullName(), user.getRole().name(), user.getEmail(), user.getProfile().getProfileImageUrl());
     }
 
     public static UserInfoResponse toAppUser(User user){

@@ -5,6 +5,7 @@ import com.example.auth_service.dto.request.*;
 import com.example.auth_service.dto.response.AuthResponse;
 import com.example.auth_service.model.*;
 import com.example.auth_service.repository.UserInviteeRepository;
+import com.example.auth_service.utils.AuthUserUtil;
 import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.auth_service.enums.UserRole;
 import com.example.common_libraries.exception.BadRequestException;
@@ -51,6 +52,7 @@ public class AuthServiceImpl implements AuthService {
     private final SqsClient sqsClient;
     private final ObjectMapper objectMapper;
     private final JWTUtil jwtUtil;
+    private final AuthUserUtil authUserUtil;
 
     @Value("${sqs.user-registration-queue-url}")
     private String userRegistrationQueueUrl;
@@ -71,7 +73,7 @@ public class AuthServiceImpl implements AuthService {
 
             createUserRelatedEntities(user);
             sendRegistrationMessageToQueue(user);
-            setAuthCookies(response, user);
+            authUserUtil.setAuthCookies(response, user);
             return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
     }
 
@@ -93,7 +95,7 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         createUserRelatedEntities(user);
-        return new UserCreationResponse(user.getId(), user.getFullName());
+        return new UserCreationResponse(user.getId(), user.getFullName(), user.getRole().name(), user.getEmail(), user.getProfile().getProfileImageUrl());
     }
 
     @Transactional
@@ -157,7 +159,7 @@ public class AuthServiceImpl implements AuthService {
         if(user.getRole() != UserRole.ADMIN){
             throw new AuthorizationDeniedException("You are not allow to login as admin");
         }
-        setAuthCookies(response, user);
+        authUserUtil.setAuthCookies(response, user);
         return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
     }
 
@@ -180,7 +182,7 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Invalid or expired OTP");
         }
         User user = getActiveUserByEmail(request.email());
-        setAuthCookies(response, user);
+        authUserUtil.setAuthCookies(response, user);
         return new AuthResponse(user.getId(), user.getEmail(),user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
     }
 
@@ -201,7 +203,7 @@ public class AuthServiceImpl implements AuthService {
         jwtUtil.validateToken(refreshToken);
 
 
-        setAuthCookies(response, user);
+        authUserUtil.setAuthCookies(response, user);
     }
 
     @Override
@@ -243,29 +245,6 @@ public class AuthServiceImpl implements AuthService {
         return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getProfile().getProfileImageUrl(), user.getRole());
     }
 
-    private void setAuthCookies(HttpServletResponse response, User user){
-        String accessToken = jwtUtil.generateAccessToken(user);
-        String refreshToken = jwtUtil.generateRefreshToken(user);
-
-        ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", accessToken)
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .sameSite("None")
-                .maxAge(Duration.ofMillis(accessTokenExpiration))
-                .build();
-
-        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .sameSite("None")
-                .maxAge(Duration.ofMillis(refreshTokenExpiration))
-                .build();
-
-        response.addHeader("Set-Cookie", accessTokenCookie.toString());
-        response.addHeader("Set-Cookie", refreshTokenCookie.toString());
-    }
 
     private void clearAuthCookies(HttpServletResponse response){
         ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", "")

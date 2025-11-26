@@ -2,6 +2,8 @@ package com.event_service.event_service.services;
 
 import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.enums.InviteeRole;
+import com.example.common_libraries.dto.UserCreationResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -13,8 +15,8 @@ public interface EventInvitationService {
     void deleteEventInvitation(Long invitationId);
     void updateEventInvitation(Long invitationId, EventInvitationRequest request);
     EventInvitationDetailsResponse getEventInvitationDetail(Long invitationId);
-    void acceptInvitation(EventInvitationAcceptanceRequest acceptanceRequest);
-    void acceptInvitationForExistingUser(String token);
+    UserCreationResponse acceptInvitation(EventInvitationAcceptanceRequest acceptanceRequest, HttpServletResponse response);
+    UserCreationResponse acceptInvitationForExistingUser(String token,  HttpServletResponse response);
     void resendInvitation(Long invitationId);
     Page<EventInvitationListResponse> getInvitationList(Pageable pageable, String search);
     Page<EventInvitationListResponse> getSavedInvitations(Pageable pageable, String search);
