@@ -15,7 +15,7 @@ public record EventEarningWithdrawalRequest(
         String provider,
 
         @NotBlank(message = "Account number is required")
-        @Pattern(regexp = "^[0-9]{10}$", message = "Account number must be 10 digits")
+        @Pattern(regexp = "^[0-9]{0,16}$", message = "Account number must be between 0 and 16 digits")
         String accountNumber,
 
         @NotBlank(message = "Account name is required")

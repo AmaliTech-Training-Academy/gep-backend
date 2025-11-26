@@ -12,6 +12,7 @@ import com.event_service.event_service.repositories.EventInviteeRepository;
 import com.event_service.event_service.repositories.EventOrganizerRepository;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.specifications.EventInviteeSpecification;
+import com.event_service.event_service.utils.AuthCookiesUtil;
 import com.event_service.event_service.utils.SecurityUtils;
 import com.example.common_libraries.dto.UserCreationResponse;
 import com.example.common_libraries.dto.AppUser;
@@ -19,6 +20,7 @@ import com.example.common_libraries.dto.queue_events.EventInvitationEvent;
 import com.example.common_libraries.exception.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,6 +55,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
     private final EventOrganizerRepository eventOrganizerRepository;
     private final EventInvitationMapper eventInvitationMapper;
     private final UserServiceClient userServiceClient;
+    private final AuthCookiesUtil authCookiesUtil;
 
 
     private static final long INVITATION_EXPIRATION_DAYS = 2;
@@ -160,16 +163,18 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
     @Override
     @Transactional
-    public void acceptInvitation(EventInvitationAcceptanceRequest acceptanceRequest) {
+    public UserCreationResponse acceptInvitation(EventInvitationAcceptanceRequest acceptanceRequest, HttpServletResponse response) {
         EventInvitee eventInvitation = getInvitationByToken(acceptanceRequest.invitationCode());
         validateInvitation(eventInvitation);
-        createInviteeAccount(acceptanceRequest, eventInvitation);
+        UserCreationResponse createdAccount = createInviteeAccount(acceptanceRequest, eventInvitation);
         eventInvitation.setStatus(InviteStatus.ACCEPTED);
         eventInviteeRepository.save(eventInvitation);
+        authCookiesUtil.setAuthCookies(response, createdAccount.email(), createdAccount.role(), createdAccount.id(), createdAccount.fullName());
+        return createdAccount;
     }
 
     @Override
-    public void acceptInvitationForExistingUser(String token) {
+    public UserCreationResponse acceptInvitationForExistingUser(String token, HttpServletResponse response) {
         EventInvitee eventInvitation = getInvitationByToken(token);
         validateInvitation(eventInvitation);
         UserCreationResponse createdUser = userServiceClient.checkUserExists(eventInvitation.getInviteeEmail());
@@ -185,7 +190,9 @@ public class EventInvitationServiceImpl implements EventInvitationService {
 
         eventOrganizerRepository.save(eventOrganizer);
         eventInvitation.setStatus(InviteStatus.ACCEPTED);
+        authCookiesUtil.setAuthCookies(response, createdUser.email(), createdUser.role(), createdUser.id(), createdUser.fullName());
         eventInviteeRepository.save(eventInvitation);
+        return createdUser;
     }
 
     private void validateInvitation(EventInvitee eventInvitation) {
@@ -198,7 +205,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
         }
     }
 
-    private void createInviteeAccount(EventInvitationAcceptanceRequest request, EventInvitee eventInvitation){
+    private UserCreationResponse createInviteeAccount(EventInvitationAcceptanceRequest request, EventInvitee eventInvitation){
         InviteeRegistrationRequest registrationRequest = new InviteeRegistrationRequest(
                 request.fullName(),
                 eventInvitation.getInviteeEmail(),
@@ -215,7 +222,7 @@ public class EventInvitationServiceImpl implements EventInvitationService {
                 .build();
 
         eventOrganizerRepository.save(eventOrganizer);
-
+        return createdUser;
     }
 
     private EventInvitee getInvitationByToken(String token){

@@ -7,6 +7,8 @@ import com.event_service.event_service.dto.EventInvitationRequest;
 import com.event_service.event_service.models.enums.InviteeRole;
 import com.event_service.event_service.services.EventInvitationService;
 import com.example.common_libraries.dto.CustomApiResponse;
+import com.example.common_libraries.dto.UserCreationResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -67,18 +69,18 @@ public class EventInvitationController {
     }
 
     @PostMapping("/accept-invitation/")
-    public ResponseEntity<CustomApiResponse<Object>> acceptInvitation(
-            @Valid @RequestBody EventInvitationAcceptanceRequest request
+    public ResponseEntity<CustomApiResponse<UserCreationResponse>> acceptInvitation(
+            @Valid @RequestBody EventInvitationAcceptanceRequest request, HttpServletResponse response
     ){
-        eventInvitationService.acceptInvitation(request);
-        return ResponseEntity.ok(CustomApiResponse.success("Event invitation accepted successfully"));
+        UserCreationResponse acceptedInvite = eventInvitationService.acceptInvitation(request, response);
+        return ResponseEntity.ok(CustomApiResponse.success("Event invitation accepted successfully", acceptedInvite));
     }
 
     @PostMapping("/accept-invitation/existing-user/{token}/")
-    public ResponseEntity<CustomApiResponse<Object>> acceptInvitationForExistingUser(
-            @PathVariable String token){
-        eventInvitationService.acceptInvitationForExistingUser(token);
-        return ResponseEntity.ok(CustomApiResponse.success("Event invitation accepted successfully"));
+    public ResponseEntity<CustomApiResponse<UserCreationResponse>> acceptInvitationForExistingUser(
+            @PathVariable String token, HttpServletResponse response){
+        UserCreationResponse acceptedInvite = eventInvitationService.acceptInvitationForExistingUser(token, response);
+        return ResponseEntity.ok(CustomApiResponse.success("Event invitation accepted successfully",acceptedInvite));
     }
 
     @GetMapping("/saved-invites")

@@ -40,4 +40,5 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
             @Param("previousYear") Integer previousYear
     );
 
+    long countByEventId(Long id);
 }

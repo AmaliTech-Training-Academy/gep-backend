@@ -60,7 +60,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     Page<EventManagementProjection> getEventManagement(Pageable pageable);
 
     Page<Event> findAllByUserId(Long id, Pageable pageable);
-
+    List<Event> findAllByUserId(Long id);
     Long countByUserId(Long id);
 
     Optional<Event> findByIdAndUserId(Long eventId, Long userId);
@@ -84,4 +84,6 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
 
     List<Event> getEventsByUserId(Long id);
+
+    Page<Event> findAllByIdIn(List<Long> eventIds, Pageable pageable);
 }

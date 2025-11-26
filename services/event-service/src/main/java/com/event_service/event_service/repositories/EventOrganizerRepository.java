@@ -10,4 +10,6 @@ import java.util.List;
 public interface EventOrganizerRepository extends JpaRepository<EventOrganizer, Long> {
     @Query("SELECT eo.userId FROM EventOrganizer eo WHERE eo.event.id = :eventId")
     List<Long> findUserIdsByEventId(@Param("eventId") Long eventId);
+
+    List<EventOrganizer> findAllByUserId(Long id);
 }
