@@ -57,14 +57,12 @@ public class AuthServiceImplTest {
         Mockito.doAnswer(invocation -> {
             HttpServletResponse resp = invocation.getArgument(0);
             User user = invocation.getArgument(1);
-            // ensure the jwtUtil mock is exercised (tests verify these interactions)
             try {
                 jwtUtil.generateAccessToken(user);
             } catch (Exception ignored) {}
             try {
                 jwtUtil.generateRefreshToken(user);
             } catch (Exception ignored) {}
-            // mimic real behavior: add two Set-Cookie headers so existing verifies pass
             resp.addHeader("Set-Cookie", "access=mocked");
             resp.addHeader("Set-Cookie", "refresh=mocked");
             return null;
@@ -244,7 +242,6 @@ public class AuthServiceImplTest {
 
         when(jwtUtil.extractUsername(oldRefreshToken)).thenReturn(email);
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
-//      when(jwtUtil.validateToken(oldRefreshToken)).thenReturn(true);
         when(jwtUtil.generateAccessToken(user)).thenReturn(newAccessToken);
         when(jwtUtil.generateRefreshToken(user)).thenReturn(newRefreshToken);
 
@@ -302,7 +299,6 @@ public class AuthServiceImplTest {
     void testLogout_Successful() {
         authService.logout(response);
 
-        // Verify that cookies are cleared (addHeader called twice for both cookies)
         verify(response, times(2)).addHeader(eq("Set-Cookie"), anyString());
     }
 
