@@ -4,6 +4,7 @@ import com.event_service.event_service.dto.projection.EventManagementProjection;
 import com.event_service.event_service.dto.projection.EventMonthlyStatsProjection;
 import com.event_service.event_service.dto.projection.EventStatProjection;
 import com.event_service.event_service.models.Event;
+import com.event_service.event_service.models.enums.InviteeRole;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -84,4 +85,19 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
 
     List<Event> getEventsByUserId(Long id);
+
+    @Query("""
+        SELECT DISTINCT e FROM Event e
+        JOIN e.organizers eo
+        WHERE eo.userId = :userId
+        AND eo.role = :role
+        AND eo.isActive = true
+        ORDER BY e.createdAt DESC
+    """)
+    Page<Event> findAllByCoOrganizer(
+            @Param("userId") Long userId,
+            @Param("role") InviteeRole role,
+            Pageable pageable
+    );
+
 }

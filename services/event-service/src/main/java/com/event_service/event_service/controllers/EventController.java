@@ -89,13 +89,13 @@ public class EventController {
     }
 
     @GetMapping("/{eventId}/registrations/overview")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ORGANISER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ORGANISER','CO_ORGANIZER')")
     public ResponseEntity<CustomApiResponse<EventRegistrationPageResponse>> getEventRegistrationsOverview(@PathVariable("eventId") Long eventId) {
         return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(eventRegistrationService.getEventRegistrationPageOverview(eventId)));
     }
 
     @GetMapping("/{eventId}/registrations/search")
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER','CO_ORGANIZER')")
     public ResponseEntity<CustomApiResponse<Page<EventRegistrationsListResponse>>> getEventRegistrations(
             @PathVariable("eventId") Long eventId,
             @RequestParam(value = "page", defaultValue = "0", required = false) int page,
@@ -142,13 +142,13 @@ public class EventController {
     }
 
     @GetMapping("/my-events/overview")
-    @PreAuthorize("hasRole('ORGANISER')")
+    @PreAuthorize("hasAnyRole('ORGANISER','CO_ORGANIZER')")
     public ResponseEntity<CustomApiResponse<MyEventsOverviewResponse>> getMyEventsOverview() {
         return ResponseEntity.status(HttpStatus.OK).body(CustomApiResponse.success(myEventService.getMyEventsOverview()));
     }
 
     @GetMapping("/my-events/details/{eventId}")
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER')")
+    @PreAuthorize("hasAnyRole('ADMIN','ORGANISER','CO_ORGANIZER')")
     public ResponseEntity<CustomApiResponse<MyEventDetailResponse>> getMyEventDetails(
             @CookieValue(name = "accessToken", required = false) String accessToken,
             @PathVariable Long eventId
@@ -157,7 +157,7 @@ public class EventController {
     }
 
     @GetMapping("/my-events")
-    @PreAuthorize("hasRole('ORGANISER')")
+    @PreAuthorize("hasAnyRole('ORGANISER','CO_ORGANIZER')")
     public ResponseEntity<CustomApiResponse<Page<MyEventsListResponse>>> getMyEvents(
             @RequestParam(name = "page",
                     defaultValue = "0") int page

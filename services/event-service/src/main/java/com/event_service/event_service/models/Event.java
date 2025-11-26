@@ -106,6 +106,10 @@ public class Event {
     @Builder.Default
     private Set<EventInvitation> invitations = new HashSet<>();
 
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<EventOrganizer> organizers = new HashSet<>();
+
     public void addImage(EventImages eventImage) {
         this.eventImages.add(eventImage);
         eventImage.setEvent(this);

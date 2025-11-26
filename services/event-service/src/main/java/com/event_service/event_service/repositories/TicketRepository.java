@@ -30,4 +30,14 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         WHERE tt.event = :event
     """)
     Double findTotalTicketSalesForEvent(@Param("event") Event event);
+
+    @Query("""
+        SELECT COALESCE(SUM(tt.price), 0.0)
+        FROM Ticket t
+        JOIN t.ticketType tt
+        JOIN tt.event e
+        JOIN e.organizers eo
+        WHERE eo.userId = :userId
+    """)
+    Double findTotalTicketSalesForCoOrganizer(@Param("userId") Long userId);
 }
