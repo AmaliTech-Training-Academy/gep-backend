@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/api/v1/webhook").permitAll()
                         .requestMatchers("/api/v1/payment").permitAll()
+                        .requestMatchers("/api/v1/payment/success").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
