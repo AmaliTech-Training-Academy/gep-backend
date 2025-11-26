@@ -3,13 +3,16 @@ package com.event_service.event_service.services;
 import com.event_service.event_service.client.UserServiceClient;
 import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.Event;
+import com.event_service.event_service.models.EventOrganizer;
 import com.event_service.event_service.models.TicketType;
+import com.event_service.event_service.models.enums.InviteeRole;
 import com.event_service.event_service.repositories.*;
 import com.event_service.event_service.utils.SecurityUtils;
 import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.dto.HostsResponse;
 import com.example.common_libraries.exception.BadRequestException;
 import com.example.common_libraries.exception.ResourceNotFoundException;
+import com.example.common_libraries.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -38,7 +41,12 @@ public class MyEventServiceImpl implements MyEventService {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
         Pageable pageable = PageRequest.of(page, 3, sort);
         AppUser currentUser = securityUtils.getCurrentUser();
-        Page<Event> myEvents = eventRepository.findAllByUserId(currentUser.id(), pageable);
+        Page<Event> myEvents;
+        if(currentUser.role().equals("CO_ORGANIZER")){
+            myEvents = eventRepository.findAllByCoOrganizer(currentUser.id(), InviteeRole.CO_ORGANIZER, pageable);
+        }else{
+            myEvents = eventRepository.findAllByUserId(currentUser.id(), pageable);
+        }
 
         return myEvents.map(
                 event -> MyEventsListResponse
@@ -57,9 +65,24 @@ public class MyEventServiceImpl implements MyEventService {
     @Override
     public MyEventsOverviewResponse getMyEventsOverview() {
         AppUser currentUser = securityUtils.getCurrentUser();
-        Long totalEvents = eventRepository.countByUserId(currentUser.id());
-        Long totalAttendees = eventRegistrationRepository.countByEventUserId(currentUser.id());
-        Double totalTicketSales = ticketRepository.findTotalTicketSalesForUser(currentUser.id());
+
+        Long totalAttendees;
+        Double totalTicketSales;
+        Long totalEvents;
+
+        if(currentUser.role().equals("CO_ORGANIZER")){
+            // find CO_ORGANIZER invite to get Event
+            List<EventOrganizer> coOrganizedEvents = eventOrganizerRepository.findAllByUserId(currentUser.id());
+
+            totalEvents = (long) coOrganizedEvents.size();
+            totalAttendees = coOrganizedEvents.stream()
+                    .mapToLong(org-> (long) org.getEvent().getEventRegistrations().size()).sum();
+            totalTicketSales = ticketRepository.findTotalTicketSalesForCoOrganizer(currentUser.id());
+        }else{
+            totalEvents = eventRepository.countByUserId(currentUser.id());
+            totalAttendees = eventRegistrationRepository.countByEventUserId(currentUser.id());
+            totalTicketSales = ticketRepository.findTotalTicketSalesForUser(currentUser.id());
+        }
 
         return MyEventsOverviewResponse
                 .builder()
@@ -81,7 +104,14 @@ public class MyEventServiceImpl implements MyEventService {
         if(currentUser.role().equals("ADMIN")){
             event = eventRepository.findById(eventId)
                     .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
-        }else{
+        }else if(currentUser.role().equals("CO_ORGANIZER")){
+            event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+            EventOrganizer organizer = eventOrganizerRepository.findByUserIdAndEvent(currentUser.id(), event);
+            if(organizer == null){
+                throw new UnauthorizedException("You are not authorized to view this event");
+            }
+        }
+        else{
             event = eventRepository.findByIdAndUserId(eventId, currentUser.id())
                     .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
         }

@@ -3,6 +3,7 @@ package com.event_service.event_service.services;
 import com.event_service.event_service.client.PaymentServiceClient;
 import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.*;
+import com.event_service.event_service.repositories.*;
 import com.event_service.event_service.specifications.EventRegistrationSpecification;
 import com.event_service.event_service.utils.SecurityUtils;
 import com.example.common_libraries.dto.*;
@@ -15,13 +16,10 @@ import com.event_service.event_service.mappers.TicketPurchasedEventMapper;
 import com.event_service.event_service.models.enums.EventMeetingTypeEnum;
 import com.event_service.event_service.models.enums.EventRegistrationStatusEnum;
 import com.event_service.event_service.models.enums.TicketStatusEnum;
-import com.event_service.event_service.repositories.EventRegistrationRepository;
-import com.event_service.event_service.repositories.EventRepository;
-import com.event_service.event_service.repositories.TicketRepository;
-import com.event_service.event_service.repositories.TicketTypeRepository;
 import com.event_service.event_service.utils.QRCodeGenerator;
 import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
+import com.example.common_libraries.exception.UnauthorizedException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.WriterException;
 import io.awspring.cloud.sqs.annotation.SqsListener;
@@ -57,6 +55,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
     private final PaymentServiceClient paymentServiceClient;
     private final EventDetailMapper eventDetailMapper;
     private final TicketPurchasedEventMapper ticketPurchasedEventMapper;
+    private final EventOrganizerRepository eventOrganizerRepository;
 
     @Value("${sqs.ticket-purchased-event-queue-url}")
     private String ticketPurchasedEventQueueUrl;
@@ -177,8 +176,17 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
         AppUser currentUser = securityUtils.getCurrentUser();
 
         Event event;
-        if(!currentUser.role().equals("ADMIN")){
+        if(currentUser.role().equals("ORGANISER")){
             event = eventRepository.findByIdAndUserId(eventId, currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }else if(currentUser.role().equals("CO_ORGANIZER")){
+            // find CO_ORGANIZER invite to get Event
+            EventOrganizer coOrganizer = eventOrganizerRepository.findByUserId(currentUser.id());
+            if(coOrganizer == null){
+                throw new UnauthorizedException("User is not an organizer of this event");
+            }
+            // Get event from invitee
+            event = Optional.ofNullable(coOrganizer.getEvent())
+                    .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
         }else{
             event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
         }
@@ -211,9 +219,20 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
         AppUser currentUser = securityUtils.getCurrentUser();
 
         Event event;
-        if(!currentUser.role().equals("ADMIN")){
+        if(currentUser.role().equals("ORGANISER")){
             event = eventRepository.findByIdAndUserId(eventId, currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
-        }else{
+        }else if(currentUser.role().equals("CO_ORGANIZER")){
+            // find CO_ORGANIZER invite to get Event
+            EventOrganizer coOrganizer = eventOrganizerRepository.findByUserId(currentUser.id());
+            if(coOrganizer == null){
+                throw new UnauthorizedException("User is not an organizer of this event");
+            }
+            // Get event from invitee
+            event = Optional.ofNullable(coOrganizer.getEvent())
+                    .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+        }
+        else{
+            // Get event if ADMIN
             event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
         }
         EventOptions eventOptions = Optional.ofNullable(event.getEventOptions()).orElse(EventOptions.builder().build());

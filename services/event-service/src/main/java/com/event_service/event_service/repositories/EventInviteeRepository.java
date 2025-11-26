@@ -24,4 +24,6 @@ public interface EventInviteeRepository extends JpaRepository<EventInvitee, Long
                                     @Param("eventId") Long eventId);
 
     Page<EventInvitee> findByInvitationIn(Collection<EventInvitation> invitations, Pageable pageable);
+
+    EventInvitee findByInviteeEmail(String inviteeEmail);
 }
