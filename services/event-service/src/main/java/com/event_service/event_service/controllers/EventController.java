@@ -80,6 +80,12 @@ public class EventController {
         return ResponseEntity.ok(eventDetailService.getEventDetailById(eventId));
     }
 
+    @GetMapping("/{eventId}/edit/details")
+    @PreAuthorize("hasAnyRole('ORGANISER','CO_ORGANIZER')")
+    public ResponseEntity<CustomApiResponse<EventEditPageResponse>> getEventForUpdate(@PathVariable Long eventId) {
+        return ResponseEntity.ok().body(CustomApiResponse.success(eventDetailService.getEventEditPageById(eventId)));
+    }
+
     @PostMapping("/{eventId}/register")
     public ResponseEntity<EventRegistrationResponse> registerForEvent(
             @PathVariable Long eventId,
