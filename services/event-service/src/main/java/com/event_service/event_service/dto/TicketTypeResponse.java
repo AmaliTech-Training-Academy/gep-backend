@@ -10,6 +10,7 @@ public record TicketTypeResponse(
         Double price,
         Boolean isActive,
         Long remainingTickets,
-        Boolean isPaid
+        Boolean isPaid,
+        Long quantity
 ) {
 }

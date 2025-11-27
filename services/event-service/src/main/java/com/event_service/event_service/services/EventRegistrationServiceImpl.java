@@ -19,7 +19,6 @@ import com.event_service.event_service.models.enums.TicketStatusEnum;
 import com.event_service.event_service.utils.QRCodeGenerator;
 import com.example.common_libraries.dto.queue_events.ProcessPaymentEvent;
 import com.example.common_libraries.dto.queue_events.TicketPurchasedEvent;
-import com.example.common_libraries.exception.UnauthorizedException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.zxing.WriterException;
 import io.awspring.cloud.sqs.annotation.SqsListener;
@@ -180,13 +179,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             event = eventRepository.findByIdAndUserId(eventId, currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
         }else if(currentUser.role().equals("CO_ORGANIZER")){
             // find CO_ORGANIZER invite to get Event
-            EventOrganizer coOrganizer = eventOrganizerRepository.findByUserId(currentUser.id());
-            if(coOrganizer == null){
-                throw new UnauthorizedException("User is not an organizer of this event");
-            }
-            // Get event from invitee
-            event = Optional.ofNullable(coOrganizer.getEvent())
-                    .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+            event = eventRepository.findByEventIdAndCoOrganizerUserId(eventId,currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
         }else{
             event = eventRepository.findById(eventId).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
         }
@@ -223,13 +216,7 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
             event = eventRepository.findByIdAndUserId(eventId, currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
         }else if(currentUser.role().equals("CO_ORGANIZER")){
             // find CO_ORGANIZER invite to get Event
-            EventOrganizer coOrganizer = eventOrganizerRepository.findByUserId(currentUser.id());
-            if(coOrganizer == null){
-                throw new UnauthorizedException("User is not an organizer of this event");
-            }
-            // Get event from invitee
-            event = Optional.ofNullable(coOrganizer.getEvent())
-                    .orElseThrow(()-> new ResourceNotFoundException("Event not found"));
+            event = eventRepository.findByEventIdAndCoOrganizerUserId(eventId,currentUser.id()).orElseThrow(()-> new ResourceNotFoundException("Event not found"));
         }
         else{
             // Get event if ADMIN

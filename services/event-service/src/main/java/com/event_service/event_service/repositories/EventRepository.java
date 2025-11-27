@@ -100,4 +100,17 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
             Pageable pageable
     );
 
+
+    @Query("""
+        SELECT e
+        FROM Event e
+        JOIN e.organizers eo
+        WHERE e.id = :eventId
+          AND eo.userId = :userId
+    """)
+    Optional<Event> findByEventIdAndCoOrganizerUserId(
+            @Param("eventId") Long eventId,
+            @Param("userId") Long userId
+    );
+
 }
