@@ -9,12 +9,13 @@ import com.example.auth_service.mapper.AuditMapper;
 import com.example.auth_service.model.AuditLogJSONB;
 import com.example.auth_service.repository.AuditLogJSONBRepository;
 import com.example.auth_service.service.AuditService;
+import com.example.auth_service.specifications.AuditLogSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -54,25 +55,26 @@ public class AuditServiceImpl implements AuditService {
 
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
+        Specification<AuditLogJSONB> spec = Specification.unrestricted();
+        spec = spec.and(AuditLogSpecification.hasFullName(fullName));
+        spec = spec.and(AuditLogSpecification.hasStatus(status));
 
+        Page<AuditLogJSONB> page = auditLogJSONBRepository.findAll(pageable);
 
-        Page<AuditLogJSONB> auditPage = auditLogJSONBRepository.findAll(pageable);
+        Page<AuditLogJSONB> auditPage =
+                auditLogJSONBRepository.findAll(spec, pageable);
 
         List<EnrichedAuditResponse> enrichedList = auditPage.getContent().stream()
                 .map(auditMapper::toEnrichedAuditResponse)
-                .filter(a -> (fullName == null || fullName.isBlank()
-                        || (a.fullName() != null && a.fullName().toLowerCase().contains(fullName.toLowerCase())))
-                        &&
-                        (status == null || a.auditStatus() == status))
                 .toList();
 
-
         return new PagedAuditResponse<>(
-                auditPage.getNumber(),
-                auditPage.getSize(),
-                auditPage.getTotalElements(),
-                auditPage.getTotalPages(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages(),
                 enrichedList
         );
     }
+
 }
