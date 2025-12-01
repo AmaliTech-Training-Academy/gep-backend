@@ -9,6 +9,7 @@ import com.example.payment_service.models.TransactionStatus;
 import com.example.payment_service.repos.TransactionRepository;
 import com.example.payment_service.specification.TransactionSpecification;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService{
@@ -26,16 +28,19 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Override
     public Page<TransactionResponse> getAllTransactions(int page, String keyword, TransactionStatus status) {
+        log.info("Getting transactions for page {} with keyword {} and status {}", page, keyword, status);
         page = Math.max(page, 0);
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
         Pageable pageable = PageRequest.of(page, 10, sort);
         Specification<Transaction> spec = (root, query, cb) -> cb.conjunction();;
 
         if(keyword != null && !keyword.trim().isEmpty()) {
-            spec.and(TransactionSpecification.hasKeyword(keyword.trim()));
+            log.info("Filtering transactions by keyword {}", keyword);
+            spec = spec.and(TransactionSpecification.hasKeyword(keyword.trim()));
         }
         if(status != null) {
-            spec.and(TransactionSpecification.hasStatus(status));
+            log.info("Filtering transactions by status {}", status);
+            spec = spec.and(TransactionSpecification.hasStatus(status));
         }
 
         Page<Transaction> transactions = transactionRepository.findAll(spec, pageable);
