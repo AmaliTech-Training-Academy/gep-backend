@@ -16,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -44,8 +45,9 @@ public class AuditServiceImpl implements AuditService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public PagedAuditResponse<EnrichedAuditResponse> getEnrichedAuditLogs(
-            Integer page,
+            Integer pageNumber,
             Integer size,
             String fullName,
             AuditStatus status,
@@ -54,17 +56,16 @@ public class AuditServiceImpl implements AuditService {
     ) {
 
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
+        Pageable pageable = PageRequest.of(pageNumber, size, sort);
         Specification<AuditLogJSONB> spec = Specification.unrestricted();
         spec = spec.and(AuditLogSpecification.hasFullName(fullName));
         spec = spec.and(AuditLogSpecification.hasStatus(status));
 
-        Page<AuditLogJSONB> page = auditLogJSONBRepository.findAll(pageable);
 
-        Page<AuditLogJSONB> auditPage =
+        Page<AuditLogJSONB> page =
                 auditLogJSONBRepository.findAll(spec, pageable);
 
-        List<EnrichedAuditResponse> enrichedList = auditPage.getContent().stream()
+        List<EnrichedAuditResponse> enrichedList = page.getContent().stream()
                 .map(auditMapper::toEnrichedAuditResponse)
                 .toList();
 
