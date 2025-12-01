@@ -3,6 +3,7 @@ package com.event_service.event_service.services;
 import com.event_service.event_service.client.PaymentServiceClient;
 import com.event_service.event_service.dto.*;
 import com.event_service.event_service.models.*;
+import com.event_service.event_service.models.enums.EventStatus;
 import com.event_service.event_service.repositories.*;
 import com.event_service.event_service.specifications.EventRegistrationSpecification;
 import com.event_service.event_service.utils.SecurityUtils;
@@ -73,6 +74,10 @@ public class EventRegistrationServiceImpl implements EventRegistrationService{
         TicketType ticketType = ticketTypeRepository.findByIdAndEvent(registrationRequest.ticketTypeId(),event).orElseThrow(()-> new ResourceNotFoundException("Ticket Type not found"));
         Long quantity = registrationRequest.numberOfTickets();
 
+        // Prevent registration to events that are COMPLETED
+        if(event.getStatus() == EventStatus.COMPLETED){
+            throw new BadRequestException("Registration is closed for this event");
+        }
         if(ticketType.getQuantity() - ticketType.getSoldCount() < quantity){
             throw new ResourceNotFoundException("Ticket Type is out of stock");
         }
