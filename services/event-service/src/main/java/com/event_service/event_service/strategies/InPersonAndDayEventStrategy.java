@@ -5,6 +5,7 @@ import com.event_service.event_service.dto.EventSectionRequest;
 import com.event_service.event_service.models.*;
 import com.event_service.event_service.repositories.EventRepository;
 import com.event_service.event_service.utils.TimeZoneUtils;
+import com.event_service.event_service.validations.EventValidator;
 import com.example.common_libraries.dto.AppUser;
 import com.example.common_libraries.service.S3Service;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
     private final S3Service s3Service;
     private final EventRepository eventRepository;
     private final TimeZoneUtils timeZoneUtils;
+    private final EventValidator eventValidator;
 
     @Override
     public Event createEvent(EventRequest eventRequest,
@@ -66,6 +68,8 @@ public class InPersonAndDayEventStrategy implements EventStrategy {
                 zoneId
         );
         Instant eventInstant = zonedDateTime.toInstant();
+        String message = "Event time must be now or in the future.";
+        eventValidator.validateEventDayInstant(eventInstant,message);
 
         AppUser authenticatedUser = getCurrentUser();
 
