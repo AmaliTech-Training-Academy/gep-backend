@@ -7,6 +7,8 @@ import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -57,6 +59,16 @@ public class EventValidator {
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.toList());
         throw new ValidationException(errors);
+    }
+
+    public void validateEventDayInstant(Instant eventDate,String errorMessage) {
+            if (eventDate.isBefore(Instant.now())) {
+                handleCustomError(errorMessage);
+            }
+    }
+
+    private void handleCustomError(String message) {
+        throw new ValidationException(Collections.singletonList(message));
     }
 
 }
